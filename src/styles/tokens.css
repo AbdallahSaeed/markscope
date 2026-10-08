@@ -1,0 +1,112 @@
+/* Markscope design tokens. Light is the default; dark overrides below. */
+:root {
+  color-scheme: light;
+  --paper: oklch(98.6% 0.006 85);
+  --paper-2: oklch(96.3% 0.008 85);
+  --paper-3: oklch(93.2% 0.01 85);
+  --raised: oklch(99.6% 0.003 85);
+  --ink: oklch(23% 0.016 265);
+  --ink-2: oklch(41% 0.016 265);
+  --ink-3: oklch(55% 0.013 265);
+  --rule: oklch(89% 0.01 85);
+  --rule-strong: oklch(80% 0.012 85);
+  --accent: oklch(50% 0.2 264);
+  --accent-hover: oklch(44% 0.2 264);
+  --accent-ink: oklch(98.5% 0.01 264);
+  --accent-soft: oklch(94% 0.035 264);
+  --code-bg: oklch(96.4% 0.007 85);
+  --code-ink: oklch(28% 0.02 265);
+  --mark: oklch(91% 0.13 95);
+  --danger: oklch(55% 0.2 25);
+
+  --c-note: oklch(54% 0.15 250);
+  --c-tip: oklch(54% 0.13 155);
+  --c-important: oklch(52% 0.17 300);
+  --c-warning: oklch(60% 0.14 70);
+  --c-caution: oklch(54% 0.19 25);
+
+  --hl-keyword: oklch(48% 0.18 300);
+  --hl-string: oklch(48% 0.12 150);
+  --hl-number: oklch(54% 0.15 50);
+  --hl-title: oklch(48% 0.16 255);
+  --hl-attr: oklch(50% 0.13 200);
+  --hl-comment: oklch(58% 0.01 265);
+  --hl-meta: oklch(52% 0.1 30);
+
+  --shadow-1: 0 1px 2px oklch(20% 0.02 265 / 0.05), 0 2px 10px oklch(20% 0.02 265 / 0.05);
+  --shadow-2:
+    0 18px 50px -12px oklch(20% 0.03 265 / 0.28), 0 2px 6px oklch(20% 0.02 265 / 0.08);
+
+  --font-ui:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  --font-serif:
+    'Iowan Old Style', 'Charter', 'Sitka Text', 'Palatino Linotype', Cambria, Georgia,
+    serif;
+  --font-mono:
+    ui-monospace, 'SF Mono', 'JetBrains Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --radius-l: 18px;
+  --dur-fast: 120ms;
+  --dur: 220ms;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --doc-font-size: 16px;
+  --doc-line-height: 1.65;
+  --doc-width: 76ch;
+  --doc-font: var(--font-ui);
+}
+
+:root[data-font='serif'] {
+  --doc-font: var(--font-serif);
+}
+:root[data-font='mono'] {
+  --doc-font: var(--font-mono);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --paper: oklch(17.5% 0.012 265);
+  --paper-2: oklch(20.3% 0.013 265);
+  --paper-3: oklch(24.5% 0.015 265);
+  --raised: oklch(22.5% 0.014 265);
+  --ink: oklch(92.5% 0.008 85);
+  --ink-2: oklch(78% 0.01 85);
+  --ink-3: oklch(63% 0.012 265);
+  --rule: oklch(29% 0.014 265);
+  --rule-strong: oklch(37% 0.016 265);
+  --accent: oklch(74% 0.13 264);
+  --accent-hover: oklch(80% 0.11 264);
+  --accent-ink: oklch(18% 0.03 264);
+  --accent-soft: oklch(29% 0.06 264);
+  --code-bg: oklch(21% 0.013 265);
+  --code-ink: oklch(88% 0.01 85);
+  --mark: oklch(48% 0.1 95);
+  --danger: oklch(70% 0.16 25);
+
+  --c-note: oklch(72% 0.12 250);
+  --c-tip: oklch(74% 0.13 155);
+  --c-important: oklch(74% 0.13 300);
+  --c-warning: oklch(80% 0.13 75);
+  --c-caution: oklch(70% 0.16 25);
+
+  --hl-keyword: oklch(76% 0.13 305);
+  --hl-string: oklch(79% 0.12 145);
+  --hl-number: oklch(80% 0.12 60);
+  --hl-title: oklch(78% 0.11 245);
+  --hl-attr: oklch(80% 0.09 200);
+  --hl-comment: oklch(62% 0.015 265);
+  --hl-meta: oklch(76% 0.1 30);
+
+  --shadow-1: 0 1px 2px oklch(0% 0 0 / 0.3), 0 2px 10px oklch(0% 0 0 / 0.25);
+  --shadow-2: 0 18px 50px -12px oklch(0% 0 0 / 0.6), 0 2px 6px oklch(0% 0 0 / 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur: 0ms;
+  }
+}

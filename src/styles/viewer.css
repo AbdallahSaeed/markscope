@@ -1,0 +1,1303 @@
+@import './base.css';
+
+:root {
+  --toolbar-h: 52px;
+  --status-h: 28px;
+  --sidebar-w: 284px;
+  --ai-w: 420px;
+}
+body[data-mode='loading'] .ms-app {
+  visibility: hidden;
+}
+
+/* ------------------------------------------------------------- toolbar */
+.ms-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--toolbar-h);
+  padding: 0 12px;
+  border-bottom: 1px solid var(--rule);
+  background: color-mix(in oklch, var(--paper) 86%, transparent);
+  backdrop-filter: saturate(1.4) blur(14px);
+}
+.ms-skip {
+  position: absolute;
+  left: -999px;
+}
+.ms-skip:focus {
+  left: 12px;
+  top: 10px;
+  z-index: 30;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.ms-titles {
+  min-width: 0;
+  flex: 1 1 auto;
+  line-height: 1.2;
+}
+.ms-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ms-subtitle {
+  margin: 1px 0 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+}
+.ms-star.is-on {
+  color: var(--c-warning);
+}
+.ms-star.is-on .ms-icon {
+  fill: currentColor;
+}
+.ms-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.ms-palette-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  margin-inline: 4px;
+  padding: 0 6px 0 10px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--paper-2);
+  color: var(--ink-3);
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast),
+    color var(--dur-fast);
+}
+.ms-palette-btn:hover {
+  border-color: var(--rule-strong);
+  color: var(--ink);
+}
+.ms-palette-btn .ms-icon {
+  width: 15px;
+  height: 15px;
+}
+.ms-menu-wrap {
+  position: relative;
+}
+.ms-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 40;
+  min-width: 240px;
+  padding: 6px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--raised);
+  box-shadow: var(--shadow-2);
+  animation: ms-pop var(--dur) var(--ease);
+}
+.ms-menu__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  text-align: start;
+  cursor: pointer;
+}
+.ms-menu__item:hover,
+.ms-menu__item:focus-visible {
+  background: var(--accent-soft);
+  outline: none;
+}
+.ms-menu__item[aria-checked='true']::after {
+  content: '✓';
+  color: var(--accent);
+  font-weight: 700;
+}
+.ms-menu__item[aria-checked] kbd {
+  display: none;
+}
+.ms-menu__sep {
+  height: 1px;
+  margin: 5px 4px;
+  background: var(--rule);
+}
+@keyframes ms-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+/* --------------------------------------------------------------- shell */
+.ms-shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr) 0;
+  min-height: calc(100vh - var(--toolbar-h));
+  transition: grid-template-columns var(--dur) var(--ease);
+}
+body.sidebar-hidden .ms-shell {
+  grid-template-columns: 0 minmax(0, 1fr) 0;
+}
+body.ai-open .ms-shell {
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr) var(--ai-w);
+}
+body.sidebar-hidden.ai-open .ms-shell {
+  grid-template-columns: 0 minmax(0, 1fr) var(--ai-w);
+}
+body[data-mode='home'] .ms-shell,
+body[data-mode='home'] .ms-status,
+body[data-mode='home'] .ms-toolbar {
+  display: none;
+}
+
+.ms-sidebar-slot,
+.ms-ai-slot {
+  min-width: 0;
+  /* clip (not hidden): hidden creates a scroll container and silently
+     disables position: sticky on the sidebar and AI panel. */
+  overflow: clip;
+}
+.ms-sidebar {
+  position: sticky;
+  top: var(--toolbar-h);
+  display: flex;
+  flex-direction: column;
+  width: var(--sidebar-w);
+  height: calc(100vh - var(--toolbar-h) - var(--status-h));
+  border-inline-end: 1px solid var(--rule);
+  background: var(--paper-2);
+}
+.ms-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 10px 10px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.ms-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 9px 10px;
+  border: 0;
+  background: none;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ms-tab .ms-icon {
+  width: 15px;
+  height: 15px;
+}
+.ms-tab:hover {
+  color: var(--ink);
+}
+.ms-tab[aria-selected='true'] {
+  color: var(--ink);
+}
+.ms-tab[aria-selected='true']::after {
+  content: '';
+  position: absolute;
+  inset: auto 6px -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.ms-badge {
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--paper-3);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-2);
+}
+.ms-badge.is-error {
+  background: color-mix(in oklch, var(--danger) 18%, var(--paper));
+  color: var(--danger);
+}
+.ms-panel {
+  flex: 1;
+  overflow: auto;
+  padding: 12px 8px 24px;
+  overscroll-behavior: contain;
+}
+.ms-outline-filter {
+  width: calc(100% - 8px);
+  margin: 0 4px 10px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--rule);
+  border-radius: 7px;
+  background: var(--raised);
+  font-size: 13px;
+}
+.ms-outline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ms-outline__link {
+  display: block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.35;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-inline-start: 2px solid transparent;
+  transition:
+    color var(--dur-fast),
+    background var(--dur-fast),
+    border-color var(--dur-fast);
+}
+.ms-outline__link:hover {
+  background: var(--paper-3);
+  color: var(--ink);
+}
+.ms-outline__link[aria-current] {
+  color: var(--accent);
+  font-weight: 600;
+  border-inline-start-color: var(--accent);
+  border-radius: 0 6px 6px 0;
+  background: var(--accent-soft);
+}
+.ms-outline__link.l1 {
+  font-weight: 650;
+  color: var(--ink);
+}
+.ms-outline__link.l2 {
+  padding-inline-start: 18px;
+}
+.ms-outline__link.l3 {
+  padding-inline-start: 30px;
+  font-size: 12.5px;
+}
+.ms-outline__link.l4,
+.ms-outline__link.l5,
+.ms-outline__link.l6 {
+  padding-inline-start: 42px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.ms-empty,
+.ms-empty-state {
+  color: var(--ink-3);
+  padding: 8px 10px;
+  font-size: 13px;
+}
+.ms-empty-state {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 4px;
+  padding-top: 32px;
+}
+.ms-empty-state .ms-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--c-tip);
+}
+.ms-empty-state p {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-weight: 600;
+}
+.ms-panel__summary {
+  margin: 0 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.ms-issues {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.ms-issue {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: start;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  text-align: start;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.ms-issue:hover {
+  background: var(--raised);
+  border-color: var(--rule);
+}
+.ms-issue__sev {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+.ms-issue--error .ms-issue__sev {
+  color: var(--danger);
+  background: color-mix(in oklch, var(--danger) 14%, transparent);
+}
+.ms-issue--warning .ms-issue__sev {
+  color: var(--c-warning);
+  background: color-mix(in oklch, var(--c-warning) 16%, transparent);
+}
+.ms-issue--info .ms-issue__sev {
+  color: var(--c-note);
+  background: color-mix(in oklch, var(--c-note) 14%, transparent);
+}
+.ms-issue__line {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.ms-stats {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  margin: 0;
+  padding: 0 6px;
+}
+.ms-stats dt,
+.ms-stats dd {
+  padding: 7px 0;
+  border-bottom: 1px solid var(--rule);
+  margin: 0;
+}
+.ms-stats dt {
+  color: var(--ink-3);
+}
+.ms-stats dd {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.ms-panel__source {
+  margin: 14px 6px 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------- main */
+.ms-main {
+  position: relative;
+  min-width: 0;
+  padding-bottom: calc(var(--status-h) + 40px);
+}
+.ms-banner {
+  position: sticky;
+  top: calc(var(--toolbar-h) + 8px);
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(var(--doc-width) + 3.2em);
+  margin: 12px auto 0;
+  padding: 8px 8px 8px 14px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--raised);
+  box-shadow: var(--shadow-1);
+}
+.ms-banner > span {
+  flex: 1;
+}
+.ms-banner--warn {
+  border-color: color-mix(in oklch, var(--c-warning) 50%, var(--rule));
+}
+.ms-banner--error {
+  border-color: color-mix(in oklch, var(--danger) 50%, var(--rule));
+}
+.ms-search {
+  position: sticky;
+  top: calc(var(--toolbar-h) + 10px);
+  z-index: 16;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: min(460px, calc(100% - 24px));
+  margin: 10px 16px 0 auto;
+  padding: 4px 4px 4px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 12px;
+  background: var(--raised);
+  box-shadow: var(--shadow-2);
+  animation: ms-pop var(--dur) var(--ease);
+}
+.ms-search > .ms-icon {
+  color: var(--ink-3);
+  width: 16px;
+}
+.ms-search__input {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  border: 0;
+  background: none;
+  outline: none;
+}
+.ms-search__count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  padding-inline: 6px;
+}
+.ms-panes {
+  padding: 40px 24px 0;
+}
+.ms-pane--editor,
+.ms-pane--source {
+  display: none;
+}
+.ms-panes[data-view='source'] .ms-pane--preview {
+  display: none;
+}
+.ms-panes[data-view='source'] .ms-pane--source {
+  display: block;
+}
+.ms-panes[data-view='split'] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0;
+  padding: 0;
+  height: calc(100vh - var(--toolbar-h) - var(--status-h));
+}
+.ms-panes[data-view='split'] .ms-pane--editor {
+  display: block;
+  border-inline-end: 1px solid var(--rule);
+}
+.ms-panes[data-view='split'] .ms-pane--preview {
+  overflow: auto;
+  padding: 32px 20px 80px;
+}
+.ms-editor {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 28px 24px 80px;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: var(--paper-2);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  line-height: 1.7;
+  tab-size: 2;
+  white-space: pre-wrap;
+}
+.ms-source {
+  max-width: 120ch;
+  margin: 0 auto;
+  padding: 20px 22px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-m);
+  background: var(--code-bg);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.65;
+  overflow: auto;
+}
+.ms-source .hljs-section {
+  font-weight: 700;
+}
+.ms-flash {
+  animation: ms-flash 1.2s var(--ease);
+}
+@keyframes ms-flash {
+  0%,
+  40% {
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 6px var(--accent-soft);
+  }
+}
+
+/* Code block chrome */
+.ms-code__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 6px 0 12px;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.ms-code__lang {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.ms-code__spacer {
+  flex: 1;
+}
+.ms-code__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink-3);
+  font: inherit;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--dur-fast),
+    background var(--dur-fast),
+    color var(--dur-fast);
+}
+.ms-code:hover .ms-code__btn,
+.ms-code:focus-within .ms-code__btn,
+.ms-code__btn.is-done {
+  opacity: 1;
+}
+@media (hover: none) {
+  .ms-code__btn {
+    opacity: 1;
+  }
+}
+.ms-code__btn:hover {
+  background: var(--paper-3);
+  color: var(--ink);
+}
+.ms-code__btn.is-done {
+  color: var(--c-tip);
+}
+.ms-code__btn .ms-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* --------------------------------------------------------------- status */
+.ms-status {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  height: var(--status-h);
+  padding: 0 14px;
+  border-top: 1px solid var(--rule);
+  background: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.ms-status__live {
+  color: var(--c-tip);
+  font-weight: 600;
+}
+.ms-status__modified {
+  color: var(--c-warning);
+}
+
+/* ------------------------------------------------------------------ AI */
+.ms-ai {
+  position: sticky;
+  top: var(--toolbar-h);
+  display: flex;
+  flex-direction: column;
+  width: var(--ai-w);
+  height: calc(100vh - var(--toolbar-h) - var(--status-h));
+  border-inline-start: 1px solid var(--rule);
+  background: var(--paper-2);
+}
+.ms-ai__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px 10px 14px;
+  border-bottom: 1px solid var(--rule);
+}
+.ms-ai__head > .ms-icon {
+  color: var(--accent);
+}
+.ms-ai__head h2 {
+  margin: 0;
+  font-size: 14px;
+}
+.ms-ai__model {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ms-ai__quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--rule);
+}
+.ms-ai__log {
+  flex: 1;
+  overflow: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ms-ai__empty {
+  margin: auto;
+  text-align: center;
+  color: var(--ink-3);
+}
+.ms-ai__turn {
+  display: grid;
+  gap: 4px;
+}
+.ms-ai__role {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.ms-ai__turn--user .ms-ai__body {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  font-size: 13.5px;
+}
+.ms-ai__body.ms-doc {
+  --doc-font-size: 14px;
+  --doc-line-height: 1.55;
+  max-width: none;
+  padding: 0;
+  margin: 0;
+}
+.ms-ai__body.is-streaming::after {
+  content: '▍';
+  color: var(--accent);
+  animation: ms-blink 1s steps(2) infinite;
+}
+.ms-ai__body.is-error {
+  color: var(--danger);
+}
+@keyframes ms-blink {
+  50% {
+    opacity: 0;
+  }
+}
+.ms-ai__actions {
+  display: flex;
+  gap: 6px;
+}
+.ms-ai__notice {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.ms-ai__confirm {
+  padding: 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 10px;
+  background: var(--raised);
+}
+.ms-ai__confirm p {
+  margin: 0 0 10px;
+}
+.ms-ai__confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+.ms-ai__form {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  padding: 10px 14px 4px;
+  border-top: 1px solid var(--rule);
+}
+.ms-ai__input {
+  flex: 1;
+  min-height: 38px;
+  max-height: 160px;
+  padding: 9px 10px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 10px;
+  background: var(--raised);
+  resize: vertical;
+}
+.ms-ai__note {
+  margin: 0;
+  padding: 4px 14px 10px;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+/* -------------------------------------------------------------- dialogs */
+dialog.ms-palette,
+dialog.ms-help {
+  width: min(640px, calc(100vw - 32px));
+  max-height: min(70vh, 560px);
+  margin: 12vh auto auto;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  background: var(--raised);
+  color: var(--ink);
+  box-shadow: var(--shadow-2);
+}
+dialog[open].ms-palette,
+dialog[open].ms-help {
+  display: flex;
+  flex-direction: column;
+  animation: ms-pop var(--dur) var(--ease);
+}
+dialog::backdrop {
+  background: oklch(20% 0.02 265 / 0.32);
+  backdrop-filter: blur(2px);
+}
+.ms-palette__input {
+  height: 54px;
+  padding: 0 18px;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  background: none;
+  font-size: 16px;
+  outline: none;
+}
+.ms-palette__list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  overflow: auto;
+}
+.ms-palette__group {
+  padding: 10px 12px 4px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.ms-palette__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.ms-palette__label {
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ms-palette__item[aria-selected='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.ms-palette__item[aria-selected='true'] kbd {
+  background: transparent;
+  color: inherit;
+  border-color: color-mix(in oklch, var(--accent-ink) 40%, transparent);
+}
+.ms-palette__empty {
+  padding: 18px;
+  color: var(--ink-3);
+  text-align: center;
+}
+.ms-palette__foot {
+  display: flex;
+  gap: 16px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.ms-help header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px 10px 20px;
+  border-bottom: 1px solid var(--rule);
+}
+.ms-help h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.ms-help dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 18px;
+  margin: 0;
+  padding: 16px 20px 20px;
+  overflow: auto;
+}
+.ms-help dt {
+  display: flex;
+  gap: 4px;
+}
+.ms-help dd {
+  margin: 0;
+  color: var(--ink-2);
+}
+dialog.ms-lightbox {
+  max-width: 96vw;
+  max-height: 96vh;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-out;
+}
+dialog.ms-lightbox::backdrop {
+  background: oklch(10% 0.01 265 / 0.86);
+}
+dialog.ms-lightbox img {
+  display: block;
+  max-width: 96vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.ms-lightbox__caption {
+  margin: 8px 0 0;
+  color: white;
+  text-align: center;
+  font-size: 13px;
+}
+
+.ms-toasts {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--status-h) + 16px);
+  z-index: 60;
+  display: grid;
+  gap: 8px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.ms-toast {
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 13px;
+  box-shadow: var(--shadow-2);
+  animation: ms-pop var(--dur) var(--ease);
+  transition:
+    opacity var(--dur),
+    transform var(--dur);
+}
+.ms-toast--error {
+  background: var(--danger);
+  color: white;
+}
+.ms-toast.is-leaving {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+/* ---------------------------------------------------------------- home */
+.ms-home {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: clamp(32px, 5vw, 80px);
+  max-width: 1180px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: clamp(32px, 7vh, 96px) clamp(16px, 4vw, 48px);
+}
+.ms-eyebrow {
+  margin: 0 0 18px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.ms-home h1 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(36px, 4.4vw, 58px);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.ms-home__lede {
+  max-width: 52ch;
+  margin: 18px 0 26px;
+  font-size: 16.5px;
+  color: var(--ink-2);
+}
+.ms-callout {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-inline-start: 3px solid var(--accent);
+  border-radius: 8px;
+  background: var(--paper-2);
+}
+.ms-callout--warn {
+  border-inline-start-color: var(--c-warning);
+}
+.ms-dropzone {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 22px;
+  border: 1.5px dashed var(--rule-strong);
+  border-radius: var(--radius-l);
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 0 10px,
+    color-mix(in oklch, var(--paper-3) 45%, transparent) 10px 11px
+  );
+  color: var(--ink-2);
+  transition:
+    border-color var(--dur),
+    background var(--dur),
+    transform var(--dur) var(--ease);
+}
+.ms-dropzone p {
+  margin: 0;
+}
+.ms-dropzone .ms-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--accent);
+}
+body.is-dragging .ms-dropzone {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  transform: scale(1.01);
+}
+body.is-dragging[data-mode='document']::after {
+  content: 'Drop to open';
+  position: fixed;
+  inset: 12px;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--accent);
+  border-radius: 20px;
+  background: color-mix(in oklch, var(--paper) 85%, transparent);
+  font-size: 22px;
+  font-weight: 650;
+  color: var(--accent);
+}
+.ms-home-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+.ms-home-action {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-content: start;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: var(--raised);
+  text-align: start;
+  cursor: pointer;
+  position: relative;
+  transition:
+    border-color var(--dur-fast),
+    box-shadow var(--dur),
+    transform var(--dur) var(--ease);
+}
+.ms-home-action:hover {
+  border-color: var(--rule-strong);
+  box-shadow: var(--shadow-1);
+  transform: translateY(-1px);
+}
+.ms-home-action__icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.ms-home-action__text {
+  display: grid;
+  gap: 2px;
+}
+.ms-home-action__text small {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.ms-home-action kbd {
+  grid-column: 2;
+  justify-self: start;
+}
+.ms-url-form {
+  display: flex;
+  gap: 8px;
+}
+.ms-url-form input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 10px;
+  background: var(--raised);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+.ms-url-form .ms-btn {
+  min-height: 40px;
+}
+.ms-home__hint {
+  margin-top: 20px;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+.ms-home__library {
+  padding: 22px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-l);
+  background: var(--paper-2);
+  align-self: start;
+}
+.ms-home__library .ms-section-label:not(:first-child) {
+  margin-top: 26px;
+}
+.ms-doc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ms-doc-list li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid var(--rule);
+}
+.ms-doc-list li:last-child {
+  border-bottom: 0;
+}
+.ms-doc-list__link {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  padding: 9px 4px;
+  color: inherit;
+  text-decoration: none;
+}
+.ms-doc-list__link:hover .ms-doc-list__title {
+  color: var(--accent);
+}
+.ms-doc-list__title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ms-doc-list__detail {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ms-doc-list__time {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.ms-doc-list .ms-icon-btn {
+  width: 28px;
+  height: 28px;
+}
+.ms-doc-list .ms-icon-btn .ms-icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* --------------------------------------------------------- focus / zen */
+body.zen .ms-toolbar,
+body.zen .ms-status,
+body.zen .ms-sidebar-slot,
+body.zen .ms-ai-slot {
+  display: none;
+}
+body.zen .ms-shell {
+  grid-template-columns: 0 minmax(0, 1fr) 0;
+}
+body.zen .ms-panes {
+  padding-top: 10vh;
+}
+
+/* ----------------------------------------------------------- responsive */
+@media (max-width: 1100px) {
+  :root {
+    --sidebar-w: 248px;
+    --ai-w: 360px;
+  }
+  .ms-palette-btn span,
+  .ms-palette-btn kbd {
+    display: none;
+  }
+}
+@media (max-width: 900px) {
+  .ms-shell,
+  body.sidebar-hidden .ms-shell,
+  body.ai-open .ms-shell,
+  body.sidebar-hidden.ai-open .ms-shell {
+    grid-template-columns: 0 minmax(0, 1fr) 0;
+  }
+  .ms-sidebar-slot,
+  .ms-ai-slot {
+    overflow: visible;
+  }
+  .ms-sidebar {
+    position: fixed;
+    top: var(--toolbar-h);
+    left: 0;
+    z-index: 25;
+    box-shadow: var(--shadow-2);
+    transform: translateX(-105%);
+    transition: transform var(--dur) var(--ease);
+  }
+  body.sidebar-open .ms-sidebar {
+    transform: none;
+  }
+  .ms-ai {
+    position: fixed;
+    top: var(--toolbar-h);
+    right: 0;
+    z-index: 25;
+    width: min(100vw, var(--ai-w));
+    box-shadow: var(--shadow-2);
+  }
+  .ms-home {
+    grid-template-columns: 1fr;
+  }
+  .ms-panes[data-view='split'] {
+    grid-template-columns: 1fr;
+    grid-template-rows: 40% 60%;
+  }
+}
+@media (max-width: 640px) {
+  .ms-seg__btn span,
+  .ms-subtitle,
+  .ms-palette-btn {
+    display: none;
+  }
+  .ms-seg__btn {
+    padding: 0 7px;
+  }
+  .ms-toolbar {
+    gap: 4px;
+    padding: 0 6px;
+  }
+  .ms-panes {
+    padding: 24px 0 0;
+  }
+  .ms-doc {
+    padding-inline: 16px;
+  }
+  .ms-home-actions {
+    grid-template-columns: 1fr;
+  }
+  .ms-status span:nth-child(n + 3):not(.ms-status__live) {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- print */
+@media print {
+  .ms-ui,
+  .ms-toolbar,
+  .ms-status,
+  .ms-sidebar-slot,
+  .ms-ai-slot,
+  .ms-anchor,
+  .ms-diagram__source {
+    display: none !important;
+  }
+  .ms-shell {
+    display: block;
+  }
+  .ms-panes,
+  .ms-main {
+    padding: 0;
+  }
+  .ms-pane--editor,
+  .ms-pane--source {
+    display: none !important;
+  }
+  .ms-pane--preview {
+    display: block !important;
+  }
+  .ms-doc {
+    max-width: none;
+    font-size: 11pt;
+  }
+  .ms-doc pre,
+  .ms-code pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .ms-doc :is(pre, table, figure, .ms-diagram, .markdown-alert, img) {
+    break-inside: avoid;
+  }
+  .ms-doc :is(h1, h2, h3, h4) {
+    break-after: avoid;
+  }
+  .ms-doc.is-large > * {
+    content-visibility: visible;
+  }
+}

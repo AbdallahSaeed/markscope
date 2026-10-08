@@ -1,0 +1,128 @@
+@import './base.css';
+
+body {
+  width: 360px;
+  max-height: 600px;
+  background: var(--paper);
+}
+#ms-popup {
+  display: grid;
+  gap: 12px;
+  padding: 12px 14px 14px;
+}
+.ms-pop-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ms-wordmark {
+  flex: 1;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.ms-card {
+  padding: 14px;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: var(--raised);
+  box-shadow: var(--shadow-1);
+}
+.ms-card h2 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+.ms-card p {
+  margin: 0 0 12px;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.ms-card .ms-btn {
+  width: 100%;
+}
+.ms-card__status:empty {
+  display: none;
+}
+.ms-card__status {
+  margin: 8px 0 0 !important;
+  color: var(--danger) !important;
+}
+.ms-warn {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border-inline-start: 3px solid var(--c-warning);
+  background: var(--paper-2);
+  font-size: 12.5px;
+}
+.ms-group {
+  display: grid;
+  gap: 2px;
+}
+.ms-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 2px;
+  border-bottom: 1px solid var(--rule);
+  cursor: pointer;
+}
+.ms-row:last-child {
+  border-bottom: 0;
+}
+.ms-row__text {
+  display: grid;
+}
+.ms-row__text strong {
+  font-weight: 600;
+}
+.ms-row__text small {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.ms-row .ms-seg__btn span {
+  display: none;
+}
+.ms-recents {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ms-recent {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  text-align: start;
+  cursor: pointer;
+}
+.ms-recent:hover {
+  background: var(--paper-3);
+}
+.ms-recent .ms-icon {
+  width: 15px;
+  height: 15px;
+  color: var(--ink-3);
+}
+.ms-recent__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 550;
+}
+.ms-recent__time {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.ms-pop-foot {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}

@@ -1,0 +1,61 @@
+{
+  "name": "markscope",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A secure, developer-grade Markdown viewer for the browser.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node scripts/build.mjs --watch",
+    "build": "node scripts/build.mjs",
+    "build:firefox": "node scripts/build.mjs --target=firefox",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "release": "npm run typecheck && npm test && node scripts/build.mjs && node scripts/build.mjs --target=firefox && node scripts/package.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.132.1",
+    "@mdit/plugin-alert": "^2.0.2",
+    "@mdit/plugin-katex-slim": "^1.1.3",
+    "@mdit/plugin-tasklist": "^1.1.3",
+    "@viz-js/viz": "^3.31.0",
+    "dompurify": "^3.4.16",
+    "highlight.js": "^11.12.0",
+    "katex": "^0.18.10",
+    "markdown-it": "^15.0.2",
+    "markdown-it-abbr": "^2.0.0",
+    "markdown-it-container": "^4.0.0",
+    "markdown-it-deflist": "^4.0.0",
+    "markdown-it-emoji": "^3.1.0",
+    "markdown-it-footnote": "^4.0.0",
+    "markdown-it-ins": "^4.0.0",
+    "markdown-it-mark": "^4.0.0",
+    "markdown-it-sub": "^2.0.0",
+    "markdown-it-sup": "^2.0.0",
+    "mermaid": "^12.1.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "@types/chrome": "^0.3.4",
+    "@types/node": "^26.6.4",
+    "@vitest/coverage-v8": "^4.1.11",
+    "esbuild": "^0.28.2",
+    "fflate": "^0.8.3",
+    "jsdom": "^29.1.1",
+    "prettier": "^3.9.9",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "mermaid": {
+      "katex": "$katex"
+    }
+  }
+}

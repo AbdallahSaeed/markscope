@@ -1,0 +1,6 @@
+{
+  "extName": { "message": "Markscope — Markdown Reader for Developers" },
+  "extDescription": {
+    "message": "Fast, secure Markdown viewer: GFM, Mermaid, math, outline, search, live reload, document doctor and optional AI."
+  }
+}

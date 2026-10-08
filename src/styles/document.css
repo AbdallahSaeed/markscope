@@ -1,0 +1,534 @@
+/*
+ * Document typography — used by the viewer AND inlined into HTML exports,
+ * so it must not depend on viewer chrome.
+ */
+@import './tokens.css';
+
+.ms-doc {
+  font-family: var(--doc-font);
+  font-size: var(--doc-font-size);
+  line-height: var(--doc-line-height);
+  color: var(--ink);
+  max-width: var(--doc-width);
+  /* content-box + padding keeps the § anchors visible despite paint containment */
+  box-sizing: content-box;
+  padding-inline: 1.6em;
+  margin-inline: auto;
+  overflow-wrap: break-word;
+  font-kerning: normal;
+  text-rendering: optimizeLegibility;
+  /* Contain fixed/absolute positioning from document HTML inside the article. */
+  contain: layout paint;
+  isolation: isolate;
+}
+.ms-doc > :first-child {
+  margin-top: 0;
+}
+.ms-doc.is-large > * {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 3lh;
+}
+
+.ms-doc
+  :is(
+    p,
+    ul,
+    ol,
+    dl,
+    blockquote,
+    table,
+    pre,
+    details,
+    figure,
+    .ms-code,
+    .ms-diagram,
+    .markdown-alert,
+    .ms-table-wrap
+  ) {
+  margin-block: 0 1.05em;
+}
+
+.ms-doc :is(h1, h2, h3, h4, h5, h6) {
+  position: relative;
+  line-height: 1.22;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  margin: 1.9em 0 0.6em;
+  scroll-margin-top: 72px;
+  text-wrap: balance;
+}
+.ms-doc h1 {
+  font-family: var(--font-serif);
+  font-size: 2.35em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-top: 0.4em;
+}
+.ms-doc h2 {
+  font-size: 1.55em;
+  padding-bottom: 0.32em;
+  border-bottom: 1px solid var(--rule);
+}
+.ms-doc h3 {
+  font-size: 1.22em;
+}
+.ms-doc h4 {
+  font-size: 1.04em;
+}
+.ms-doc :is(h5, h6) {
+  font-size: 0.82em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+}
+
+.ms-anchor {
+  position: absolute;
+  inset-inline-start: -1.15em;
+  width: 1em;
+  text-align: center;
+  font-family: var(--font-serif);
+  font-weight: 400;
+  color: var(--ink-3);
+  text-decoration: none;
+  opacity: 0;
+  transition:
+    opacity var(--dur-fast) var(--ease),
+    color var(--dur-fast);
+}
+:is(h1, h2, h3, h4, h5, h6):hover > .ms-anchor,
+.ms-anchor:focus-visible {
+  opacity: 1;
+}
+.ms-anchor:hover {
+  color: var(--accent);
+}
+
+.ms-doc a {
+  color: var(--accent);
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in oklch, var(--accent) 35%, transparent);
+  text-underline-offset: 0.18em;
+  transition: text-decoration-color var(--dur-fast);
+}
+.ms-doc a:hover {
+  text-decoration-color: currentColor;
+}
+.ms-doc a.ms-link-invalid {
+  color: var(--ink-3);
+  text-decoration-style: dashed;
+  cursor: not-allowed;
+}
+
+.ms-doc strong {
+  font-weight: 650;
+}
+.ms-doc :is(ul, ol) {
+  padding-inline-start: 1.6em;
+}
+.ms-doc li + li {
+  margin-top: 0.25em;
+}
+.ms-doc li > :is(ul, ol) {
+  margin-block: 0.25em 0;
+}
+.ms-doc li::marker {
+  color: var(--ink-3);
+}
+.ms-doc .task-list-container {
+  list-style: none;
+  padding-inline-start: 0.4em;
+}
+.ms-doc .task-list-item-checkbox {
+  margin: 0 0.5em 0 0;
+  accent-color: var(--accent);
+  vertical-align: -0.1em;
+}
+
+.ms-doc blockquote {
+  margin-inline: 0;
+  padding: 0.1em 1.1em;
+  border-inline-start: 3px solid var(--rule-strong);
+  color: var(--ink-2);
+}
+.ms-doc hr {
+  border: 0;
+  height: 1px;
+  background: var(--rule);
+  margin: 2.4em 0;
+}
+.ms-doc img,
+.ms-doc video {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-s);
+}
+.ms-doc img {
+  cursor: zoom-in;
+}
+.ms-doc a img {
+  cursor: pointer;
+}
+.ms-doc mark {
+  background: var(--mark);
+  color: inherit;
+  padding: 0 0.15em;
+  border-radius: 3px;
+}
+.ms-doc ins {
+  text-decoration-color: var(--c-tip);
+}
+.ms-doc abbr[title] {
+  text-decoration: underline dotted;
+  cursor: help;
+}
+.ms-doc kbd {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  padding: 0.12em 0.42em;
+  border: 1px solid var(--rule-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--raised);
+}
+.ms-doc dt {
+  font-weight: 650;
+}
+.ms-doc dd {
+  margin-inline-start: 1.4em;
+  color: var(--ink-2);
+}
+
+/* Inline code */
+.ms-doc :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  padding: 0.12em 0.36em;
+  border-radius: 5px;
+  background: var(--code-bg);
+  border: 1px solid var(--rule);
+  color: var(--code-ink);
+  overflow-wrap: anywhere;
+}
+
+/* Code blocks */
+.ms-code {
+  position: relative;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-m);
+  background: var(--code-bg);
+  overflow: hidden;
+}
+.ms-code pre,
+.ms-doc pre {
+  margin: 0;
+  padding: 0.9em 1.1em;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 0.84em;
+  line-height: 1.6;
+  tab-size: 2;
+  color: var(--code-ink);
+}
+.ms-doc > pre {
+  background: var(--code-bg);
+  border-radius: var(--radius-m);
+  border: 1px solid var(--rule);
+}
+.ms-code pre.is-wrapped {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+pre.has-gutter {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 1em;
+}
+.ms-gutter {
+  text-align: right;
+  color: var(--ink-3);
+  opacity: 0.6;
+  user-select: none;
+  white-space: pre;
+  border-inline-end: 1px solid var(--rule);
+  padding-inline-end: 0.8em;
+}
+
+/* Callouts: GitHub alerts and ::: containers share one style */
+.markdown-alert {
+  --c: var(--c-note);
+  padding: 0.75em 1.1em 0.15em;
+  border: 1px solid color-mix(in oklch, var(--c) 28%, transparent);
+  border-inline-start: 3px solid var(--c);
+  border-radius: var(--radius-s) var(--radius-m) var(--radius-m) var(--radius-s);
+  background: color-mix(in oklch, var(--c) 7%, var(--paper));
+}
+.markdown-alert-tip {
+  --c: var(--c-tip);
+}
+.markdown-alert-important {
+  --c: var(--c-important);
+}
+.markdown-alert-warning {
+  --c: var(--c-warning);
+}
+.markdown-alert-caution {
+  --c: var(--c-caution);
+}
+.markdown-alert-title {
+  font-family: var(--font-mono);
+  font-size: 0.74em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c);
+  margin: 0 0 0.35em !important;
+}
+
+/* Tables */
+.ms-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-m);
+}
+.ms-doc table {
+  border-collapse: collapse;
+  width: max-content;
+  min-width: 100%;
+  font-size: 0.92em;
+  font-variant-numeric: tabular-nums;
+}
+.ms-table-wrap table {
+  margin: 0;
+}
+.ms-doc :is(th, td) {
+  padding: 0.5em 0.85em;
+  border-bottom: 1px solid var(--rule);
+  text-align: start;
+  vertical-align: top;
+}
+.ms-doc th {
+  background: var(--paper-2);
+  font-weight: 650;
+  font-size: 0.94em;
+}
+.ms-doc tbody tr:last-child > * {
+  border-bottom: 0;
+}
+.ms-doc tbody tr:hover {
+  background: color-mix(in oklch, var(--paper-3) 50%, transparent);
+}
+
+/* Details, front matter, inline TOC */
+.ms-doc details {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-m);
+  padding: 0.5em 1em;
+}
+.ms-doc summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.ms-doc details[open] > summary {
+  margin-bottom: 0.5em;
+}
+.ms-frontmatter {
+  font-size: 0.86em;
+  background: var(--paper-2);
+}
+.ms-frontmatter summary {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.ms-frontmatter table {
+  width: 100%;
+}
+.ms-frontmatter th {
+  background: none;
+  font-family: var(--font-mono);
+  width: 1%;
+  white-space: nowrap;
+}
+.ms-toc-inline {
+  border-inline-start: 2px solid var(--accent);
+  padding: 0.3em 1em;
+  background: var(--paper-2);
+  border-radius: 0 var(--radius-m) var(--radius-m) 0;
+}
+.ms-toc-inline__title {
+  font-family: var(--font-mono);
+  font-size: 0.74em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0.4em 0 !important;
+}
+.ms-toc-inline ul {
+  list-style: none;
+  padding: 0;
+}
+.ms-toc-l2 {
+  padding-inline-start: 1em;
+}
+.ms-toc-l3 {
+  padding-inline-start: 2em;
+}
+.ms-toc-l4 {
+  padding-inline-start: 3em;
+}
+
+/* Footnotes */
+.ms-doc .footnotes-sep {
+  margin-top: 3em;
+}
+.ms-doc .footnotes {
+  font-size: 0.88em;
+  color: var(--ink-2);
+}
+.ms-doc .footnote-ref a {
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* Diagrams */
+.ms-diagram {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-m);
+  padding: 1em;
+  background: var(--raised);
+  overflow-x: auto;
+  text-align: center;
+}
+.ms-diagram[data-state='ready'] .ms-diagram__source {
+  display: none;
+}
+.ms-diagram:not([data-state='ready']) .ms-diagram__source {
+  text-align: start;
+}
+.ms-diagram__figure svg {
+  max-width: 100%;
+  height: auto;
+}
+.ms-diagram__error {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  color: var(--danger);
+  text-align: start;
+  margin: 0.6em 0 0;
+}
+
+.ms-broken-image,
+.ms-blocked-image {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.6em 0.9em;
+  border: 1px dashed var(--rule-strong);
+  border-radius: var(--radius-s);
+  color: var(--ink-3);
+  font-size: 0.86em;
+  background: var(--paper-2);
+}
+.ms-blocked-image {
+  font: inherit;
+  font-size: 0.86em;
+  cursor: pointer;
+  flex-wrap: wrap;
+}
+.ms-blocked-image:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.ms-broken-image .ms-icon,
+.ms-blocked-image .ms-icon {
+  width: 1.1em;
+  height: 1.1em;
+}
+
+/* KaTeX display math scrolls instead of overflowing. */
+.ms-doc .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.2em;
+}
+
+/* Syntax highlighting (highlight.js classes) driven by tokens. */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in,
+.hljs-doctag,
+.hljs-section,
+.hljs-literal {
+  color: var(--hl-keyword);
+}
+.hljs-string,
+.hljs-regexp,
+.hljs-addition,
+.hljs-template-tag,
+.hljs-template-variable {
+  color: var(--hl-string);
+}
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-variable.constant_ {
+  color: var(--hl-number);
+}
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.function_,
+.hljs-name {
+  color: var(--hl-title);
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-property,
+.hljs-type,
+.hljs-params,
+.hljs-selector-class,
+.hljs-selector-id {
+  color: var(--hl-attr);
+}
+.hljs-comment,
+.hljs-quote {
+  color: var(--hl-comment);
+  font-style: italic;
+}
+.hljs-meta,
+.hljs-link,
+.hljs-deletion {
+  color: var(--hl-meta);
+}
+.hljs-emphasis {
+  font-style: italic;
+}
+.hljs-strong {
+  font-weight: 700;
+}
+
+::highlight(ms-search) {
+  background-color: var(--mark);
+  color: var(--ink);
+}
+::highlight(ms-search-current) {
+  background-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Standalone HTML export */
+body.ms-export {
+  margin: 0;
+  padding: 48px 20px 80px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.ms-export__footer {
+  max-width: var(--doc-width);
+  margin: 4em auto 0;
+  font: 12px var(--font-mono);
+  color: var(--ink-3);
+}
