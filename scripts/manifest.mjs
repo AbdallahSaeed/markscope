@@ -58,7 +58,16 @@ export function createManifest({ version, target }) {
   if (target === 'firefox') {
     manifest.background = { scripts: ['js/background.js'], type: 'module' }
     manifest.browser_specific_settings = {
-      gecko: { id: 'markscope@markscope.dev', strict_min_version: '128.0' },
+      gecko: {
+        id: 'markscope@markscope.dev',
+        // data_collection_permissions is understood from Firefox 140.
+        strict_min_version: '140.0',
+        // Nothing is collected. The optional AI assistant sends document text
+        // to the user's own provider, so it asks for this at runtime.
+        data_collection_permissions: { required: ['none'], optional: ['websiteContent'] },
+      },
+      // Same key on Android is understood from 142.
+      gecko_android: { strict_min_version: '142.0' },
     }
     delete manifest.minimum_chrome_version
     delete manifest.web_accessible_resources

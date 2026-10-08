@@ -22,6 +22,13 @@ npx prettier --write …   # semi:false, singleQuote, printWidth 90
 
 E2E always runs against `dist/chrome`: rebuild before `npm run test:e2e`.
 
+GitHub: <https://github.com/AbdallahSaeed/markscope>. Website: <https://abdallahsaeed.github.io/markscope/>, built by `scripts/build-site.mjs` from `site/` + `docs/PRIVACY.md` + store screenshots.
+
+Workflows in `.github/workflows/`:
+- `ci.yml`: typecheck, prettier, coverage, both builds, `web-ext lint`, E2E.
+- `pages.yml`: deploys the website.
+- `release.yml`: on tag `vX.Y.Z` (must equal `package.json` version), creates the GitHub Release with the zips and a source zip. The store jobs run only if `CHROME_*` / `AMO_*` secrets exist.
+
 ## Architecture (where things live)
 
 | Context | Entry | Notes |

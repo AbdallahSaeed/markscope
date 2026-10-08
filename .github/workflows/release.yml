@@ -1,0 +1,90 @@
+name: Release
+
+# Push a tag like v1.0.0 (matching package.json "version") to build, test and
+# publish a GitHub Release with the Chrome and Firefox zips. Store uploads run
+# only when their secrets are configured (see docs/PUBLISHING.md).
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - id: meta
+        name: Check tag matches package.json
+        run: |
+          version=$(node -p "require('./package.json').version")
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "Tag $GITHUB_REF_NAME != v$version"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - run: npm run release
+      - name: Source archive for Mozilla review
+        run: git archive --format=zip -o "release/markscope-${{ steps.meta.outputs.version }}-source.zip" HEAD
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" release/*.zip release/SHA256SUMS.txt \
+            --title "Markscope $GITHUB_REF_NAME" \
+            --notes "See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/$GITHUB_REF_NAME/CHANGELOG.md). Install: unzip markscope-*-chrome.zip and use **Load unpacked** at chrome://extensions, or install from the stores once listed."
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: release
+
+  chrome-web-store:
+    needs: release
+    runs-on: ubuntu-latest
+    env:
+      EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+      CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+      CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+      REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+          path: release
+      - name: Upload and submit for review
+        if: env.EXTENSION_ID != '' && env.REFRESH_TOKEN != ''
+        run: npx --yes chrome-webstore-upload-cli@4.0.2 --source "release/markscope-${{ needs.release.outputs.version }}-chrome.zip" --auto-publish
+      - name: Skipped (no Chrome Web Store secrets)
+        if: env.EXTENSION_ID == '' || env.REFRESH_TOKEN == ''
+        run: echo "Configure CHROME_* secrets to publish automatically (docs/PUBLISHING.md)."
+
+  firefox-add-ons:
+    needs: release
+    runs-on: ubuntu-latest
+    env:
+      WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
+      WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.WEB_EXT_API_KEY != ''
+      - uses: actions/download-artifact@v4
+        if: env.WEB_EXT_API_KEY != ''
+        with:
+          name: release
+          path: release
+      - name: Sign and submit to addons.mozilla.org (listed)
+        if: env.WEB_EXT_API_KEY != ''
+        run: |
+          mkdir -p ff && cd ff && unzip -q "../release/markscope-${{ needs.release.outputs.version }}-firefox.zip" && cd ..
+          npx --yes web-ext@10.7.0 sign --source-dir ff --channel listed \
+            --upload-source-code "release/markscope-${{ needs.release.outputs.version }}-source.zip" \
+            --approval-timeout 0
+      - name: Skipped (no AMO secrets)
+        if: env.WEB_EXT_API_KEY == ''
+        run: echo "Configure AMO_JWT_ISSUER / AMO_JWT_SECRET secrets to publish automatically (docs/PUBLISHING.md)."

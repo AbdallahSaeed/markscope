@@ -2,6 +2,10 @@
 
 <h1 align="center">Markscope</h1>
 
+<p align="center"><a href="https://abdallahsaeed.github.io/markscope/">Website</a> · <a href="https://github.com/AbdallahSaeed/markscope/releases/latest">Download</a> · <a href="https://abdallahsaeed.github.io/markscope/privacy.html">Privacy</a> · <a href="CHANGELOG.md">Changelog</a></p>
+
+<p align="center"><a href="https://github.com/AbdallahSaeed/markscope/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/AbdallahSaeed/markscope/actions/workflows/ci.yml/badge.svg"></a> <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-4b5ff0"></a></p>
+
 <p align="center"><strong>A fast, secure Markdown reader for developers — right in your browser.</strong><br>
 Open any <code>.md</code> file, local or remote, and get an outline, search, diagrams, math, live reload and a documentation doctor. Optional, bring-your-own-key AI.</p>
 
@@ -63,11 +67,11 @@ Requests go straight from the extension's service worker to your provider. There
 
 ### From a store
 
-Store listings are being prepared (see [docs/PUBLISHING.md](docs/PUBLISHING.md)).
+Chrome Web Store and Firefox Add-ons listings are in review (see [docs/PUBLISHING.md](docs/PUBLISHING.md)). Until they are live, install from a release zip.
 
 ### From a release zip
 
-1. Download `markscope-<version>-chrome.zip` from the releases and unzip it.
+1. Download `markscope-<version>-chrome.zip` from the [latest release](https://github.com/AbdallahSaeed/markscope/releases/latest) and unzip it.
 2. Open `chrome://extensions` (or `edge://extensions`) and enable **Developer mode**.
 3. Click **Load unpacked** and select the unzipped folder.
 4. Optional, for local files: in the extension's **Details**, enable **Allow access to file URLs**.
@@ -180,7 +184,7 @@ npm run build:firefox    # dist/firefox (background.scripts variant)
 npm run release          # typecheck + tests + both builds + release/*.zip + SHA256SUMS.txt
 ```
 
-Release checklist: bump `version` in `package.json`, update `CHANGELOG.md`, run `npm run release` and `npm run test:e2e`, then upload the zips.
+Release checklist: bump `version` in `package.json`, update `CHANGELOG.md`, commit, then push a tag `vX.Y.Z`. The **Release** workflow tests and builds, creates the GitHub Release with the zips, and submits to the stores when their secrets are configured. The **Website** workflow deploys `site/` to GitHub Pages.
 
 ## Publishing
 

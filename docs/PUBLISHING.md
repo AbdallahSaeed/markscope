@@ -38,3 +38,31 @@ Versioning follows SemVer; `package.json` `version` is copied into the manifest.
 - [ ] Create a public Git remote (e.g. GitHub `markscope`) and push; tag `v1.0.0`.
 - [ ] Submit each listing and respond to reviewer questions.
 - [ ] Optional: reserve the `markscope` name and domain before announcing.
+
+
+## URLs for the store forms
+
+| Field | Value |
+| --- | --- |
+| Website / homepage | https://abdallahsaeed.github.io/markscope/ |
+| Privacy policy | https://abdallahsaeed.github.io/markscope/privacy.html |
+| Support | https://github.com/AbdallahSaeed/markscope/issues |
+| Source code (AMO) | https://github.com/AbdallahSaeed/markscope (or the `-source.zip` attached to each GitHub Release) |
+
+## Automated publishing (after the first manual submission)
+
+The **Release** workflow (`.github/workflows/release.yml`) runs on tags `v*`. It always creates a GitHub Release. Store jobs run only when these repository **secrets** exist (Settings → Secrets and variables → Actions). Never paste them into issues or chat.
+
+| Secret | Where to get it |
+| --- | --- |
+| `CHROME_EXTENSION_ID` | The item ID shown in the Chrome Web Store dashboard after the first manual upload |
+| `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET`, `CHROME_REFRESH_TOKEN` | A Google Cloud OAuth client with the Chrome Web Store API enabled ([guide](https://developer.chrome.com/docs/webstore/using-api)) |
+| `AMO_JWT_ISSUER`, `AMO_JWT_SECRET` | addons.mozilla.org → Tools → Manage API Keys |
+
+After a listing is approved, set the repository **variables** `CHROME_STORE_URL` and `FIREFOX_STORE_URL`. The website's install buttons then switch from the release zip to the store pages on the next deploy.
+
+## Notes for Mozilla reviewers
+
+- Bundled third-party libraries (Mermaid, DOMPurify, KaTeX, highlight.js, markdown-it, viz.js) trigger generic `innerHTML` / `Function` lint warnings. The extension CSP is `script-src 'self' 'wasm-unsafe-eval'` without `'unsafe-eval'`, so `eval`/`Function` cannot execute, and all document HTML is sanitized by DOMPurify before insertion.
+- Build from source: `npm ci && npm run build:firefox` → `dist/firefox` (Node 22).
+- `data_collection_permissions`: required `none`; optional `websiteContent`, requested at runtime only when the user enables the optional AI assistant (document text is sent only to the provider endpoint the user configures).

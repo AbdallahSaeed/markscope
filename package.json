@@ -4,6 +4,15 @@
   "private": true,
   "description": "A secure, developer-grade Markdown viewer for the browser.",
   "license": "MIT",
+  "author": "Abdallah Saeed",
+  "homepage": "https://abdallahsaeed.github.io/markscope/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AbdallahSaeed/markscope.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AbdallahSaeed/markscope/issues"
+  },
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -51,7 +60,8 @@
     "jsdom": "^29.1.1",
     "prettier": "^3.9.9",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "web-ext": "^10.7.0"
   },
   "overrides": {
     "mermaid": {

@@ -463,9 +463,16 @@ function aiSection(): HTMLElement {
   const ensureOrigin = async (): Promise<boolean> => {
     const origin = originPattern(settings.ai.baseUrl)
     if (!origin) return false
+    // Firefox requires an explicit data-collection grant before website
+    // content leaves the browser (declared optional in the manifest).
+    const isFirefox = navigator.userAgent.includes('Firefox/')
+    const wanted = (
+      isFirefox
+        ? { origins: [origin], data_collection: ['websiteContent'] }
+        : { origins: [origin] }
+    ) as chrome.permissions.Permissions
     return (
-      (await chrome.permissions.contains({ origins: [origin] })) ||
-      chrome.permissions.request({ origins: [origin] })
+      (await chrome.permissions.contains(wanted)) || chrome.permissions.request(wanted)
     )
   }
 

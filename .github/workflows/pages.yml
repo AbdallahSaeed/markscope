@@ -1,13 +1,9 @@
-name: Deploy site to GitHub Pages
+name: Website
 
 on:
   push:
     branches: [main]
-    paths:
-      - "site/**"
-      - "docs/store/screenshots/**"
-      - "src/icons/logo.svg"
-      - ".github/workflows/pages.yml"
+    paths: ['site/**', 'docs/PRIVACY.md', 'docs/store/screenshots/**', 'scripts/build-site.mjs', 'package.json']
   workflow_dispatch:
 
 permissions:
@@ -27,14 +23,17 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Assemble site
-        run: |
-          mkdir -p _site/assets/screenshots
-          cp site/*.html site/*.css _site/
-          cp src/icons/logo.svg _site/assets/
-          cp docs/store/screenshots/*.png _site/assets/screenshots/
-
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build site
+        run: node scripts/build-site.mjs
+        env:
+          # Set these repository variables once the store listings are live.
+          CHROME_STORE_URL: ${{ vars.CHROME_STORE_URL }}
+          FIREFOX_STORE_URL: ${{ vars.FIREFOX_STORE_URL }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

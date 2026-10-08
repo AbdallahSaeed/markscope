@@ -95,17 +95,17 @@ Support: open an issue in the project repository.
 - [x] Not used or transferred to determine creditworthiness or for lending
 
 ## Privacy Policy
-**Privacy Policy URL**: _TODO, publish `docs/PRIVACY.md` (for example via GitHub Pages) and paste the URL here_
+**Privacy Policy URL**: https://abdallahsaeed.github.io/markscope/privacy.html
 
 ## Distribution
 **Visibility**: Public
 **Regions**: All regions
 
 ## Developer Info
-**Publisher Name**: _TODO_
+**Publisher Name**: Abdallah Saeed
 **Contact Email**: _TODO (must be monitored)_
-**Support URL**: _TODO, repository issues URL_
-**Homepage URL**: _TODO, repository URL_
+**Support URL**: https://github.com/AbdallahSaeed/markscope/issues
+**Homepage URL**: https://abdallahsaeed.github.io/markscope/
 
 ## Version History
 | Version | Date | Summary |
