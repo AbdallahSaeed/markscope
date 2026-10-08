@@ -7,3 +7,4 @@ playwright-report/
 .e2e-profile/
 *.pem
 .DS_Store
+_site/

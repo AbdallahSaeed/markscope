@@ -1,0 +1,63 @@
+/* Markscope landing page design tokens. System faces only: the page makes no third-party requests. */
+
+:root {
+  --paper: oklch(98.4% 0.007 85);
+  --paper-2: oklch(95.6% 0.01 85);
+  --paper-3: oklch(92% 0.012 85);
+  --ink: oklch(23% 0.02 265);
+  --ink-2: oklch(42% 0.02 265);
+  --ink-3: oklch(58% 0.015 265);
+  --rule: oklch(88% 0.012 85);
+  --accent: oklch(52% 0.2 274);
+  --accent-hover: oklch(46% 0.2 274);
+  --accent-ink: oklch(99% 0 0);
+  --accent-soft: oklch(93% 0.04 274);
+  --amber: oklch(86% 0.14 85);
+  --amber-ink: oklch(48% 0.12 70);
+  --warn: oklch(72% 0.15 70);
+  --done: oklch(60% 0.15 155);
+  --code-bg: oklch(22% 0.02 265);
+  --code-ink: oklch(92% 0.01 265);
+  --shadow: 0 1px 2px oklch(20% 0.02 265 / 0.06), 0 12px 32px -12px oklch(20% 0.02 265 / 0.18);
+  --shadow-lift: 0 2px 4px oklch(20% 0.02 265 / 0.08), 0 24px 48px -16px oklch(20% 0.02 265 / 0.28);
+
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Charter, Georgia, ui-serif, serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+  --text-sm: 0.875rem;
+  --text-base: clamp(1rem, 0.96rem + 0.2vw, 1.0625rem);
+  --text-lg: clamp(1.125rem, 1.05rem + 0.35vw, 1.3rem);
+  --text-h2: clamp(1.75rem, 1.2rem + 2.2vw, 2.75rem);
+  --text-hero: clamp(2.75rem, 1.4rem + 6vw, 5.75rem);
+
+  --gutter: clamp(1rem, 0.5rem + 2.5vw, 2.5rem);
+  --space-section: clamp(4rem, 2.5rem + 6vw, 8.5rem);
+  --max: 72rem;
+  --radius-sm: 6px;
+  --radius: 12px;
+
+  --duration-fast: 150ms;
+  --duration-slow: 900ms;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: oklch(17.5% 0.015 265);
+    --paper-2: oklch(21% 0.018 265);
+    --paper-3: oklch(26% 0.02 265);
+    --ink: oklch(94% 0.008 85);
+    --ink-2: oklch(78% 0.012 265);
+    --ink-3: oklch(64% 0.015 265);
+    --rule: oklch(30% 0.02 265);
+    --accent: oklch(72% 0.15 274);
+    --accent-hover: oklch(78% 0.13 274);
+    --accent-ink: oklch(18% 0.03 274);
+    --accent-soft: oklch(30% 0.07 274);
+    --amber-ink: oklch(84% 0.13 85);
+    --code-bg: oklch(13% 0.015 265);
+    --shadow: 0 1px 2px oklch(0% 0 0 / 0.3), 0 12px 32px -12px oklch(0% 0 0 / 0.6);
+    --shadow-lift: 0 2px 4px oklch(0% 0 0 / 0.35), 0 24px 48px -16px oklch(0% 0 0 / 0.7);
+  }
+}
