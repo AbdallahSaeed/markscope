@@ -33,7 +33,7 @@ Developers read Markdown all day: READMEs, ADRs, runbooks, specs, changelogs. Br
 - **Live reload** with ETag/Last-Modified (304s), paused in background tabs, keeps your reading position
 - Drag and drop a file, or use **Open file** (⌘/Ctrl O). Picked files live-reload via the File System Access API
 - **Open folder** (⇧⌘/Ctrl⇧O, or drop a folder): browse a project's docs in a **Files** tab. Relative images and links work, navigation keeps your place with Back/Forward, and ⌘K searches every file in the folder. **Show all files** also lists non-Markdown files (shown, not openable). Dependency and hidden folders (`node_modules`, `.git`, …) are skipped
-- **Edit view** with live preview and scroll sync. **Save** (⌘/Ctrl S) writes back to files you opened or dropped. **Save as…** (⇧⌘/Ctrl⇧S) saves web, `file://` and scratch documents to a file of your choice, and later saves go there
+- **Edit view** with live preview and scroll sync. **Save** (⌘/Ctrl S) writes back to files you opened or dropped. **Save as…** (⇧⌘/Ctrl⇧S) saves web, `file://` and scratch documents to a file of your choice, and later saves go there. **Discard** reverts unsaved edits to the last saved version (with Undo)
 - **Source view** with line numbers, plus scratch documents that autosave in the browser
 - **Command palette** (⌘/Ctrl K) covering commands, headings and recent documents
 - **Find in document** (`/`), highlighted with the CSS Custom Highlight API

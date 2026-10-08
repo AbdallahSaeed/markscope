@@ -1594,3 +1594,16 @@ details[open] > .ms-files__dir::before {
 .ms-reconnect .ms-btn {
   font-size: 14px;
 }
+.ms-discard-btn {
+  margin-inline-end: 2px;
+  animation: ms-pop var(--dur) var(--ease);
+}
+.ms-discard-btn:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+@media (max-width: 640px) {
+  .ms-discard-btn {
+    padding: 0 8px;
+  }
+}

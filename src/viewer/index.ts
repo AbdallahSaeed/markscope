@@ -204,6 +204,7 @@ async function main(): Promise<void> {
   layout.paletteBtn.addEventListener('click', () => void app.palette.open())
   layout.favoriteBtn.addEventListener('click', () => void app.toggleFavorite())
   layout.saveBtn.addEventListener('click', () => void app.save())
+  layout.discardBtn.addEventListener('click', () => void app.discardChanges())
   layout.zenExit.addEventListener('click', () => app.toggleZen(false))
   for (const [mode, btn] of Object.entries(layout.modeButtons)) {
     btn.addEventListener('click', () => app.setView(mode as 'read' | 'split' | 'source'))

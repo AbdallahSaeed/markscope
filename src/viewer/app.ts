@@ -75,6 +75,13 @@ export class ViewerApp {
   readonly ai: AIPanel
   private renderer: RenderClient
   private watcher: Watcher | null = null
+  /** Text as last loaded or saved: what Discard reverts to. */
+  private savedSource = ''
+  /** Debounced editor → document sync; Discard cancels a pending run. */
+  private readonly pendingEdit = debounce(
+    () => void this.onEdit().catch(e => toast(errorMessage(e), 'error')),
+    160,
+  )
   private watcherInterval = 0
   private validators: Validators | null = null
   private renderSeq = 0
@@ -137,10 +144,7 @@ export class ViewerApp {
       () => this.closeAI(),
     )
     this.layout.aiSlot.append(this.ai.el)
-    this.layout.editor.addEventListener(
-      'input',
-      debounce(() => void this.onEdit().catch(e => toast(errorMessage(e), 'error')), 160),
-    )
+    this.layout.editor.addEventListener('input', this.pendingEdit)
     window.addEventListener('beforeunload', e => {
       if (this.modified && !this.doc?.scratch) e.preventDefault()
     })
@@ -205,6 +209,7 @@ export class ViewerApp {
 
   async openDocument(doc: LoadedDoc): Promise<void> {
     this.doc = doc
+    this.savedSource = doc.source
     this.validators = null
     this.modified = false
     hideBanner(this.layout)
@@ -240,6 +245,7 @@ export class ViewerApp {
     this.layout.subtitle.title = doc.sourceUrl ?? ''
     document.title = `${doc.title}${this.modified ? ' •' : ''} · Markscope`
     this.layout.saveBtn.hidden = !this.modified
+    this.layout.discardBtn.hidden = !this.modified
     void this.refreshFavorite()
   }
 
@@ -418,6 +424,7 @@ export class ViewerApp {
 
   private async applyExternalChange(text: string, lastModified?: number): Promise<void> {
     if (!this.doc) return
+    this.savedSource = text
     this.doc = {
       ...this.doc,
       source: text,
@@ -540,11 +547,45 @@ export class ViewerApp {
 
   /** Called after a successful write: clears the dirty state everywhere. */
   markSaved(): void {
+    this.savedSource = this.doc?.source ?? ''
     this.modified = false
     hideBanner(this.layout)
     this.updateHeader()
     this.updateStatus()
     this.configureWatcher()
+  }
+
+  /**
+   * Discard (revert to the last saved version). Acts immediately but offers
+   * Undo, so a misclick never loses work.
+   */
+  async discardChanges(): Promise<void> {
+    const doc = this.doc
+    if (!doc) return
+    this.pendingEdit.cancel()
+    const edited = this.layout.editor.value
+    if (!this.modified && edited === this.savedSource) return
+    this.doc = { ...doc, source: this.savedSource }
+    this.layout.editor.value = this.savedSource
+    this.modified = false
+    this.updateHeader()
+    this.configureWatcher()
+    await this.render({ preserveScroll: true })
+    showBanner(this.layout, 'Edits discarded — reverted to the last saved version.', {
+      label: 'Undo',
+      run: () => void this.restoreEdits(edited),
+    })
+  }
+
+  private async restoreEdits(text: string): Promise<void> {
+    if (!this.doc) return
+    this.doc = { ...this.doc, source: text }
+    this.layout.editor.value = text
+    this.modified = text !== this.savedSource
+    hideBanner(this.layout)
+    this.updateHeader()
+    this.configureWatcher()
+    await this.render({ preserveScroll: true })
   }
 
   // ------------------------------------------------------------------ editing

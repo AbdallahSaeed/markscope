@@ -129,3 +129,48 @@ test('save: scratch documents autosave and offer "Save as" for a real file', asy
   await page.keyboard.press('Control+Shift+s')
   await expect.poll(() => writes(page)).toEqual(['# Scratch'])
 })
+
+test('discard: reverts unsaved edits, offers Undo, and respects the last save', async ({
+  context,
+  server,
+}) => {
+  const page = await openMarkdown(context, `${server.url}/guide.md`)
+  await installFakeFileSystem(page)
+  await page.locator('[data-mode="split"]').click()
+  const editor = page.locator('.ms-editor')
+  const discard = page.getByRole('button', { name: 'Discard', exact: true })
+  await expect(discard).toBeHidden()
+
+  // Edit, then discard → back to the original document.
+  await editor.fill('# Scribbles')
+  await expect(page.locator('.ms-doc h1')).toHaveText(/Scribbles/)
+  await expect(discard).toBeVisible()
+  await discard.click()
+  await expect(page.locator('.ms-doc h1')).toHaveText(/Guide/)
+  await expect(editor).toHaveValue(/^# Guide/)
+  await expect(discard).toBeHidden()
+  await expect(page.locator('.ms-save-btn')).toBeHidden()
+  await expect(page.locator('.ms-status__modified')).toBeHidden()
+  await expect(page).not.toHaveTitle(/•/)
+
+  // Undo brings the edits back (still unsaved).
+  await page.locator('.ms-banner').getByRole('button', { name: 'Undo' }).click()
+  await expect(page.locator('.ms-doc h1')).toHaveText(/Scribbles/)
+  await expect(editor).toHaveValue('# Scribbles')
+  await expect(discard).toBeVisible()
+
+  // Save, edit again, discard → reverts to the SAVED text, not the original.
+  await page.keyboard.press('Control+s')
+  await expect.poll(() => writes(page)).toEqual(['# Scribbles'])
+  await editor.fill('# Second draft')
+  await discard.click()
+  await expect(editor).toHaveValue('# Scribbles')
+  await expect(page.locator('.ms-doc h1')).toHaveText(/Scribbles/)
+
+  // Typing then discarding immediately (inside the editor's debounce) sticks.
+  await editor.pressSequentially('!!', { delay: 0 })
+  await discard.click()
+  await page.waitForTimeout(400)
+  await expect(editor).toHaveValue('# Scribbles')
+  await expect(discard).toBeHidden()
+})

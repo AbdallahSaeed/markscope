@@ -13,6 +13,7 @@ export interface Layout {
   subtitle: HTMLElement
   favoriteBtn: HTMLButtonElement
   saveBtn: HTMLButtonElement
+  discardBtn: HTMLButtonElement
   modeButtons: Record<ViewMode, HTMLButtonElement>
   searchBtn: HTMLButtonElement
   aiBtn: HTMLButtonElement
@@ -61,6 +62,13 @@ export function buildLayout(mount: HTMLElement): Layout {
     hidden: true,
   })
   saveBtn.textContent = 'Save'
+  const discardBtn = h('button', {
+    type: 'button',
+    class: 'ms-btn ms-btn--small ms-discard-btn',
+    title: 'Discard unsaved edits (revert to the last saved version)',
+    hidden: true,
+  })
+  discardBtn.textContent = 'Discard'
 
   const mode = (id: ViewMode, label: string, ico: readonly string[], key: string) =>
     h(
@@ -100,6 +108,7 @@ export function buildLayout(mount: HTMLElement): Layout {
     homeBtn,
     h('div', { class: 'ms-titles' }, title, subtitle),
     favoriteBtn,
+    discardBtn,
     saveBtn,
     h(
       'div',
@@ -175,6 +184,7 @@ export function buildLayout(mount: HTMLElement): Layout {
     subtitle,
     favoriteBtn,
     saveBtn,
+    discardBtn,
     modeButtons,
     searchBtn,
     aiBtn,

@@ -11,6 +11,7 @@ First release of Markscope.
 - Live reload with conditional requests and backoff.
 - Document doctor and statistics.
 - Save (⌘/Ctrl S) back to opened/dropped files and Save as… for web, `file://` and scratch documents; the Save button appears only with unsaved edits.
+- **Discard** (toolbar button, ⋯ menu, command palette) reverts unsaved edits to the last saved version, with an Undo banner.
 - Live reload of local files pauses with a Reconnect prompt when Chrome drops file permission after a reload (no more `getFile` errors).
 - **Open folder** (⇧⌘/Ctrl⇧O, start page, or drop a folder): Files tab with the folder's Markdown tree, relative images and links that work, in-place navigation with Back/Forward, folder-wide file search in the command palette, recent folders, Reconnect after reload.
 - Files tab "Show all files" toggle: non-Markdown files are listed (dimmed, with type badges) but not openable. Folders with no Markdown open in this mode with an overview card (file counts and types) instead of a bare message.
@@ -20,4 +21,4 @@ First release of Markscope.
 - Self-contained HTML export: no external requests (math as native MathML), Mermaid styling preserved, links to other documents point at the original files, code language labels; Markdown export is byte-identical to the source.
 - Focus mode: centered full-width reading, reading-progress bar, Exit focus button (also Z / Esc); split view fills the screen.
 - Optional AI assistant: Anthropic (official SDK), OpenAI, local and custom endpoints.
-- 304 unit and integration tests plus 26 Playwright E2E tests.
+- 304 unit and integration tests plus 27 Playwright E2E tests.

@@ -207,6 +207,11 @@ export function menuItems(ctx: CommandContext): (MenuItem | 'separator')[] {
     { label: 'Save', hint: `${MOD_LABEL} S`, run: () => void app.save() },
     { label: 'Save as…', hint: `⇧${MOD_LABEL} S`, run: () => void app.saveAs() },
     { label: 'Copy Markdown', run: () => void app.copySource() },
+    {
+      label: 'Discard changes',
+      run: () => void app.discardChanges(),
+      hidden: () => !app.modified,
+    },
     'separator',
     { label: 'Export as HTML', run: () => void app.exportAs('html') },
     { label: 'Export as Markdown', run: () => void app.exportAs('md') },
