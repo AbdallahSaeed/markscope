@@ -173,6 +173,15 @@ body[data-mode='home'] .ms-toolbar {
   display: none;
 }
 
+.ms-sidebar-slot {
+  grid-column: 1;
+}
+.ms-main {
+  grid-column: 2;
+}
+.ms-ai-slot {
+  grid-column: 3;
+}
 .ms-sidebar-slot,
 .ms-ai-slot {
   min-width: 0;
@@ -1167,17 +1176,95 @@ body.is-dragging[data-mode='document']::after {
 }
 
 /* --------------------------------------------------------- focus / zen */
+/* Hidden regions stay in the grid (pinned columns below), so the document
+   never slides into a zero-width track. */
 body.zen .ms-toolbar,
-body.zen .ms-status,
-body.zen .ms-sidebar-slot,
-body.zen .ms-ai-slot {
+body.zen .ms-status {
   display: none;
 }
-body.zen .ms-shell {
-  grid-template-columns: 0 minmax(0, 1fr) 0;
+body.zen .ms-sidebar-slot,
+body.zen .ms-ai-slot {
+  visibility: hidden;
 }
-body.zen .ms-panes {
-  padding-top: 10vh;
+body.zen .ms-shell,
+body.zen.sidebar-hidden .ms-shell,
+body.zen.ai-open .ms-shell {
+  grid-template-columns: 0 minmax(0, 1fr) 0;
+  min-height: 100vh;
+}
+body.zen .ms-panes[data-view='read'],
+body.zen .ms-panes[data-view='source'] {
+  padding-top: 12vh;
+}
+body.zen .ms-panes[data-view='split'] {
+  height: 100vh;
+}
+body.zen .ms-main {
+  padding-bottom: 20vh;
+}
+/* Split view scrolls inside its panes; the page itself must not scroll. */
+.ms-main:has(.ms-panes[data-view='split']),
+body.zen .ms-main:has(.ms-panes[data-view='split']) {
+  padding-bottom: 0;
+}
+.ms-zen-exit {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 30;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px 0 8px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--raised) 90%, transparent);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0.45;
+  transition:
+    opacity var(--dur) var(--ease),
+    border-color var(--dur-fast);
+}
+.ms-zen-exit .ms-icon {
+  width: 15px;
+  height: 15px;
+}
+body.zen .ms-zen-exit:not([hidden]) {
+  display: inline-flex;
+}
+.ms-zen-exit:hover,
+.ms-zen-exit:focus-visible {
+  opacity: 1;
+  border-color: var(--rule-strong);
+}
+/* Reading progress in focus mode: a scroll-driven animation, no JS. */
+.ms-progress {
+  display: none;
+}
+@supports (animation-timeline: scroll()) {
+  body.zen:has(.ms-panes[data-view='read']) .ms-progress {
+    display: block;
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 30;
+    height: 3px;
+    background: var(--accent);
+    transform-origin: 0 50%;
+    animation: ms-progress linear both;
+    animation-timeline: scroll(root block);
+  }
+}
+@keyframes ms-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
 }
 
 /* ----------------------------------------------------------- responsive */
@@ -1300,4 +1387,10 @@ body.zen .ms-panes {
   .ms-doc.is-large > * {
     content-visibility: visible;
   }
+}
+
+/* Save button: only visible while there are unsaved edits. */
+.ms-save-btn {
+  margin-inline-end: 4px;
+  animation: ms-pop var(--dur) var(--ease);
 }

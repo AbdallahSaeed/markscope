@@ -32,7 +32,8 @@ Developers read Markdown all day: READMEs, ADRs, runbooks, specs, changelogs. Br
 - Opens GitHub, GitLab and Bitbucket *blob* pages as raw Markdown (popup or context menu)
 - **Live reload** with ETag/Last-Modified (304s), paused in background tabs, keeps your reading position
 - Drag and drop a file, or use **Open file** (⌘/Ctrl O). Picked files live-reload via the File System Access API
-- **Edit view** with live preview and scroll sync, **Source view** with line numbers, and scratch documents saved in the browser
+- **Edit view** with live preview and scroll sync. **Save** (⌘/Ctrl S) writes back to files you opened or dropped. **Save as…** (⇧⌘/Ctrl⇧S) saves web, `file://` and scratch documents to a file of your choice, and later saves go there
+- **Source view** with line numbers, plus scratch documents that autosave in the browser
 - **Command palette** (⌘/Ctrl K) covering commands, headings and recent documents
 - **Find in document** (`/`), highlighted with the CSS Custom Highlight API
 - **Document doctor**: broken anchors, missing images, heading-level jumps, duplicate headings, empty links, missing alt text and TODO/FIXME
@@ -186,7 +187,6 @@ Targets are the Chrome Web Store, Microsoft Edge Add-ons and Firefox Add-ons (ex
 ## Roadmap
 
 - Localization (UI strings are centralized for translation)
-- Save edits back to files picked via the File System Access API
 - Multi-document workspace (folder view for picked directories)
 - External link checker (opt-in, per-origin permission)
 - Firefox parity for `file://` documents

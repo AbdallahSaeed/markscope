@@ -35,6 +35,20 @@ export function shortcutTable(ctx: CommandContext): Shortcut[] {
       global: true,
     },
     {
+      keys: `${MOD_LABEL} S`,
+      description: 'Save (write back to the file)',
+      match: e => modKey('s')(e) && !e.shiftKey,
+      run: () => hasDoc() && void app.save(),
+      global: true,
+    },
+    {
+      keys: `Shift ${MOD_LABEL} S`,
+      description: 'Save as… (choose a file)',
+      match: e => modKey('s')(e) && e.shiftKey,
+      run: () => hasDoc() && void app.saveAs(),
+      global: true,
+    },
+    {
       keys: '/',
       description: 'Find in document',
       match: key('/'),
@@ -151,7 +165,10 @@ export function shortcutTable(ctx: CommandContext): Shortcut[] {
       run: () => {
         if (app.search.isOpen) app.search.close()
         else if (!app.ai.el.hidden) app.closeAI()
-        else document.body.classList.remove('sidebar-open', 'zen')
+        else {
+          document.body.classList.remove('sidebar-open')
+          app.toggleZen(false)
+        }
       },
       global: true,
     },
@@ -179,6 +196,8 @@ export function menuItems(ctx: CommandContext): (MenuItem | 'separator')[] {
       run: () => app.viewOriginal(),
       hidden: () => !app.doc?.sourceUrl,
     },
+    { label: 'Save', hint: `${MOD_LABEL} S`, run: () => void app.save() },
+    { label: 'Save as…', hint: `⇧${MOD_LABEL} S`, run: () => void app.saveAs() },
     { label: 'Copy Markdown', run: () => void app.copySource() },
     'separator',
     { label: 'Export as HTML', run: () => void app.exportAs('html') },

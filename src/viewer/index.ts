@@ -73,6 +73,7 @@ async function resolveDocument(params: ViewerParams): Promise<LoadedDoc | null> 
       ...(stored.handle ? { handle: stored.handle } : {}),
       ...(stored.lastModified !== undefined ? { lastModified: stored.lastModified } : {}),
       scratch: !!stored.scratch,
+      ...(stored.baseUrl ? { baseUrl: stored.baseUrl } : {}),
     }
   }
   return null
@@ -187,6 +188,8 @@ async function main(): Promise<void> {
   layout.themeBtn.addEventListener('click', () => app.cycleTheme())
   layout.paletteBtn.addEventListener('click', () => void app.palette.open())
   layout.favoriteBtn.addEventListener('click', () => void app.toggleFavorite())
+  layout.saveBtn.addEventListener('click', () => void app.save())
+  layout.zenExit.addEventListener('click', () => app.toggleZen(false))
   for (const [mode, btn] of Object.entries(layout.modeButtons)) {
     btn.addEventListener('click', () => app.setView(mode as 'read' | 'split' | 'source'))
   }

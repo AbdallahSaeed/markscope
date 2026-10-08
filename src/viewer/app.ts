@@ -10,6 +10,7 @@ import { PermissionNeededError, errorMessage } from '@/shared/errors'
 import { computeStats } from '@/shared/stats'
 import { renderKey, type Settings } from '@/shared/settings'
 import {
+  buildViewerUrl,
   describeSource,
   isRemoteUrl,
   withRawMarker,
@@ -29,6 +30,17 @@ import { applyAppearance, onSystemThemeChange, resolvedTheme } from './theme'
 import { toast } from './toast'
 import { defaultLoaderDeps, loadSource, type Validators } from './source-loader'
 import { Watcher } from './watcher'
+import {
+  canWrite,
+  ensurePermission,
+  FileAccessNeededError,
+  pickSaveTarget,
+  readIfPermitted,
+  suggestedFileName,
+  supportsSavePicker,
+  writeText,
+} from './file-access'
+import { MOD_LABEL } from './shortcuts'
 import { highlightSource } from './source-view'
 
 export interface LoadedDoc {
@@ -40,6 +52,8 @@ export interface LoadedDoc {
   handle?: FileSystemFileHandle
   lastModified?: number
   scratch: boolean
+  /** Base for relative links when the document no longer has a sourceUrl. */
+  baseUrl?: string | null
 }
 
 export interface AppDeps {
@@ -199,6 +213,7 @@ export class ViewerApp {
         : `Local · ${doc.ref?.kind === 'local' ? doc.ref.name : ''}`
     this.layout.subtitle.title = doc.sourceUrl ?? ''
     document.title = `${doc.title}${this.modified ? ' •' : ''} · Markscope`
+    this.layout.saveBtn.hidden = !this.modified
     void this.refreshFavorite()
   }
 
@@ -250,7 +265,7 @@ export class ViewerApp {
     this.lastRenderKey = renderKey(this.settings)
     this.docView.render(result, {
       settings: this.settings,
-      baseUrl: doc.sourceUrl,
+      baseUrl: doc.sourceUrl ?? doc.baseUrl ?? null,
       sourceLength: doc.source.length,
       dark: resolvedTheme(this.settings) === 'dark',
       aiEnabled: this.settings.ai.enabled,
@@ -310,7 +325,7 @@ export class ViewerApp {
       }),
       Object.assign(document.createElement('span'), {
         className: 'ms-status__modified',
-        textContent: this.modified ? 'Edited (unsaved)' : '',
+        textContent: this.modified ? `Edited · ${MOD_LABEL} S to save` : '',
         hidden: !this.modified,
       }),
     )
@@ -361,7 +376,7 @@ export class ViewerApp {
       this.doc?.sourceUrl === doc.sourceUrl &&
       !this.modified
     if (doc.handle) {
-      const file = await doc.handle.getFile()
+      const file = await readIfPermitted(doc.handle)
       if (file.lastModified === doc.lastModified) return
       const text = await file.text()
       if (stillCurrent()) await this.applyExternalChange(text, file.lastModified)
@@ -403,6 +418,8 @@ export class ViewerApp {
       return
     try {
       if (doc.handle) {
+        if (!(await ensurePermission(doc.handle, 'read')))
+          throw new FileAccessNeededError(doc.handle.name)
         const file = await doc.handle.getFile()
         this.modified = false
         await this.applyExternalChange(await file.text(), file.lastModified)
@@ -425,6 +442,18 @@ export class ViewerApp {
   }
 
   onLoadError(error: unknown): void {
+    if (error instanceof FileAccessNeededError) {
+      // Permission can only be re-granted from a click, so ask once and pause.
+      this.watcher?.stop()
+      this.watcher = null
+      showBanner(
+        this.layout,
+        `Live reload paused: Chrome needs your permission to read ${error.fileName} again.`,
+        { label: 'Reconnect', run: () => void this.reconnectFile() },
+        'warn',
+      )
+      return
+    }
     if (error instanceof PermissionNeededError) {
       showBanner(
         this.layout,
@@ -448,6 +477,138 @@ export class ViewerApp {
       { label: 'Retry', run: () => void this.reload() },
       'error',
     )
+  }
+
+  /** Click handler for the Reconnect banner (a user gesture). */
+  private async reconnectFile(): Promise<void> {
+    const doc = this.doc
+    if (!doc?.handle) return
+    if (!(await ensurePermission(doc.handle, 'read'))) {
+      toast('Permission was not granted. Use Reload (R) to try again.', 'error')
+      return
+    }
+    hideBanner(this.layout)
+    try {
+      const file = await doc.handle.getFile()
+      if (file.lastModified !== doc.lastModified && !this.modified) {
+        await this.applyExternalChange(await file.text(), file.lastModified)
+      }
+      this.configureWatcher()
+      toast(`Reconnected to ${doc.handle.name}`)
+    } catch (error) {
+      this.onLoadError(error)
+    }
+  }
+
+  // --------------------------------------------------------------------- save
+
+  /**
+   * Edits reach `doc.source` through a debounce; a save pressed right after
+   * typing must include the latest keystrokes.
+   */
+  private commitEditor(): void {
+    if (!this.doc) return
+    const text = this.layout.editor.value
+    if (text === this.doc.source) return
+    this.doc = { ...this.doc, source: text }
+    if (!this.doc.scratch) this.modified = true
+    void this.render({ preserveScroll: true })
+  }
+
+  /** Save (⌘/Ctrl S): write back to the file, or fall back to "Save as". */
+  async save(): Promise<void> {
+    this.commitEditor()
+    const doc = this.doc
+    if (!doc) return
+    try {
+      if (doc.scratch && !doc.handle) {
+        await this.flushScratch()
+        toast(
+          'Scratch documents save automatically in this browser. Use Save as… to create a file.',
+        )
+        return
+      }
+      if (!doc.handle || !canWrite(doc.handle)) return await this.saveAs()
+      if (!(await ensurePermission(doc.handle, 'readwrite'))) {
+        toast('Saving needs permission to edit the file.', 'error')
+        return
+      }
+      await this.writeTo(doc.handle)
+      toast(`Saved to ${doc.handle.name}`)
+    } catch (error) {
+      toast(`Could not save: ${errorMessage(error)}`, 'error')
+    }
+  }
+
+  /** Save as… (⇧⌘/Ctrl⇧S): pick a file; later saves go to that file. */
+  async saveAs(): Promise<void> {
+    this.commitEditor()
+    const doc = this.doc
+    if (!doc) return
+    try {
+      if (!supportsSavePicker()) {
+        exportMarkdown(doc.source, doc.title)
+        toast('Downloaded a copy (this browser cannot save directly to files).')
+        return
+      }
+      const original = doc.sourceUrl ? describeSource(doc.sourceUrl) : null
+      const name = suggestedFileName(
+        doc.ref?.kind === 'local' ? doc.ref.name : (original?.name ?? doc.title),
+      )
+      const handle = await pickSaveTarget(name)
+      if (!handle) return
+      const baseUrl = doc.sourceUrl ?? doc.baseUrl ?? null
+      const stored = await localDocs.create({
+        name: handle.name,
+        text: doc.source,
+        handle,
+        ...(baseUrl ? { baseUrl } : {}),
+      })
+      const ref: DocumentRef = { kind: 'local', id: stored.id, name: handle.name }
+      this.doc = {
+        ...doc,
+        ref,
+        sourceUrl: null,
+        baseUrl,
+        localId: stored.id,
+        handle,
+        scratch: false,
+      }
+      this.validators = null
+      await this.writeTo(handle)
+      history.replaceState(
+        null,
+        '',
+        buildViewerUrl(this.deps.viewerBase, { doc: stored.id }, location.hash),
+      )
+      void this.deps.library.visit(ref, this.doc.title)
+      toast(
+        original && isRemoteUrl(doc.sourceUrl ?? '')
+          ? `Saved to ${handle.name}. The original on ${original.host} is unchanged.`
+          : `Saved to ${handle.name}`,
+      )
+    } catch (error) {
+      toast(`Could not save: ${errorMessage(error)}`, 'error')
+    }
+  }
+
+  private async writeTo(handle: FileSystemFileHandle): Promise<void> {
+    const text = this.doc?.source ?? ''
+    await writeText(handle, text)
+    // Record our own write so live reload doesn't treat it as a change.
+    const lastModified =
+      (await handle.getFile().catch(() => null))?.lastModified ?? Date.now()
+    if (this.doc) this.doc = { ...this.doc, lastModified }
+    if (this.doc?.localId) {
+      const stored = await localDocs.get(this.doc.localId)
+      if (stored)
+        await localDocs.put({ ...stored, text, lastModified, updatedAt: Date.now() })
+    }
+    this.modified = false
+    hideBanner(this.layout)
+    this.updateHeader()
+    this.updateStatus()
+    this.configureWatcher()
   }
 
   // ------------------------------------------------------------------ editing
@@ -476,7 +637,11 @@ export class ViewerApp {
     for (const [id, btn] of Object.entries(this.layout.modeButtons))
       btn.setAttribute('aria-pressed', String(id === mode))
     if (mode === 'source') this.renderSourceView()
-    if (mode === 'split') this.layout.editor.focus({ preventScroll: true })
+    if (mode === 'split') {
+      // Panes scroll independently; a leftover page scroll would cut them off.
+      window.scrollTo(0, 0)
+      this.layout.editor.focus({ preventScroll: true })
+    }
   }
 
   private renderSourceView(): void {
@@ -597,13 +762,14 @@ export class ViewerApp {
     else this.closeAI()
   }
 
-  toggleZen(): void {
-    document.body.classList.toggle('zen')
-    toast(
-      document.body.classList.contains('zen')
-        ? 'Focus mode — press Z to exit'
-        : 'Focus mode off',
-    )
+  toggleZen(force?: boolean): void {
+    const on = document.body.classList.toggle('zen', force)
+    this.layout.zenExit.hidden = !on
+    if (on) {
+      toast('Focus mode — press Z or Esc to exit')
+      // Keep the reader where they were; the hidden toolbar no longer offsets it.
+      if (this.view === 'split') this.layout.editor.focus({ preventScroll: true })
+    }
   }
 
   async toggleFullscreen(): Promise<void> {

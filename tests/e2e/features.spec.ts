@@ -130,3 +130,53 @@ test('popup and settings pages render', async ({ context, extensionId }) => {
   await expect(options.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible()
   await expect(options.getByLabel('Enable AI features')).not.toBeChecked()
 })
+
+test('focus mode keeps the document at reading width and is easy to exit', async ({
+  viewer,
+}) => {
+  const page = await viewer()
+  await page.getByRole('button', { name: /Feature tour/ }).click()
+  await page.locator('.ms-doc h1').waitFor()
+  const normalWidth = await page
+    .locator('.ms-doc')
+    .evaluate(el => el.getBoundingClientRect().width)
+
+  // Enter from the menu (mouse users) — chrome hides, the document must not collapse.
+  await page.getByRole('button', { name: 'More actions' }).click()
+  await page.getByRole('menuitemcheckbox', { name: /Focus mode/ }).click()
+  await expect(page.locator('.ms-toolbar')).toBeHidden()
+  // Wait for the column transition to settle, then check width + centering.
+  await expect
+    .poll(async () => {
+      const box = await page.locator('.ms-doc').boundingBox()
+      return Math.abs((box?.x ?? 0) + (box?.width ?? 0) / 2 - 640)
+    })
+    .toBeLessThan(12)
+  const zenBox = await page.locator('.ms-doc').boundingBox()
+  expect(zenBox?.width).toBeGreaterThanOrEqual(normalWidth - 1)
+  expect(Math.abs((zenBox?.x ?? 0) + (zenBox?.width ?? 0) / 2 - 640)).toBeLessThan(12)
+  // Reading progress bar is active (0% wide at the top, so check display).
+  await expect(page.locator('.ms-progress')).toHaveCSS('display', 'block')
+
+  // Split view in focus mode fills the viewport, even after scrolling.
+  await page.mouse.wheel(0, 900)
+  await page.keyboard.press('2')
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0)
+  const editorBox = await page.locator('.ms-editor').boundingBox()
+  expect(editorBox?.width).toBeGreaterThan(400)
+  expect(editorBox?.y).toBe(0)
+  expect(editorBox?.height).toBeGreaterThan(780)
+  await page.locator('.ms-doc').click()
+  await page.keyboard.press('1')
+
+  // Mouse exit.
+  await page.getByRole('button', { name: /Exit focus/ }).click()
+  await expect(page.locator('.ms-toolbar')).toBeVisible()
+  await expect(page.locator('.ms-zen-exit')).toBeHidden()
+
+  // Keyboard: Z enters, Esc exits.
+  await page.keyboard.press('z')
+  await expect(page.locator('.ms-toolbar')).toBeHidden()
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.ms-toolbar')).toBeVisible()
+})

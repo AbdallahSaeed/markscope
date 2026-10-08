@@ -11,6 +11,7 @@ export interface Layout {
   title: HTMLElement
   subtitle: HTMLElement
   favoriteBtn: HTMLButtonElement
+  saveBtn: HTMLButtonElement
   modeButtons: Record<ViewMode, HTMLButtonElement>
   searchBtn: HTMLButtonElement
   aiBtn: HTMLButtonElement
@@ -28,6 +29,7 @@ export interface Layout {
   aiSlot: HTMLElement
   status: HTMLElement
   home: HTMLElement
+  zenExit: HTMLButtonElement
 }
 
 const iconBtn = (
@@ -49,6 +51,13 @@ export function buildLayout(mount: HTMLElement): Layout {
   const subtitle = h('p', { class: 'ms-subtitle' })
   const favoriteBtn = iconBtn('Add to favorites', ICONS.star, { 'aria-pressed': 'false' })
   favoriteBtn.classList.add('ms-star')
+  const saveBtn = h('button', {
+    type: 'button',
+    class: 'ms-btn ms-btn--small ms-btn--primary ms-save-btn',
+    title: 'Save (Ctrl/⌘ S)',
+    hidden: true,
+  })
+  saveBtn.textContent = 'Save'
 
   const mode = (id: ViewMode, label: string, ico: readonly string[], key: string) =>
     h(
@@ -87,6 +96,7 @@ export function buildLayout(mount: HTMLElement): Layout {
     sidebarBtn,
     h('div', { class: 'ms-titles' }, title, subtitle),
     favoriteBtn,
+    saveBtn,
     h(
       'div',
       { class: 'ms-seg', role: 'group', 'aria-label': 'View mode' },
@@ -132,7 +142,24 @@ export function buildLayout(mount: HTMLElement): Layout {
     'aria-label': 'Document status',
   })
   const home = h('div', { class: 'ms-home-root', hidden: true })
-  const root = h('div', { class: 'ms-app' }, toolbar, shell, status, home)
+  // Focus mode chrome: an always-reachable exit and a reading-progress bar.
+  const zenExit = h(
+    'button',
+    { type: 'button', class: 'ms-zen-exit ms-ui', title: 'Exit focus mode (Z or Esc)' },
+    icon(ICONS.x),
+    h('span', { text: 'Exit focus' }),
+  )
+  const progress = h('div', { class: 'ms-progress ms-ui', 'aria-hidden': 'true' })
+  const root = h(
+    'div',
+    { class: 'ms-app' },
+    toolbar,
+    shell,
+    status,
+    home,
+    zenExit,
+    progress,
+  )
   mount.replaceChildren(root)
 
   return {
@@ -142,6 +169,7 @@ export function buildLayout(mount: HTMLElement): Layout {
     title,
     subtitle,
     favoriteBtn,
+    saveBtn,
     modeButtons,
     searchBtn,
     aiBtn,
@@ -159,6 +187,7 @@ export function buildLayout(mount: HTMLElement): Layout {
     aiSlot,
     status,
     home,
+    zenExit,
   }
 }
 

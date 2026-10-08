@@ -13,6 +13,8 @@ export interface LocalDoc {
   handle?: FileSystemFileHandle
   lastModified?: number
   scratch?: boolean
+  /** Original URL, kept so relative links/images still resolve after "Save as". */
+  baseUrl?: string
 }
 
 const DB_NAME = 'markscope'
@@ -54,7 +56,21 @@ export const localDocs = {
       'readonly',
       s => s.get(id) as IDBRequest<LocalDoc | undefined>,
     ),
-  put: (doc: LocalDoc) => tx('readwrite', s => s.put(doc)).then(() => doc),
+  async put(doc: LocalDoc): Promise<LocalDoc> {
+    try {
+      await tx('readwrite', s => s.put(doc))
+    } catch (error) {
+      // A handle that can't be structured-cloned must not lose the text.
+      if (
+        !(error instanceof DOMException && error.name === 'DataCloneError') ||
+        !doc.handle
+      )
+        throw error
+      const { handle: _unstorable, ...rest } = doc
+      await tx('readwrite', s => s.put(rest))
+    }
+    return doc
+  },
   delete: (id: string) => tx('readwrite', s => s.delete(id)).then(() => undefined),
   async create(init: Omit<LocalDoc, 'id' | 'updatedAt'>): Promise<LocalDoc> {
     return this.put({ ...init, id: randomId(), updatedAt: Date.now() })

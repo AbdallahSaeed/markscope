@@ -680,6 +680,7 @@ function dataSection(): HTMLElement {
 function shortcutsSection(): HTMLElement {
   const rows: [string, string][] = [
     ['Ctrl/⌘ K', 'Command palette'],
+    ['Ctrl/⌘ S', 'Save (⇧ for Save as…)'],
     ['/', 'Find in document'],
     ['1 · 2 · 3', 'Read · Edit · Source view'],
     ['J / K', 'Next / previous heading'],

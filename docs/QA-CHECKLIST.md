@@ -44,7 +44,10 @@ Find the extension ID at `chrome://extensions` (Markscope → ID) and use it as
 18. Ctrl/⌘ K, type `#usage` → the heading result jumps to Usage.
 
 ## 5. Views and editing
-19. Press **2** → Edit view: type in the editor → the preview updates live; the status shows "Edited (unsaved)".
+19. Press **2** → Edit view: type in the editor → the preview updates live; the status shows "Edited · ⌘S to save" and a **Save** button appears.
+19a. Open a local file (⌘O), edit it, press ⌘S → Chrome asks once to allow editing → the file on disk is updated and the Save button disappears.
+19b. On a web document, edit, then ⌘S → a Save dialog opens; after saving, the URL changes to `?doc=…`, relative links still work, and the next ⌘S saves without a dialog.
+19c. Reload the viewer of a saved/opened local file with live reload on → a "Reconnect" banner appears (no console error); click it → live reload resumes.
 20. Press **1** → Read view. **3** → Source view.
 21. Start page (Shift+H) → **Scratch document** → type, reload → the content persists.
 22. Start page → **Feature tour** → the full showcase renders.
