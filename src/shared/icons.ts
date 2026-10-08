@@ -1,5 +1,6 @@
 /** Icon path data (Lucide-style geometry, 24×24, stroke icons). */
 export const ICONS = {
+  home: ['M3 11.5 12 4l9 7.5', 'M5.5 10v10h13V10', 'M10 20v-5.5h4V20'],
   menu: ['M4 6h16', 'M4 12h16', 'M4 18h10'],
   search: ['M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z', 'm20 20-4.2-4.2'],
   command: ['M9 6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3Z'],

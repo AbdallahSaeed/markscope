@@ -8,6 +8,7 @@ export interface Layout {
   root: HTMLElement
   toolbar: HTMLElement
   sidebarBtn: HTMLButtonElement
+  homeBtn: HTMLButtonElement
   title: HTMLElement
   subtitle: HTMLElement
   favoriteBtn: HTMLButtonElement
@@ -47,6 +48,8 @@ export function buildLayout(mount: HTMLElement): Layout {
   const sidebarBtn = iconBtn('Toggle sidebar (B)', ICONS.menu, {
     'aria-controls': 'ms-sidebar-slot',
   })
+  const homeBtn = iconBtn('Start page (Shift H)', ICONS.home)
+  homeBtn.classList.add('ms-home-btn')
   const title = h('h1', { class: 'ms-title', text: 'Markscope' })
   const subtitle = h('p', { class: 'ms-subtitle' })
   const favoriteBtn = iconBtn('Add to favorites', ICONS.star, { 'aria-pressed': 'false' })
@@ -94,6 +97,7 @@ export function buildLayout(mount: HTMLElement): Layout {
     { class: 'ms-toolbar ms-ui' },
     h('a', { class: 'ms-skip', href: '#ms-doc', text: 'Skip to document' }),
     sidebarBtn,
+    homeBtn,
     h('div', { class: 'ms-titles' }, title, subtitle),
     favoriteBtn,
     saveBtn,
@@ -166,6 +170,7 @@ export function buildLayout(mount: HTMLElement): Layout {
     root,
     toolbar,
     sidebarBtn,
+    homeBtn,
     title,
     subtitle,
     favoriteBtn,

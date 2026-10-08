@@ -21,14 +21,36 @@ export interface TreeNode {
   name: string
   path: string
   kind: 'file' | 'dir'
+  /** Files only: whether Markscope can open it. */
+  markdown?: boolean
   children?: TreeNode[]
 }
 
 export interface WorkspaceTree {
+  /** Every (non-ignored) file and folder; filter with `markdownOnly`. */
   nodes: TreeNode[]
   /** Flat list of Markdown file paths (for the command palette). */
   files: string[]
+  /** Flat list of every file path (for "show all files" filtering). */
+  allFiles: string[]
   truncated: boolean
+}
+
+export const isMarkdownName = (name: string) =>
+  isMarkdownPath(`https://x.invalid/${encodeURIComponent(name)}`)
+
+/** The tree pruned to Markdown files and the folders that contain them. */
+export function markdownOnly(nodes: TreeNode[]): TreeNode[] {
+  const out: TreeNode[] = []
+  for (const node of nodes) {
+    if (node.kind === 'file') {
+      if (node.markdown) out.push(node)
+      continue
+    }
+    const children = markdownOnly(node.children ?? [])
+    if (children.length) out.push({ ...node, children })
+  }
+  return out
 }
 
 /** Folders skipped while scanning: dependencies, VCS data, build output. */
@@ -73,6 +95,7 @@ export async function scanTree(
   limits = { maxEntries: MAX_SCAN_ENTRIES, maxDepth: MAX_SCAN_DEPTH },
 ): Promise<WorkspaceTree> {
   const files: string[] = []
+  const allFiles: string[] = []
   let seen = 0
   let truncated = false
 
@@ -107,16 +130,18 @@ export async function scanTree(
           depth + 1,
         )
         if (children.length) nodes.push({ name: entry.name, path, kind: 'dir', children })
-      } else if (isMarkdownPath(`https://x.invalid/${encodeURIComponent(entry.name)}`)) {
-        files.push(path)
-        nodes.push({ name: entry.name, path, kind: 'file' })
+      } else {
+        const markdown = isMarkdownName(entry.name)
+        if (markdown) files.push(path)
+        allFiles.push(path)
+        nodes.push({ name: entry.name, path, kind: 'file', markdown })
       }
     }
     return nodes
   }
 
   const nodes = await walk(asDir(root), '', 0)
-  return { nodes, files, truncated }
+  return { nodes, files, allFiles, truncated }
 }
 
 /** Resolves a folder-relative path to a file handle (throws NotFoundError). */

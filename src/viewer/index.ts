@@ -197,6 +197,7 @@ async function main(): Promise<void> {
   installDragAndDrop(folders)
 
   layout.sidebarBtn.addEventListener('click', () => app.toggleSidebar())
+  layout.homeBtn.addEventListener('click', ctx.goHome)
   layout.searchBtn.addEventListener('click', () => app.search.open())
   layout.aiBtn.addEventListener('click', () => app.toggleAI())
   layout.themeBtn.addEventListener('click', () => app.cycleTheme())

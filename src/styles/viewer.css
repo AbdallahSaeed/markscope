@@ -1527,3 +1527,70 @@ body.zen .ms-zen-exit:not([hidden]) {
 details[open] > .ms-files__dir::before {
   transform: rotate(45deg);
 }
+
+/* Files panel: tools row, non-openable files, folder overview */
+.ms-files__tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 4px 8px;
+}
+.ms-files__tools .ms-outline-filter {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  margin: 0;
+}
+.ms-files__toggle {
+  flex: none;
+  height: 30px;
+  font-size: 12px;
+}
+.ms-files__toggle[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.ms-files__toggle:disabled {
+  cursor: default;
+  opacity: 0.8;
+}
+.ms-files__file.is-other {
+  cursor: default;
+  color: var(--ink-3);
+  opacity: 0.75;
+}
+.ms-files__file.is-other:hover {
+  background: none;
+  color: var(--ink-3);
+}
+.ms-files__ext {
+  margin-inline-start: auto;
+  padding: 0 5px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.ms-folder-overview {
+  max-width: 520px;
+}
+.ms-type-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-mono);
+}
+@media (max-width: 480px) {
+  .ms-toolbar .ms-star {
+    display: none;
+  }
+}
+.ms-reconnect .ms-btn {
+  font-size: 14px;
+}

@@ -70,16 +70,7 @@ export function createFolderController(
     if (!session) return
     const seq = ++loading
     if (!path) {
-      // An empty folder (or no Markdown files): show the tree and a note.
-      renderFiles(null, true)
-      document.body.dataset.mode = 'document'
-      app.layout.home.hidden = true
-      app.layout.title.textContent = session.workspace.name
-      app.layout.subtitle.textContent = 'Folder'
-      showBanner(
-        app.layout,
-        `No Markdown files were found in “${session.workspace.name}”.`,
-      )
+      showFolderOverview(session)
       return
     }
     try {
@@ -102,6 +93,75 @@ export function createFolderController(
       }
       showBanner(app.layout, errorMessage(error), undefined, 'error')
     }
+  }
+
+  /**
+   * A folder with no Markdown files: list everything in the Files tab (files
+   * shown but not openable) and explain what Markscope can open.
+   */
+  function showFolderOverview(current: FolderSession): void {
+    const { workspace, tree } = current
+    app.folder = current
+    // No document is open: actions like Save must not target the previous one.
+    app.doc = null
+    app.result = null
+    document.body.dataset.mode = 'document'
+    app.layout.home.hidden = true
+    app.layout.title.textContent = workspace.name
+    app.layout.subtitle.textContent = 'Folder · no Markdown files'
+    document.title = `${workspace.name} · Markscope`
+    app.layout.status.replaceChildren()
+    app.layout.favoriteBtn.hidden = true
+    app.layout.saveBtn.hidden = true
+    renderFiles(null, true)
+
+    const folders = new Set(
+      tree.allFiles.map(f => f.split('/').slice(0, -1).join('/')).filter(Boolean),
+    )
+    const byType = new Map<string, number>()
+    for (const file of tree.allFiles) {
+      const ext = /\.([A-Za-z0-9]{1,8})$/.exec(file)?.[1]?.toLowerCase() ?? 'other'
+      byType.set(ext, (byType.get(ext) ?? 0) + 1)
+    }
+    const topTypes = [...byType.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6)
+    const another = h(
+      'button',
+      { type: 'button', class: 'ms-btn' },
+      icon(ICONS.folder),
+      h('span', { text: 'Open another folder…' }),
+    )
+    another.addEventListener('click', () => void controller.openFolder())
+
+    app.layout.article.replaceChildren(
+      h(
+        'div',
+        { class: 'ms-reconnect ms-folder-overview' },
+        icon(ICONS.folder),
+        h('h2', { text: `No Markdown files in “${workspace.name}”` }),
+        h('p', {
+          text:
+            tree.allFiles.length === 0
+              ? 'This folder is empty.'
+              : `It contains ${tree.allFiles.length} file${tree.allFiles.length === 1 ? '' : 's'}${folders.size ? ` in ${folders.size + 1} folders` : ''}. They are listed in the Files panel, but only Markdown files (.md, .markdown, .mdx) open in Markscope.`,
+        }),
+        topTypes.length
+          ? h(
+              'ul',
+              { class: 'ms-type-chips', 'aria-label': 'File types in this folder' },
+              ...topTypes.map(([ext, n]) =>
+                h('li', { class: 'ms-chip ms-chip--quiet', text: `${ext} · ${n}` }),
+              ),
+            )
+          : null,
+        tree.truncated
+          ? h('p', {
+              class: 'ms-muted',
+              text: 'Large folder: only the first files were scanned.',
+            })
+          : null,
+        another,
+      ),
+    )
   }
 
   function showReconnect(ws: Workspace, params: ViewerParams): void {

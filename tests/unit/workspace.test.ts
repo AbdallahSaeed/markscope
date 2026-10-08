@@ -13,6 +13,7 @@ import {
   ancestorsOf,
   defaultDocument,
   IGNORED_DIRS,
+  markdownOnly,
   resolveFile,
   scanTree,
   type Workspace,
@@ -137,7 +138,25 @@ describe('folder scanning', () => {
       'docs/guide.md',
       'README.md',
     ])
-    expect(tree.nodes.map(n => n.name)).toEqual(['docs', 'README.md']) // empty/ has no markdown
+    // Markdown-only view drops empty/ (no markdown) and notes.txt…
+    expect(markdownOnly(tree.nodes).map(n => n.name)).toEqual(['docs', 'README.md'])
+    // …while the full tree keeps every non-ignored file, flagged.
+    expect(tree.nodes.map(n => n.name)).toEqual([
+      'docs',
+      'empty',
+      'notes.txt',
+      'README.md',
+    ])
+    expect(tree.nodes.find(n => n.name === 'notes.txt')?.markdown).toBe(false)
+    expect(tree.allFiles).toEqual([
+      'docs/deep/z.mdx',
+      'docs/img/x.png',
+      'docs/b.md',
+      'docs/guide.md',
+      'empty/only.txt',
+      'notes.txt',
+      'README.md',
+    ])
     expect(tree.truncated).toBe(false)
     expect(IGNORED_DIRS.has('node_modules')).toBe(true)
   })

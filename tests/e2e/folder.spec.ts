@@ -152,3 +152,86 @@ test('a file opened on its own explains missing images and finds itself in a pic
   await expect.poll(() => imageLoaded(page, 'Logo')).toBe(true)
   await expect(page.locator('.ms-needs-folder')).toHaveCount(0)
 })
+
+test('folder without Markdown: overview, all files listed but not openable', async ({
+  viewer,
+}) => {
+  const page = await viewer()
+  await page.evaluate(async () => {
+    const root = await navigator.storage.getDirectory()
+    await root.removeEntry('examples', { recursive: true }).catch(() => undefined)
+    const dir = await root.getDirectoryHandle('examples', { create: true })
+    const write = async (d: FileSystemDirectoryHandle, n: string, t: string) => {
+      const f = await d.getFileHandle(n, { create: true })
+      const w = await (
+        f as unknown as {
+          createWritable(): Promise<{
+            write(t: string): Promise<void>
+            close(): Promise<void>
+          }>
+        }
+      ).createWritable()
+      await w.write(t)
+      await w.close()
+    }
+    const src = await dir.getDirectoryHandle('src', { create: true })
+    await write(dir, 'example.py', 'print(1)')
+    await write(dir, 'data.csv', 'a,b')
+    await write(src, 'main.ts', 'export {}')
+    ;(
+      window as unknown as {
+        showDirectoryPicker: () => Promise<FileSystemDirectoryHandle>
+      }
+    ).showDirectoryPicker = async () => dir
+  })
+  await page.getByRole('button', { name: /Open folder/ }).click()
+
+  const overview = page.locator('.ms-folder-overview')
+  await expect(overview).toContainText('No Markdown files in “examples”')
+  await expect(overview).toContainText('3 files')
+  await expect(overview.locator('.ms-type-chips li')).toHaveCount(3)
+  await expect(page.locator('.ms-banner')).toBeHidden()
+
+  // Files tab lists everything; non-Markdown files are inert (not links).
+  const files = page.locator('#ms-panel-files')
+  await expect(files).toBeVisible()
+  await expect(files.locator('.ms-files__toggle')).toHaveAttribute('aria-pressed', 'true')
+  await files.locator('summary', { hasText: 'src' }).click()
+  await expect(files.locator('.ms-files__file.is-other')).toHaveText([
+    'main.tsts',
+    'data.csvcsv',
+    'example.pypy',
+  ])
+  await expect(files.locator('a.ms-files__file')).toHaveCount(0)
+  await files.locator('.ms-files__file', { hasText: 'example.py' }).click()
+  await expect(overview).toBeVisible() // clicking did not navigate
+
+  // Filtering works across all files.
+  await files.getByLabel('Filter files').fill('main')
+  await expect(files.locator('.ms-files__flat .ms-files__file')).toHaveText([
+    'src/main.tsts',
+  ])
+})
+
+test('"Show all files" toggle and the toolbar home button', async ({ viewer }) => {
+  const page = await viewer()
+  await createProject(page)
+  await page.getByRole('button', { name: /Open folder/ }).click()
+  await expect(page.locator('.ms-doc h1')).toHaveText(/Project readme/)
+
+  const files = page.locator('#ms-panel-files')
+  const toggle = files.locator('.ms-files__toggle')
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+  await expect(files.locator('.ms-files__file.is-other')).toHaveCount(0)
+  await toggle.click()
+  await files.locator('summary', { hasText: 'assets' }).click()
+  await expect(
+    files.locator('.ms-files__file.is-other', { hasText: 'logo.png' }),
+  ).toBeVisible()
+  await expect(files.locator('a.ms-files__file', { hasText: 'README.md' })).toBeVisible() // Markdown still opens
+
+  // Home button returns to the start page, which lists the folder.
+  await page.getByRole('button', { name: /Start page/ }).click()
+  await expect(page.locator('#ms-home-title')).toBeVisible()
+  await expect(page.locator('.ms-folder-link', { hasText: 'project' })).toBeVisible()
+})
