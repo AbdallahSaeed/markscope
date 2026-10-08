@@ -8,7 +8,7 @@ import { fuzzyFilter } from './fuzzy'
 export interface PaletteItem {
   id: string
   label: string
-  group: 'Command' | 'Heading' | 'Recent'
+  group: 'Command' | 'Heading' | 'File' | 'Recent'
   hint?: string
   run: () => void
 }

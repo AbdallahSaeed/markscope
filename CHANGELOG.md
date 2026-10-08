@@ -12,8 +12,10 @@ First release of Markscope.
 - Document doctor and statistics.
 - Save (⌘/Ctrl S) back to opened/dropped files and Save as… for web, `file://` and scratch documents; the Save button appears only with unsaved edits.
 - Live reload of local files pauses with a Reconnect prompt when Chrome drops file permission after a reload (no more `getFile` errors).
+- **Open folder** (⇧⌘/Ctrl⇧O, start page, or drop a folder): Files tab with the folder's Markdown tree, relative images and links that work, in-place navigation with Back/Forward, folder-wide file search in the command palette, recent folders, Reconnect after reload.
+- Relative images in a file opened on its own now show a clear "open the folder" placeholder (one click finds the file in the folder) instead of disappearing; `file://` images fall back to loading through the extension.
 - Print / Save as PDF: always printed in the light palette (readable from the dark theme), light-themed diagrams, page margins, external link URLs shown, front matter omitted.
 - Self-contained HTML export: no external requests (math as native MathML), Mermaid styling preserved, links to other documents point at the original files, code language labels; Markdown export is byte-identical to the source.
 - Focus mode: centered full-width reading, reading-progress bar, Exit focus button (also Z / Esc); split view fills the screen.
 - Optional AI assistant: Anthropic (official SDK), OpenAI, local and custom endpoints.
-- 287 unit and integration tests plus 22 Playwright E2E tests.
+- 304 unit and integration tests plus 24 Playwright E2E tests.

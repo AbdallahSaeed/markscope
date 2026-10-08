@@ -52,6 +52,9 @@ Find the extension ID at `chrome://extensions` (Markscope → ID) and use it as
 21. Start page (Shift+H) → **Scratch document** → type, reload → the content persists.
 22. Start page → **Feature tour** → the full showcase renders.
 23. Drag a local `.md` file onto the window → it opens; edit and save the file on disk with live reload on → the view updates.
+23a. Start page → **Open folder…** (or ⇧⌘O) → pick this repo → README renders **with its logo image**; the **Files** tab lists Markdown files (no node_modules); clicking a doc link opens it without a page reload; Back/Forward work; ⌘K → type a file name → opens it.
+23b. Open `README.md` via **Open file** (⌘O) → the logo shows an "open the folder" placeholder and a banner; click it, pick the repo folder → the same README reopens from the folder with the image.
+23c. Reload a folder document → "Reconnect" card → click → Chrome asks for access → the document returns.
 
 ## 6. Appearance and settings
 24. Press **T** repeatedly → system → light → dark; Mermaid re-themes.

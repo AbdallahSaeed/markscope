@@ -1,6 +1,6 @@
 /**
- * Left sidebar with three tabs: Outline (TOC + scrollspy + filter),
- * Doctor (documentation lint) and Info (statistics).
+ * Left sidebar tabs: Files (only when a folder is open), Outline (TOC +
+ * scrollspy + filter), Doctor (documentation lint) and Info (statistics).
  */
 import type { DoctorIssue } from '@/analysis/doctor'
 import type { Heading } from '@/engine/types'
@@ -8,7 +8,7 @@ import { h, icon } from '@/shared/dom'
 import { ICONS } from '@/shared/icons'
 import { formatReadingTime, type DocumentStats } from '@/shared/stats'
 
-export type SidebarTab = 'outline' | 'doctor' | 'info'
+export type SidebarTab = 'files' | 'outline' | 'doctor' | 'info'
 
 export interface SidebarHooks {
   onHeading: (id: string) => void
@@ -51,6 +51,7 @@ export class Sidebar {
         extra,
       )
     this.tabs = {
+      files: tab('files', 'Files', ICONS.folder),
       outline: tab('outline', 'Outline', ICONS.list),
       doctor: tab('doctor', 'Doctor', ICONS.stethoscope, this.doctorBadge),
       info: tab('info', 'Info', ICONS.info),
@@ -67,7 +68,9 @@ export class Sidebar {
         },
         ...children,
       )
+    this.tabs.files.hidden = true
     this.panels = {
+      files: panel('files'),
       outline: panel(
         'outline',
         this.filter,
@@ -113,8 +116,19 @@ export class Sidebar {
     if (notify) this.hooks.onTab(tab)
   }
 
+  /** Shows the Files tab with the given content, or hides it (null). */
+  setFiles(content: HTMLElement | null, select = false): void {
+    this.tabs.files.hidden = content === null
+    this.panels.files.replaceChildren(...(content ? [content] : []))
+    if (!content && this.tabs.files.getAttribute('aria-selected') === 'true')
+      this.select('outline', false)
+    if (content && select) this.select('files', false)
+  }
+
   private onTabKey(e: KeyboardEvent): void {
-    const order: SidebarTab[] = ['outline', 'doctor', 'info']
+    const order = (['files', 'outline', 'doctor', 'info'] as SidebarTab[]).filter(
+      t => !this.tabs[t].hidden,
+    )
     const current = order.findIndex(
       t => this.tabs[t].getAttribute('aria-selected') === 'true',
     )

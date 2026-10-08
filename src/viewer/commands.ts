@@ -12,6 +12,7 @@ export interface CommandContext {
   library: LibraryStore
   viewerBase: string
   openFile: () => void
+  openFolder: () => void
   newScratch: () => void
   goHome: () => void
 }
@@ -30,8 +31,15 @@ export function shortcutTable(ctx: CommandContext): Shortcut[] {
     {
       keys: `${MOD_LABEL} O`,
       description: 'Open a local file',
-      match: modKey('o'),
+      match: e => modKey('o')(e) && !e.shiftKey,
       run: ctx.openFile,
+      global: true,
+    },
+    {
+      keys: `Shift ${MOD_LABEL} O`,
+      description: 'Open a folder',
+      match: e => modKey('o')(e) && e.shiftKey,
+      run: ctx.openFolder,
       global: true,
     },
     {
@@ -284,7 +292,18 @@ export async function paletteItems(ctx: CommandContext): Promise<PaletteItem[]> 
       run: () => location.assign(entryHref(e, ctx.viewerBase)),
     }
   })
-  return [...headings, ...commands, ...recents]
+  // Files of the open folder: ⌘K then type a file name.
+  const folder = app.folder
+  const files: PaletteItem[] = folder
+    ? folder.tree.files.map(path => ({
+        id: `f:${path}`,
+        label: path,
+        group: 'File',
+        hint: folder.workspace.name,
+        run: () => void app.navigateFolder(path, ''),
+      }))
+    : []
+  return [...headings, ...files, ...commands, ...recents]
 }
 
 async function copyAllCode(app: ViewerApp): Promise<void> {

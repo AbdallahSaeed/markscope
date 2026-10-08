@@ -10,9 +10,9 @@ import { PermissionNeededError, errorMessage } from '@/shared/errors'
 import { computeStats } from '@/shared/stats'
 import { renderKey, type Settings } from '@/shared/settings'
 import {
-  buildViewerUrl,
   describeSource,
   isRemoteUrl,
+  parseWorkspaceUrl,
   withRawMarker,
   type ViewerParams,
 } from '@/shared/urls'
@@ -20,7 +20,8 @@ import type { DocumentRef, LibraryStore } from '@/storage/library-store'
 import type { SettingsStore } from '@/storage/settings-store'
 import { AIPanel } from './ai-panel'
 import { DocumentView } from './document-view'
-import { exportHtml, exportMarkdown } from './export'
+import { exportDocument, printDocument } from './document-actions'
+import { saveDocument, saveDocumentAs } from './save-actions'
 import { hideBanner, showBanner, type Layout, type ViewMode } from './layout'
 import { localDocs } from './local-docs'
 import { CommandPalette, type PaletteItem } from './palette'
@@ -30,18 +31,11 @@ import { applyAppearance, onSystemThemeChange, resolvedTheme } from './theme'
 import { toast } from './toast'
 import { defaultLoaderDeps, loadSource, type Validators } from './source-loader'
 import { Watcher } from './watcher'
-import {
-  canWrite,
-  ensurePermission,
-  FileAccessNeededError,
-  pickSaveTarget,
-  readIfPermitted,
-  suggestedFileName,
-  supportsSavePicker,
-  writeText,
-} from './file-access'
+import { ensurePermission, FileAccessNeededError, readIfPermitted } from './file-access'
 import { MOD_LABEL } from './shortcuts'
 import { highlightSource } from './source-view'
+import { idFromHash, scrollToId, scrollToLine, topVisibleLine } from './navigation'
+import { FolderSession, readFileAsBlobUrl } from './folder-session'
 
 export interface LoadedDoc {
   ref: DocumentRef | null
@@ -54,6 +48,8 @@ export interface LoadedDoc {
   scratch: boolean
   /** Base for relative links when the document no longer has a sourceUrl. */
   baseUrl?: string | null
+  /** Set when the document belongs to an opened folder. */
+  folder?: { id: string; name: string; path: string }
 }
 
 export interface AppDeps {
@@ -85,8 +81,14 @@ export class ViewerApp {
   private lastRenderKey = ''
   private sourceRendered = false
   paletteItems: () => Promise<PaletteItem[]> = async () => []
+  /** Open folder (set by the bootstrap; needs a user gesture). */
+  requestFolder: () => void = () => undefined
+  /** In-place navigation inside the open folder; returns true if handled. */
+  navigateFolder: (path: string, hash: string) => boolean = () => false
+  /** Renders the Files panel for the open folder (set by the bootstrap). */
+  folder: FolderSession | null = null
 
-  constructor(private readonly deps: AppDeps) {
+  constructor(readonly deps: AppDeps) {
     this.layout = deps.layout
     this.renderer = new RenderClient(deps.workerUrl)
     this.sidebar = new Sidebar({
@@ -101,6 +103,26 @@ export class ViewerApp {
       },
       onImageError: debounce(() => this.runDoctor(), 300),
       onNavigateAnchor: id => this.scrollToId(id),
+      loadLocalMedia: url =>
+        url.startsWith('file:')
+          ? readFileAsBlobUrl(url)
+          : (this.folder?.loadMedia(url) ?? Promise.resolve(null)),
+      onUnresolvedLocalMedia: () =>
+        showBanner(
+          this.layout,
+          'This document shows images by relative path. Open the folder that contains it to display them.',
+          { label: 'Open folder…', run: () => this.requestFolder() },
+        ),
+      onRequestFolder: () => this.requestFolder(),
+      onNavigateWorkspace: (target, hash) => {
+        const t = parseWorkspaceUrl(target)
+        return (
+          !!t &&
+          !!this.folder &&
+          t.id === this.folder.id &&
+          this.navigateFolder(t.path, hash)
+        )
+      },
     })
     this.search = new SearchBar(() => this.layout.article)
     this.layout.main.prepend(this.search.el)
@@ -183,7 +205,9 @@ export class ViewerApp {
 
   async openDocument(doc: LoadedDoc): Promise<void> {
     this.doc = doc
+    this.validators = null
     this.modified = false
+    hideBanner(this.layout)
     this.sourceRendered = false
     document.body.dataset.mode = 'document'
     this.layout.home.hidden = true
@@ -208,9 +232,11 @@ export class ViewerApp {
     this.layout.title.textContent = doc.title
     this.layout.subtitle.textContent = doc.scratch
       ? 'Scratch document · saved in this browser'
-      : where
-        ? `${where.host} · ${where.path}`
-        : `Local · ${doc.ref?.kind === 'local' ? doc.ref.name : ''}`
+      : doc.folder
+        ? `${doc.folder.name} / ${doc.folder.path}`
+        : where
+          ? `${where.host} · ${where.path}`
+          : `Local · ${doc.ref?.kind === 'local' ? doc.ref.name : ''}`
     this.layout.subtitle.title = doc.sourceUrl ?? ''
     document.title = `${doc.title}${this.modified ? ' •' : ''} · Markscope`
     this.layout.saveBtn.hidden = !this.modified
@@ -502,108 +528,18 @@ export class ViewerApp {
 
   // --------------------------------------------------------------------- save
 
-  /**
-   * Edits reach `doc.source` through a debounce; a save pressed right after
-   * typing must include the latest keystrokes.
-   */
-  private commitEditor(): void {
-    if (!this.doc) return
-    const text = this.layout.editor.value
-    if (text === this.doc.source) return
-    this.doc = { ...this.doc, source: text }
-    if (!this.doc.scratch) this.modified = true
-    void this.render({ preserveScroll: true })
-  }
-
   /** Save (⌘/Ctrl S): write back to the file, or fall back to "Save as". */
-  async save(): Promise<void> {
-    this.commitEditor()
-    const doc = this.doc
-    if (!doc) return
-    try {
-      if (doc.scratch && !doc.handle) {
-        await this.flushScratch()
-        toast(
-          'Scratch documents save automatically in this browser. Use Save as… to create a file.',
-        )
-        return
-      }
-      if (!doc.handle || !canWrite(doc.handle)) return await this.saveAs()
-      if (!(await ensurePermission(doc.handle, 'readwrite'))) {
-        toast('Saving needs permission to edit the file.', 'error')
-        return
-      }
-      await this.writeTo(doc.handle)
-      toast(`Saved to ${doc.handle.name}`)
-    } catch (error) {
-      toast(`Could not save: ${errorMessage(error)}`, 'error')
-    }
+  save(): Promise<void> {
+    return saveDocument(this)
   }
 
   /** Save as… (⇧⌘/Ctrl⇧S): pick a file; later saves go to that file. */
-  async saveAs(): Promise<void> {
-    this.commitEditor()
-    const doc = this.doc
-    if (!doc) return
-    try {
-      if (!supportsSavePicker()) {
-        exportMarkdown(doc.source, doc.title)
-        toast('Downloaded a copy (this browser cannot save directly to files).')
-        return
-      }
-      const original = doc.sourceUrl ? describeSource(doc.sourceUrl) : null
-      const name = suggestedFileName(
-        doc.ref?.kind === 'local' ? doc.ref.name : (original?.name ?? doc.title),
-      )
-      const handle = await pickSaveTarget(name)
-      if (!handle) return
-      const baseUrl = doc.sourceUrl ?? doc.baseUrl ?? null
-      const stored = await localDocs.create({
-        name: handle.name,
-        text: doc.source,
-        handle,
-        ...(baseUrl ? { baseUrl } : {}),
-      })
-      const ref: DocumentRef = { kind: 'local', id: stored.id, name: handle.name }
-      this.doc = {
-        ...doc,
-        ref,
-        sourceUrl: null,
-        baseUrl,
-        localId: stored.id,
-        handle,
-        scratch: false,
-      }
-      this.validators = null
-      await this.writeTo(handle)
-      history.replaceState(
-        null,
-        '',
-        buildViewerUrl(this.deps.viewerBase, { doc: stored.id }, location.hash),
-      )
-      void this.deps.library.visit(ref, this.doc.title)
-      toast(
-        original && isRemoteUrl(doc.sourceUrl ?? '')
-          ? `Saved to ${handle.name}. The original on ${original.host} is unchanged.`
-          : `Saved to ${handle.name}`,
-      )
-    } catch (error) {
-      toast(`Could not save: ${errorMessage(error)}`, 'error')
-    }
+  saveAs(): Promise<void> {
+    return saveDocumentAs(this)
   }
 
-  private async writeTo(handle: FileSystemFileHandle): Promise<void> {
-    const text = this.doc?.source ?? ''
-    await writeText(handle, text)
-    // Record our own write so live reload doesn't treat it as a change.
-    const lastModified =
-      (await handle.getFile().catch(() => null))?.lastModified ?? Date.now()
-    if (this.doc) this.doc = { ...this.doc, lastModified }
-    if (this.doc?.localId) {
-      const stored = await localDocs.get(this.doc.localId)
-      if (stored)
-        await localDocs.put({ ...stored, text, lastModified, updatedAt: Date.now() })
-    }
+  /** Called after a successful write: clears the dirty state everywhere. */
+  markSaved(): void {
     this.modified = false
     hideBanner(this.layout)
     this.updateHeader()
@@ -661,54 +597,21 @@ export class ViewerApp {
   // --------------------------------------------------------------- navigation
 
   scrollToId(id: string): void {
-    const el = id
-      ? this.layout.article.querySelector<HTMLElement>(`[id="${CSS.escape(id)}"]`)
-      : null
-    if (!el) return
-    el.closest('details')?.setAttribute('open', '')
-    el.scrollIntoView({
-      block: 'start',
-      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches
-        ? 'instant'
-        : 'smooth',
-    })
-    history.replaceState(null, '', `#${encodeURIComponent(id)}`)
+    scrollToId(this.layout.article, id)
   }
 
   private scrollToHash(): void {
-    const raw = location.hash.slice(1)
-    if (!raw) return
-    let id = raw
-    try {
-      id = decodeURIComponent(raw)
-    } catch {
-      // keep raw
-    }
+    if (!location.hash) return
+    const id = idFromHash(location.hash)
     requestAnimationFrame(() => this.scrollToId(id))
   }
 
   scrollToLine(line: number, behavior: ScrollBehavior = 'smooth'): void {
-    const blocks = this.layout.article.querySelectorAll<HTMLElement>('[data-source-line]')
-    let target: HTMLElement | null = null
-    for (const el of blocks) {
-      if (Number(el.dataset.sourceLine) <= line) target = el
-      else break
-    }
-    target ??= blocks[0] ?? null
-    target?.scrollIntoView({ block: 'start', behavior })
-    if (behavior !== 'instant' && target) {
-      target.classList.add('ms-flash')
-      setTimeout(() => target?.classList.remove('ms-flash'), 1200)
-    }
+    scrollToLine(this.layout.article, line, behavior)
   }
 
   private topVisibleLine(): number {
-    for (const el of this.layout.article.querySelectorAll<HTMLElement>(
-      '[data-source-line]',
-    )) {
-      if (el.getBoundingClientRect().bottom > 64) return Number(el.dataset.sourceLine)
-    }
-    return 0
+    return topVisibleLine(this.layout.article)
   }
 
   jumpHeading(delta: 1 | -1): void {
@@ -777,33 +680,22 @@ export class ViewerApp {
     else await document.documentElement.requestFullscreen()
   }
 
-  async exportAs(kind: 'html' | 'md'): Promise<void> {
-    const doc = this.doc
-    if (!doc) return
-    if (kind === 'md') return exportMarkdown(doc.source, doc.title)
-    const theme = resolvedTheme(this.settings)
-    await this.docView.diagrams.renderAll(this.layout.article)
-    await exportHtml(this.layout.article, doc.title, theme)
+  exportAs(kind: 'html' | 'md'): Promise<void> {
+    return exportDocument(this, kind)
   }
 
-  async print(): Promise<void> {
-    const article = this.layout.article
-    const dark = resolvedTheme(this.settings) === 'dark'
-    // Paper is light: print diagrams in the light theme, then restore.
-    await this.docView.diagrams.renderAll(article, false)
-    this.prepareForPrint()
-    window.print()
-    if (dark) await this.docView.diagrams.restoreTheme(article)
+  print(): Promise<void> {
+    return printDocument(this)
   }
 
   /** Browser-initiated print (menu, Ctrl/⌘ P) can't await, so open what we can. */
-  private prepareForPrint(): void {
+  prepareForPrint(): void {
     this.layout.article
       .querySelectorAll('details')
       .forEach(d => d.setAttribute('open', ''))
   }
 
-  private async flushScratch(): Promise<void> {
+  async flushScratch(): Promise<void> {
     const doc = this.doc
     if (!doc?.scratch || !doc.localId) return
     const text = this.layout.editor.value
@@ -830,9 +722,11 @@ export function deriveTitle(result: RenderResult, doc: LoadedDoc): string {
   )?.[1]
   const fallback = doc.sourceUrl
     ? describeSource(doc.sourceUrl).name
-    : doc.ref?.kind === 'local'
-      ? doc.ref.name
-      : 'Untitled'
+    : doc.folder
+      ? (doc.folder.path.split('/').pop() ?? doc.folder.path)
+      : doc.ref?.kind === 'local'
+        ? doc.ref.name
+        : 'Untitled'
   return (fmTitle || h1 || fallback || 'Untitled').slice(0, 200)
 }
 

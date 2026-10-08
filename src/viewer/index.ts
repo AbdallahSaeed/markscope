@@ -3,6 +3,7 @@
  *   ?src=URL[&h=handoff]  remote or file:// document
  *   ?doc=ID               local document (IndexedDB)
  *   ?scratch=1            new scratch document
+ *   ?ws=ID[&path=P]       document inside an opened folder
  *   (none)                start page
  */
 import { errorMessage, PermissionNeededError } from '@/shared/errors'
@@ -23,6 +24,8 @@ import { Menu } from './menu'
 import { installShortcuts } from './shortcuts'
 import { defaultLoaderDeps, loadSource } from './source-loader'
 import { toast } from './toast'
+import { createFolderController, type FolderController } from './folder-controller'
+import { workspaces, type Workspace } from './workspace'
 
 const viewerBase = chrome.runtime.getURL('viewer.html')
 const settings = settingsStore()
@@ -114,7 +117,7 @@ async function openTour(): Promise<void> {
   location.assign(buildViewerUrl(viewerBase, { doc: doc.id }))
 }
 
-function installDragAndDrop(): void {
+function installDragAndDrop(folders: FolderController): void {
   document.addEventListener('dragover', e => {
     if (e.dataTransfer?.types.includes('Files')) {
       e.preventDefault()
@@ -137,9 +140,18 @@ function installDragAndDrop(): void {
     ).getAsFileSystemHandle
     const handlePromise = getHandle ? getHandle.call(item) : Promise.resolve(null)
     const file = item.getAsFile()
+    const handle = await handlePromise.catch(() => null)
+    // A dropped folder opens as a workspace.
+    if (handle?.kind === 'directory') {
+      await folders
+        .openHandle(handle as FileSystemDirectoryHandle)
+        .catch(error =>
+          toast(`Could not open the folder: ${errorMessage(error)}`, 'error'),
+        )
+      return
+    }
     if (!file) return
     try {
-      const handle = await handlePromise.catch(() => null)
       await openLocalFile(
         file,
         handle?.kind === 'file' ? (handle as FileSystemFileHandle) : undefined,
@@ -166,11 +178,13 @@ async function main(): Promise<void> {
     void pickLocalFile()
       .then(r => (r ? openLocalFile(r.file, r.handle) : undefined))
       .catch(e => toast(errorMessage(e), 'error'))
+  const folders = createFolderController(app, viewerBase)
   const ctx: CommandContext = {
     app,
     library,
     viewerBase,
     openFile,
+    openFolder: () => void folders.openFolder(),
     newScratch: () => void newScratch(),
     goHome: () => location.assign(viewerBase),
   }
@@ -180,7 +194,7 @@ async function main(): Promise<void> {
     () => shortcutTable(ctx),
     () => app.palette.isOpen,
   )
-  installDragAndDrop()
+  installDragAndDrop(folders)
 
   layout.sidebarBtn.addEventListener('click', () => app.toggleSidebar())
   layout.searchBtn.addEventListener('click', () => app.search.open())
@@ -200,6 +214,7 @@ async function main(): Promise<void> {
   if (query.get('tour') === '1') return openTour()
 
   try {
+    if (await folders.start(params)) return
     const doc = await resolveDocument(params)
     if (doc) {
       await app.openDocument(doc)
@@ -225,18 +240,25 @@ async function main(): Promise<void> {
     document.body.dataset.mode = 'home'
     layout.home.hidden = false
     document.title = 'Markscope'
-    const [fileAccess, lib] = await Promise.all([
+    const [fileAccess, lib, recentFolders] = await Promise.all([
       chrome.extension.isAllowedFileSchemeAccess().catch(() => true),
       library.load(),
+      workspaces.list().catch(() => [] as Workspace[]),
     ])
     if (seq !== homeSeq) return // a newer library update is rendering
     renderHome(layout.home, {
       library: lib,
+      folders: recentFolders,
       viewerBase,
       fileAccess,
       welcome: query.get('welcome') === '1',
       hooks: {
         openFile,
+        openFolder: () => void folders.openFolder(),
+        openStoredFolder: (ws: Workspace) =>
+          void folders.openStored(ws).catch(e => toast(errorMessage(e), 'error')),
+        removeFolder: (ws: Workspace) =>
+          void workspaces.remove(ws.id).then(() => showHome()),
         openUrl: url => location.assign(buildViewerUrl(viewerBase, { src: url })),
         newScratch: () => void newScratch(),
         openTour: () => void openTour(),
@@ -247,7 +269,12 @@ async function main(): Promise<void> {
     })
   }
   await showHome()
-  library.subscribe(() => void showHome().catch(e => toast(errorMessage(e), 'error')))
+  // Refresh the start page's lists while it is showing — but never pull the
+  // user back to it after they opened a document in place (e.g. a folder).
+  library.subscribe(() => {
+    if (document.body.dataset.mode !== 'home') return
+    void showHome().catch(e => toast(errorMessage(e), 'error'))
+  })
 }
 
 main().catch(error => {

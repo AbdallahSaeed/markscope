@@ -37,7 +37,7 @@ export class FileAccessNeededError extends Error {
 }
 
 export async function hasPermission(
-  handle: FileSystemFileHandle,
+  handle: FileSystemHandle,
   mode: AccessMode,
 ): Promise<boolean> {
   const query = (handle as unknown as PermissionedHandle).queryPermission
@@ -52,7 +52,7 @@ export async function hasPermission(
 
 /** Must be called from a user gesture when permission is not yet granted. */
 export async function ensurePermission(
-  handle: FileSystemFileHandle,
+  handle: FileSystemHandle,
   mode: AccessMode,
 ): Promise<boolean> {
   if (await hasPermission(handle, mode)) return true

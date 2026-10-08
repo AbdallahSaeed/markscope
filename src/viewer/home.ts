@@ -11,10 +11,14 @@ import {
   sourceProtocol,
 } from '@/shared/urls'
 import type { Library, LibraryEntry } from '@/storage/library-store'
+import type { Workspace } from './workspace'
 import { MOD_LABEL } from './shortcuts'
 
 export interface HomeHooks {
   openFile: () => void
+  openFolder: () => void
+  openStoredFolder: (ws: Workspace) => void
+  removeFolder: (ws: Workspace) => void
   openUrl: (url: string) => void
   newScratch: () => void
   openTour: () => void
@@ -23,14 +27,21 @@ export interface HomeHooks {
 }
 
 export function entryHref(entry: LibraryEntry, viewerBase: string): string {
-  return entry.ref.kind === 'url'
-    ? buildViewerUrl(viewerBase, { src: entry.ref.url })
-    : buildViewerUrl(viewerBase, { doc: entry.ref.id })
+  const ref = entry.ref
+  if (ref.kind === 'url') return buildViewerUrl(viewerBase, { src: ref.url })
+  if (ref.kind === 'workspace')
+    return buildViewerUrl(viewerBase, { ws: ref.id, path: ref.path })
+  return buildViewerUrl(viewerBase, { doc: ref.id })
 }
 
 export function entryLabel(entry: LibraryEntry): { title: string; detail: string } {
   if (entry.ref.kind === 'local')
     return { title: entry.title || entry.ref.name, detail: `Local · ${entry.ref.name}` }
+  if (entry.ref.kind === 'workspace')
+    return {
+      title: entry.title || (entry.ref.path.split('/').pop() ?? entry.ref.path),
+      detail: `${entry.ref.name} / ${entry.ref.path}`,
+    }
   const d = describeSource(entry.ref.url)
   return { title: entry.title || d.name, detail: `${d.host}${d.path}` }
 }
@@ -39,6 +50,7 @@ export function renderHome(
   root: HTMLElement,
   opts: {
     library: Library
+    folders: Workspace[]
     viewerBase: string
     fileAccess: boolean
     welcome: boolean
@@ -201,7 +213,7 @@ export function renderHome(
           h(
             'p',
             {},
-            h('strong', { text: 'Drop a Markdown file anywhere' }),
+            h('strong', { text: 'Drop a Markdown file or folder anywhere' }),
             h('span', { text: ' — it stays on your device.' }),
           ),
         ),
@@ -216,6 +228,13 @@ export function renderHome(
             `${MOD_LABEL} O`,
           ),
           action(
+            'Open folder…',
+            'Browse a project’s docs with working images',
+            ICONS.book,
+            hooks.openFolder,
+            `⇧${MOD_LABEL} O`,
+          ),
+          action(
             'Scratch document',
             'Write with live preview',
             ICONS.edit,
@@ -224,7 +243,7 @@ export function renderHome(
           action(
             'Feature tour',
             'See everything Markscope renders',
-            ICONS.book,
+            ICONS.sparkles,
             hooks.openTour,
           ),
         ),
@@ -243,6 +262,45 @@ export function renderHome(
       h(
         'section',
         { class: 'ms-home__library', 'aria-label': 'Library' },
+        opts.folders.length
+          ? h('h2', { class: 'ms-section-label', text: 'Folders' })
+          : null,
+        opts.folders.length
+          ? h(
+              'ul',
+              { class: 'ms-doc-list' },
+              ...opts.folders.slice(0, 6).map(ws =>
+                h(
+                  'li',
+                  {},
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      class: 'ms-doc-list__link ms-folder-link',
+                      on: { click: () => hooks.openStoredFolder(ws) },
+                    },
+                    h('span', { class: 'ms-doc-list__title', text: ws.name }),
+                    h('span', { class: 'ms-doc-list__detail', text: 'Folder' }),
+                  ),
+                  h('span', {
+                    class: 'ms-doc-list__time',
+                    text: relativeTime(ws.openedAt),
+                  }),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      class: 'ms-icon-btn',
+                      'aria-label': `Forget folder ${ws.name}`,
+                      on: { click: () => hooks.removeFolder(ws) },
+                    },
+                    icon(ICONS.x),
+                  ),
+                ),
+              ),
+            )
+          : null,
         h('h2', { class: 'ms-section-label', text: 'Favorites' }),
         list(favorites, 'Star a document to pin it here.'),
         h('h2', { class: 'ms-section-label', text: 'Recent' }),

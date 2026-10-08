@@ -1042,7 +1042,7 @@ body.is-dragging[data-mode='document']::after {
 }
 .ms-home-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin: 14px 0;
 }
@@ -1386,4 +1386,144 @@ body.zen .ms-zen-exit:not([hidden]) {
 .ms-save-btn {
   margin-inline-end: 4px;
   animation: ms-pop var(--dur) var(--ease);
+}
+
+/* ------------------------------------------------------------- files */
+.ms-tabs:has(#ms-tab-files:not([hidden])) .ms-tab .ms-icon {
+  display: none;
+}
+.ms-files__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 4px 10px;
+  color: var(--ink-2);
+}
+.ms-files__head strong {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.ms-files__head .ms-icon-btn {
+  width: 26px;
+  height: 26px;
+}
+.ms-files__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ms-files__list .ms-files__list {
+  padding-inline-start: 14px;
+  border-inline-start: 1px solid var(--rule);
+  margin-inline-start: 10px;
+}
+.ms-files__dir,
+.ms-files__file {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: var(--ink-2);
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ms-files__dir {
+  list-style: none;
+  font-weight: 600;
+  color: var(--ink);
+}
+.ms-files__dir::-webkit-details-marker {
+  display: none;
+}
+.ms-files__dir .ms-icon,
+.ms-files__file .ms-icon {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: var(--ink-3);
+}
+.ms-files__dir span,
+.ms-files__file span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ms-files__dir:hover,
+.ms-files__file:hover {
+  background: var(--paper-3);
+  color: var(--ink);
+}
+.ms-files__file[aria-current='page'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+.ms-files__file[aria-current='page'] .ms-icon {
+  color: var(--accent);
+}
+.ms-needs-folder {
+  text-align: start;
+}
+
+.ms-folder-link {
+  border: 0;
+  background: none;
+  text-align: start;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.ms-folder-link:hover .ms-doc-list__title {
+  color: var(--accent);
+}
+.ms-reconnect {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  max-width: 440px;
+  margin: 12vh auto 0;
+  padding: 32px 28px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-l);
+  background: var(--paper-2);
+  text-align: center;
+  font-family: var(--font-ui);
+}
+.ms-reconnect > .ms-icon {
+  width: 36px;
+  height: 36px;
+  color: var(--accent);
+}
+.ms-reconnect h2 {
+  margin: 0;
+  border: 0;
+  padding: 0;
+  font-size: 18px;
+}
+.ms-reconnect p {
+  margin: 0 0 8px;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+.ms-files__dir::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-inline: 1px 2px;
+  border-right: 1.5px solid var(--ink-3);
+  border-bottom: 1.5px solid var(--ink-3);
+  transform: rotate(-45deg);
+  transition: transform var(--dur-fast) var(--ease);
+}
+details[open] > .ms-files__dir::before {
+  transform: rotate(45deg);
 }

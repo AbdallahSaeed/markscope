@@ -120,6 +120,41 @@ export function normalizeDocumentUrl(url: string): string {
   return toRawUrl(url) ?? url
 }
 
+/**
+ * Documents inside an opened folder are addressed as
+ * `workspace://<workspace-id>/<path>`. Standard URL resolution then handles
+ * relative links and images, and `..` can never climb above the folder root.
+ */
+export const WORKSPACE_PROTOCOL = 'workspace:'
+const ID_RE = /^[A-Za-z0-9_-]{8,64}$/
+
+/** Normalizes a folder-relative path: no empty, `.` or `..` segments. */
+export function normalizeWorkspacePath(path: string): string {
+  return path
+    .split('/')
+    .filter(s => s !== '' && s !== '.' && s !== '..')
+    .join('/')
+}
+
+export function workspaceUrl(id: string, path: string): string {
+  return `workspace://${id}/${normalizeWorkspacePath(path).split('/').map(encodeURIComponent).join('/')}`
+}
+
+export function parseWorkspaceUrl(url: string): { id: string; path: string } | null {
+  const u = safeParseUrl(url)
+  if (!u || u.protocol !== WORKSPACE_PROTOCOL || !ID_RE.test(u.host)) return null
+  try {
+    const path = u.pathname
+      .split('/')
+      .filter(Boolean)
+      .map(s => decodeURIComponent(s))
+      .join('/')
+    return { id: u.host, path: normalizeWorkspacePath(path) }
+  } catch {
+    return null
+  }
+}
+
 export interface ViewerParams {
   /** Source URL of the document (http/https/file). */
   src?: string
@@ -129,6 +164,10 @@ export interface ViewerParams {
   doc?: string
   /** Open the scratch editor. */
   scratch?: boolean
+  /** Opened folder (workspace) id. */
+  ws?: string
+  /** Folder-relative path of the document inside the workspace. */
+  path?: string
 }
 
 export function buildViewerUrl(
@@ -141,6 +180,9 @@ export function buildViewerUrl(
   if (params.handoff) u.searchParams.set('h', params.handoff)
   if (params.doc) u.searchParams.set('doc', params.doc)
   if (params.scratch) u.searchParams.set('scratch', '1')
+  if (params.ws) u.searchParams.set('ws', params.ws)
+  if (params.ws && params.path)
+    u.searchParams.set('path', normalizeWorkspacePath(params.path))
   u.hash = hash
   return u.toString()
 }
@@ -156,6 +198,12 @@ export function parseViewerUrl(href: string): ViewerParams {
   const doc = u.searchParams.get('doc')
   if (doc && /^[A-Za-z0-9_-]{8,64}$/.test(doc)) params.doc = doc
   if (u.searchParams.get('scratch') === '1') params.scratch = true
+  const ws = u.searchParams.get('ws')
+  if (ws && ID_RE.test(ws)) {
+    params.ws = ws
+    const path = normalizeWorkspacePath(u.searchParams.get('path') ?? '')
+    if (path && path.length <= 2048 && !path.includes('\0')) params.path = path
+  }
   return params
 }
 
@@ -195,6 +243,8 @@ export function resolveLink(
   if (trimmed.startsWith('#')) return { kind: 'anchor', href: trimmed }
 
   const u = safeParseUrl(trimmed, baseUrl ?? undefined)
+  if (u?.protocol === WORKSPACE_PROTOCOL)
+    return resolveWorkspaceLink(u, baseUrl, viewerBase)
   if (!u || !SAFE_LINK_PROTOCOLS.has(u.protocol)) return { kind: 'invalid' }
   // file: links are only meaningful when the document itself is local.
   if (u.protocol === 'file:' && sourceProtocol(baseUrl ?? '') !== 'file') {
@@ -226,11 +276,37 @@ function sameDocument(u: URL, baseUrl: string): boolean {
 }
 
 /** Resolves an image/media source; returns null for disallowed schemes. */
+/** Links between documents of the same opened folder stay in that folder. */
+function resolveWorkspaceLink(
+  u: URL,
+  baseUrl: string | null,
+  viewerBase: string,
+): ResolvedLink {
+  const base = parseWorkspaceUrl(baseUrl ?? '')
+  const target = parseWorkspaceUrl(u.toString())
+  if (!base || !target || base.id !== target.id || !target.path)
+    return { kind: 'invalid' }
+  if (target.path === base.path && u.hash) return { kind: 'anchor', href: u.hash }
+  if (!isMarkdownPath(`https://x.invalid/${target.path}`)) return { kind: 'invalid' }
+  return {
+    kind: 'document',
+    href: buildViewerUrl(viewerBase, { ws: target.id, path: target.path }, u.hash),
+    target: workspaceUrl(target.id, target.path),
+  }
+}
+
 export function resolveMediaSrc(src: string, baseUrl: string | null): string | null {
   const trimmed = src.trim()
   if (trimmed.startsWith('data:image/')) return trimmed
   const u = safeParseUrl(trimmed, baseUrl ?? undefined)
   if (!u) return null
+  if (u.protocol === WORKSPACE_PROTOCOL) {
+    const base = parseWorkspaceUrl(baseUrl ?? '')
+    const target = parseWorkspaceUrl(u.toString())
+    return base && target && base.id === target.id && target.path
+      ? workspaceUrl(target.id, target.path)
+      : null
+  }
   if (u.protocol === 'http:' || u.protocol === 'https:' || u.protocol === 'blob:') {
     return u.toString()
   }

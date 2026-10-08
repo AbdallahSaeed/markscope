@@ -9,7 +9,10 @@ export const MAX_RECENTS = 50
 export const MAX_FAVORITES = 200
 
 export type DocumentRef =
-  { kind: 'url'; url: string } | { kind: 'local'; id: string; name: string }
+  | { kind: 'url'; url: string }
+  | { kind: 'local'; id: string; name: string }
+  /** A document inside an opened folder; `name` is the folder's name. */
+  | { kind: 'workspace'; id: string; path: string; name: string }
 
 export interface LibraryEntry {
   ref: DocumentRef
@@ -23,7 +26,9 @@ export interface Library {
 }
 
 export function refKey(ref: DocumentRef): string {
-  return ref.kind === 'url' ? `url:${ref.url}` : `local:${ref.id}`
+  if (ref.kind === 'url') return `url:${ref.url}`
+  if (ref.kind === 'workspace') return `ws:${ref.id}:${ref.path}`
+  return `local:${ref.id}`
 }
 
 type Rec = Record<string, unknown>
@@ -33,6 +38,19 @@ function parseRef(v: unknown): DocumentRef | null {
   if (!isRecord(v)) return null
   if (v.kind === 'url' && typeof v.url === 'string' && v.url.length < 8192) {
     return { kind: 'url', url: v.url }
+  }
+  if (
+    v.kind === 'workspace' &&
+    typeof v.id === 'string' &&
+    typeof v.path === 'string' &&
+    typeof v.name === 'string'
+  ) {
+    return {
+      kind: 'workspace',
+      id: v.id,
+      path: v.path.slice(0, 2048),
+      name: v.name.slice(0, 500),
+    }
   }
   if (v.kind === 'local' && typeof v.id === 'string' && typeof v.name === 'string') {
     return { kind: 'local', id: v.id, name: v.name.slice(0, 500) }

@@ -32,6 +32,7 @@ Developers read Markdown all day: READMEs, ADRs, runbooks, specs, changelogs. Br
 - Opens GitHub, GitLab and Bitbucket *blob* pages as raw Markdown (popup or context menu)
 - **Live reload** with ETag/Last-Modified (304s), paused in background tabs, keeps your reading position
 - Drag and drop a file, or use **Open file** (⌘/Ctrl O). Picked files live-reload via the File System Access API
+- **Open folder** (⇧⌘/Ctrl⇧O, or drop a folder): browse a project's docs in a **Files** tab. Relative images and links work, navigation keeps your place with Back/Forward, and ⌘K searches every file in the folder. Dependency and hidden folders (`node_modules`, `.git`, …) are skipped
 - **Edit view** with live preview and scroll sync. **Save** (⌘/Ctrl S) writes back to files you opened or dropped. **Save as…** (⇧⌘/Ctrl⇧S) saves web, `file://` and scratch documents to a file of your choice, and later saves go there
 - **Source view** with line numbers, plus scratch documents that autosave in the browser
 - **Command palette** (⌘/Ctrl K) covering commands, headings and recent documents

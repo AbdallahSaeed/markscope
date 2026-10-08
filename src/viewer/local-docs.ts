@@ -4,6 +4,7 @@
  * a picked file can be live-reloaded without file:// permissions.
  */
 import { randomId } from '@/shared/ids'
+import { tx as idbTx } from './idb'
 
 export interface LocalDoc {
   id: string
@@ -17,38 +18,8 @@ export interface LocalDoc {
   baseUrl?: string
 }
 
-const DB_NAME = 'markscope'
-const STORE = 'docs'
-
-function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1)
-    req.onupgradeneeded = () => req.result.createObjectStore(STORE, { keyPath: 'id' })
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error ?? new Error('IndexedDB unavailable'))
-  })
-}
-
-async function tx<T>(
-  mode: IDBTransactionMode,
-  fn: (store: IDBObjectStore) => IDBRequest<T>,
-): Promise<T> {
-  const db = await openDb()
-  try {
-    return await new Promise<T>((resolve, reject) => {
-      const transaction = db.transaction(STORE, mode)
-      const req = fn(transaction.objectStore(STORE))
-      // Resolve on commit, so navigating right after a write cannot lose it.
-      transaction.oncomplete = () => resolve(req.result)
-      transaction.onerror = () =>
-        reject(transaction.error ?? req.error ?? new Error('IndexedDB request failed'))
-      transaction.onabort = () =>
-        reject(transaction.error ?? new Error('IndexedDB transaction aborted'))
-    })
-  } finally {
-    db.close()
-  }
-}
+const tx = <T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequest<T>) =>
+  idbTx<T>('docs', mode, fn)
 
 export const localDocs = {
   get: (id: string) =>

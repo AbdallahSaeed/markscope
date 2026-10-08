@@ -19,7 +19,22 @@ export interface DocumentViewHooks {
   onExplainCode?: (code: string, lang: string) => void
   onImageError?: (src: string) => void
   onNavigateAnchor?: (id: string) => void
+  /** Loads folder (workspace:) or file: media as a blob URL. */
+  loadLocalMedia?: (url: string) => Promise<string | null>
+  /** A relative image can't be resolved (document has no location). */
+  onUnresolvedLocalMedia?: (count: number) => void
+  /** User clicked a "needs folder" placeholder (a user gesture). */
+  onRequestFolder?: () => void
+  /** Same-folder document link: navigate in place (keeps folder permission). */
+  onNavigateWorkspace?: (target: string, hash: string) => boolean
 }
+
+const HAS_SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i
+const isRelativeRef = (ref: string) =>
+  ref.trim() !== '' &&
+  !HAS_SCHEME_RE.test(ref) &&
+  !ref.startsWith('//') &&
+  !ref.startsWith('#')
 
 let katexCssLoaded = false
 function ensureKatexCss(): void {
@@ -33,6 +48,7 @@ function ensureKatexCss(): void {
 export class DocumentView {
   readonly diagrams = new DiagramRenderer()
   private brokenImages = new Set<string>()
+  private objectUrls: string[] = []
 
   constructor(
     readonly article: HTMLElement,
@@ -58,6 +74,8 @@ export class DocumentView {
   ): void {
     const fragment = sanitizeToFragment(result.html)
     this.brokenImages = new Set()
+    for (const url of this.objectUrls) URL.revokeObjectURL(url)
+    this.objectUrls = []
     this.rewriteLinks(fragment, opts.baseUrl)
     this.rewriteMedia(fragment, opts.baseUrl, opts.settings)
     this.decorateHeadings(fragment)
@@ -106,6 +124,7 @@ export class DocumentView {
     settings: Settings,
   ): void {
     const baseHost = baseUrl ? safeParseUrl(baseUrl)?.host : undefined
+    let unresolved = 0
     for (const el of Array.from(
       root.querySelectorAll<HTMLImageElement | HTMLSourceElement | HTMLVideoElement>(
         'img[src], source[src], video[src], audio[src]',
@@ -114,7 +133,20 @@ export class DocumentView {
       const original = el.getAttribute('src') ?? ''
       const src = resolveMediaSrc(original, baseUrl)
       if (!src) {
+        // A relative image in a document with no known location (opened via
+        // ⌘O or drag & drop): say why, instead of silently dropping it.
+        if (!baseUrl && isRelativeRef(original) && el instanceof HTMLImageElement) {
+          el.replaceWith(this.needsFolderPlaceholder(original, el.alt))
+          unresolved += 1
+          continue
+        }
         el.removeAttribute('src')
+        continue
+      }
+      if (src.startsWith('workspace:')) {
+        el.removeAttribute('src')
+        el.dataset.msOriginalSrc = original
+        void this.loadLocal(el, src)
         continue
       }
       const remoteHost = /^https?:/.test(src) ? safeParseUrl(src)?.host : undefined
@@ -130,9 +162,20 @@ export class DocumentView {
       el.setAttribute('src', src)
       if (el instanceof HTMLImageElement) {
         el.dataset.msOriginalSrc = original
-        el.addEventListener('error', () => this.markBroken(el), { once: true })
+        el.addEventListener(
+          'error',
+          () => {
+            // Some browsers refuse file:// images in extension pages; read the
+            // file through the extension instead before giving up.
+            if (src.startsWith('file:') && this.hooks.loadLocalMedia)
+              void this.loadLocal(el, src)
+            else this.markBroken(el)
+          },
+          { once: true },
+        )
       }
     }
+    if (unresolved) this.hooks.onUnresolvedLocalMedia?.(unresolved)
     // srcset can smuggle relative URLs; resolve or drop each candidate.
     for (const el of Array.from(root.querySelectorAll<HTMLElement>('[srcset]'))) {
       const resolved = (el.getAttribute('srcset') ?? '')
@@ -140,12 +183,51 @@ export class DocumentView {
         .map(part => {
           const [url, size] = part.trim().split(/\s+/, 2)
           const abs = url ? resolveMediaSrc(url, baseUrl) : null
-          return abs ? [abs, size].filter(Boolean).join(' ') : null
+          // Folder images are loaded via blob URLs from `src`; drop srcset ones.
+          return abs && !abs.startsWith('workspace:')
+            ? [abs, size].filter(Boolean).join(' ')
+            : null
         })
         .filter(Boolean)
       if (resolved.length) el.setAttribute('srcset', resolved.join(', '))
       else el.removeAttribute('srcset')
     }
+  }
+
+  private async loadLocal(
+    el: HTMLImageElement | HTMLSourceElement | HTMLVideoElement,
+    url: string,
+  ): Promise<void> {
+    try {
+      const blobUrl = (await this.hooks.loadLocalMedia?.(url)) ?? null
+      if (!blobUrl) throw new Error('unavailable')
+      this.objectUrls.push(blobUrl)
+      el.setAttribute('src', blobUrl)
+      if (el instanceof HTMLImageElement) {
+        el.addEventListener('error', () => this.markBroken(el), { once: true })
+      }
+    } catch {
+      if (el instanceof HTMLImageElement) this.markBroken(el)
+      else el.removeAttribute('src')
+    }
+  }
+
+  private needsFolderPlaceholder(src: string, alt: string): HTMLElement {
+    const name = src.split(/[?#]/)[0]?.split('/').pop() ?? src
+    const btn = h(
+      'button',
+      {
+        type: 'button',
+        class: 'ms-blocked-image ms-needs-folder',
+        title: `${src} is a relative path. Open the folder that contains this document to show it.`,
+      },
+      icon(ICONS.folder),
+      h('span', {
+        text: `Image “${alt || name}” — open the folder to show local images`,
+      }),
+    )
+    btn.addEventListener('click', () => this.hooks.onRequestFolder?.())
+    return btn
   }
 
   private blockedImage(src: string, alt: string, host: string): HTMLElement {
@@ -297,6 +379,25 @@ export class DocumentView {
       return
     }
     const anchor = target.closest('a')
+    const docTarget = anchor?.dataset.msDoc
+    if (
+      docTarget?.startsWith('workspace:') &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.shiftKey &&
+      event.button === 0
+    ) {
+      let hash = ''
+      try {
+        hash = new URL(anchor?.getAttribute('href') ?? '', 'https://x.invalid/').hash
+      } catch {
+        // no hash
+      }
+      if (this.hooks.onNavigateWorkspace?.(docTarget, hash)) {
+        event.preventDefault()
+        return
+      }
+    }
     const href = anchor?.getAttribute('href')
     if (anchor && href?.startsWith('#') && !event.metaKey && !event.ctrlKey) {
       event.preventDefault()
