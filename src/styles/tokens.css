@@ -66,42 +66,46 @@
   --doc-font: var(--font-mono);
 }
 
-:root[data-theme='dark'] {
-  color-scheme: dark;
-  --paper: oklch(17.5% 0.012 265);
-  --paper-2: oklch(20.3% 0.013 265);
-  --paper-3: oklch(24.5% 0.015 265);
-  --raised: oklch(22.5% 0.014 265);
-  --ink: oklch(92.5% 0.008 85);
-  --ink-2: oklch(78% 0.01 85);
-  --ink-3: oklch(63% 0.012 265);
-  --rule: oklch(29% 0.014 265);
-  --rule-strong: oklch(37% 0.016 265);
-  --accent: oklch(74% 0.13 264);
-  --accent-hover: oklch(80% 0.11 264);
-  --accent-ink: oklch(18% 0.03 264);
-  --accent-soft: oklch(29% 0.06 264);
-  --code-bg: oklch(21% 0.013 265);
-  --code-ink: oklch(88% 0.01 85);
-  --mark: oklch(48% 0.1 95);
-  --danger: oklch(70% 0.16 25);
+/* Screen only: printed pages always use the light palette (paper is white
+   and browsers skip background colors by default). */
+@media screen {
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --paper: oklch(17.5% 0.012 265);
+    --paper-2: oklch(20.3% 0.013 265);
+    --paper-3: oklch(24.5% 0.015 265);
+    --raised: oklch(22.5% 0.014 265);
+    --ink: oklch(92.5% 0.008 85);
+    --ink-2: oklch(78% 0.01 85);
+    --ink-3: oklch(63% 0.012 265);
+    --rule: oklch(29% 0.014 265);
+    --rule-strong: oklch(37% 0.016 265);
+    --accent: oklch(74% 0.13 264);
+    --accent-hover: oklch(80% 0.11 264);
+    --accent-ink: oklch(18% 0.03 264);
+    --accent-soft: oklch(29% 0.06 264);
+    --code-bg: oklch(21% 0.013 265);
+    --code-ink: oklch(88% 0.01 85);
+    --mark: oklch(48% 0.1 95);
+    --danger: oklch(70% 0.16 25);
 
-  --c-note: oklch(72% 0.12 250);
-  --c-tip: oklch(74% 0.13 155);
-  --c-important: oklch(74% 0.13 300);
-  --c-warning: oklch(80% 0.13 75);
-  --c-caution: oklch(70% 0.16 25);
+    --c-note: oklch(72% 0.12 250);
+    --c-tip: oklch(74% 0.13 155);
+    --c-important: oklch(74% 0.13 300);
+    --c-warning: oklch(80% 0.13 75);
+    --c-caution: oklch(70% 0.16 25);
 
-  --hl-keyword: oklch(76% 0.13 305);
-  --hl-string: oklch(79% 0.12 145);
-  --hl-number: oklch(80% 0.12 60);
-  --hl-title: oklch(78% 0.11 245);
-  --hl-attr: oklch(80% 0.09 200);
-  --hl-comment: oklch(62% 0.015 265);
-  --hl-meta: oklch(76% 0.1 30);
+    --hl-keyword: oklch(76% 0.13 305);
+    --hl-string: oklch(79% 0.12 145);
+    --hl-number: oklch(80% 0.12 60);
+    --hl-title: oklch(78% 0.11 245);
+    --hl-attr: oklch(80% 0.09 200);
+    --hl-comment: oklch(62% 0.015 265);
+    --hl-meta: oklch(76% 0.1 30);
 
-  --shadow-1: 0 1px 2px oklch(0% 0 0 / 0.3), 0 2px 10px oklch(0% 0 0 / 0.25);
-  --shadow-2: 0 18px 50px -12px oklch(0% 0 0 / 0.6), 0 2px 6px oklch(0% 0 0 / 0.3);
+    --shadow-1: 0 1px 2px oklch(0% 0 0 / 0.3), 0 2px 10px oklch(0% 0 0 / 0.25);
+    --shadow-2: 0 18px 50px -12px oklch(0% 0 0 / 0.6), 0 2px 6px oklch(0% 0 0 / 0.3);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -126,7 +126,7 @@ describe('DocumentView', () => {
   test('explain button appears only with AI enabled and calls the hook', () => {
     const { article, hooks } = mount('```py\nprint(1)\n```', { ai: true })
     article.querySelector<HTMLButtonElement>('[data-action="explain"]')?.click()
-    expect(hooks.onExplainCode).toHaveBeenCalledWith('print(1)\n', 'py')
+    expect(hooks.onExplainCode).toHaveBeenCalledWith('print(1)', 'py')
   })
 
   test('line numbers and wrapping settings', () => {

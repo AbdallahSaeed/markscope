@@ -12,7 +12,8 @@ First release of Markscope.
 - Document doctor and statistics.
 - Save (⌘/Ctrl S) back to opened/dropped files and Save as… for web, `file://` and scratch documents; the Save button appears only with unsaved edits.
 - Live reload of local files pauses with a Reconnect prompt when Chrome drops file permission after a reload (no more `getFile` errors).
-- Export to HTML and Markdown; print to PDF.
+- Print / Save as PDF: always printed in the light palette (readable from the dark theme), light-themed diagrams, page margins, external link URLs shown, front matter omitted.
+- Self-contained HTML export: no external requests (math as native MathML), Mermaid styling preserved, links to other documents point at the original files, code language labels; Markdown export is byte-identical to the source.
 - Focus mode: centered full-width reading, reading-progress bar, Exit focus button (also Z / Esc); split view fills the screen.
 - Optional AI assistant: Anthropic (official SDK), OpenAI, local and custom endpoints.
-- 281 unit and integration tests plus 22 Playwright E2E tests.
+- 287 unit and integration tests plus 22 Playwright E2E tests.

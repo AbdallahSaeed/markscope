@@ -532,3 +532,54 @@ body.ms-export {
   font: 12px var(--font-mono);
   color: var(--ink-3);
 }
+
+/* ------------------------------------------------------------------ print */
+@page {
+  margin: 16mm 15mm 18mm;
+}
+@media print {
+  .ms-doc {
+    max-width: none;
+    padding-inline: 0;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    contain: none;
+  }
+  .ms-frontmatter,
+  .ms-anchor,
+  .ms-diagram__source,
+  .ms-export__footer {
+    display: none !important;
+  }
+  .ms-doc :is(pre, .ms-code pre) {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .ms-doc
+    :is(pre, table, figure, .ms-code, .ms-diagram, .markdown-alert, img, tr, blockquote) {
+    break-inside: avoid;
+  }
+  .ms-doc :is(h1, h2, h3, h4, h5, h6) {
+    break-after: avoid;
+  }
+  .ms-doc .footnotes {
+    break-before: avoid;
+  }
+  /* Paper can't be clicked: show where external links go. */
+  .ms-doc a.ms-external[href^='http']::after {
+    content: ' (' attr(href) ')';
+    font-size: 0.8em;
+    color: var(--ink-3);
+    overflow-wrap: anywhere;
+  }
+  .ms-table-wrap {
+    overflow: visible;
+  }
+  .ms-doc table {
+    width: 100%;
+    min-width: 0;
+  }
+  .ms-diagram {
+    background: none;
+  }
+}

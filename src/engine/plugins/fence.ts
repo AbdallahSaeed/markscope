@@ -48,7 +48,8 @@ export function fencePlugin(md: MarkdownIt, opts: FenceOptions): void {
     }
 
     env.codeBlocks.push({ lang, content: code, line })
-    const body = highlightCode(code, lang, env, opts.highlight)
+    // A fence's trailing newline would render as an empty last line.
+    const body = highlightCode(code.replace(/\n$/, ''), lang, env, opts.highlight)
     const langAttr = lang ? ` data-lang="${escapeHtml(lang)}"` : ''
     const cls = lang ? `hljs language-${escapeHtml(lang)}` : 'hljs'
     return `<div class="ms-code"${langAttr}${lineAttr}><pre><code class="${cls}">${body}</code></pre></div>\n`

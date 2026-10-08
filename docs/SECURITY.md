@@ -24,7 +24,7 @@
 | API key exfiltration | Key bound to the endpoint origin it was saved for. Never synced, exported or imported. AI settings excluded from imports. https required except loopback. Credentials-free fetches (`credentials:'omit'`). Key read only in the service worker | `src/storage/secrets-store.ts`, `src/shared/settings.ts`, `src/background/ai-service.ts` |
 | Prompt injection | Document framed as untrusted data, `</document>`-style breakout neutralized, AI output rendered with `html:false` and sanitized, remote media in answers never loaded, confirmation before the first send per provider | `src/ai/prompts.ts`, `src/viewer/ai-panel.ts` |
 | Least privilege | No `tabs`, `history`, `cookies` or `downloads`. `activeTab` for on-demand rendering. Note: Chrome derives host access per origin from the `*.md` content-script patterns, which is effectively all http(s) origins — inherent to auto-detection. Users who restrict site access get a per-origin grant prompt instead | manifest |
-| HTML export | Re-sanitized, with a meta CSP `default-src 'none'` inside the exported file | `src/viewer/export.ts` |
+| HTML export | Re-sanitized (diagram figures, already sanitized at render, are re-inserted via unguessable placeholders). The exported file carries a meta CSP `default-src 'none'` and makes no external requests: math is native MathML, no CDN | `src/viewer/export.ts` |
 
 ## Residual risks and notes
 

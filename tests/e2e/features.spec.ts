@@ -97,6 +97,27 @@ test('keyboard help, export and accessibility landmarks', async ({ context, serv
   await page.getByRole('menuitem', { name: 'Export as HTML' }).click()
   const file = await download
   expect(file.suggestedFilename()).toBe('Guide.html')
+  const downloadPath = await file.path()
+  const exported = await import('node:fs').then(fs =>
+    fs.readFileSync(downloadPath, 'utf8'),
+  )
+  expect(exported).not.toContain('cdn.jsdelivr') // self-contained
+  expect(exported).not.toContain('chrome-extension://') // links work outside Markscope
+  expect(exported.match(/<style/g)?.length ?? 0).toBeGreaterThanOrEqual(2) // Mermaid styles kept
+
+  // Printing from the dark theme uses the light palette (paper is white).
+  await page.keyboard.press('t')
+  await page.keyboard.press('t')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await page.emulateMedia({ media: 'print' })
+  const ink = await page
+    .locator('.ms-doc p')
+    .first()
+    .evaluate(el => getComputedStyle(el).color)
+  expect(ink).not.toMatch(/oklch\(0\.9|rgb\(2[0-9]{2}/) // not light-on-white
+  await expect(page.locator('.ms-frontmatter, .ms-toolbar')).toHaveCount(1) // toolbar exists…
+  await expect(page.locator('.ms-toolbar')).toBeHidden() // …but is not printed
+  await page.emulateMedia({ media: 'screen' })
 
   await expect(page.getByRole('main')).toBeVisible()
   await expect(

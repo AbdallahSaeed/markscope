@@ -781,13 +781,19 @@ export class ViewerApp {
     const doc = this.doc
     if (!doc) return
     if (kind === 'md') return exportMarkdown(doc.source, doc.title)
+    const theme = resolvedTheme(this.settings)
     await this.docView.diagrams.renderAll(this.layout.article)
-    await exportHtml(this.layout.article, doc.title, resolvedTheme(this.settings))
+    await exportHtml(this.layout.article, doc.title, theme)
   }
 
   async print(): Promise<void> {
-    await this.docView.diagrams.renderAll(this.layout.article)
+    const article = this.layout.article
+    const dark = resolvedTheme(this.settings) === 'dark'
+    // Paper is light: print diagrams in the light theme, then restore.
+    await this.docView.diagrams.renderAll(article, false)
+    this.prepareForPrint()
     window.print()
+    if (dark) await this.docView.diagrams.restoreTheme(article)
   }
 
   /** Browser-initiated print (menu, Ctrl/⌘ P) can't await, so open what we can. */

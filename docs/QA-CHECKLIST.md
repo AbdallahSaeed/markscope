@@ -65,9 +65,9 @@ Find the extension ID at `chrome://extensions` (Markscope → ID) and use it as
 30. Sidebar → **Info** → words, reading time and render time.
 
 ## 8. Export and print
-31. ⋯ menu → Export as HTML → `Guide.html` downloads, opens offline and looks like the viewer.
+31. ⋯ menu → Export as HTML → `Guide.html` downloads; open it with Wi-Fi off → diagrams are styled (not black boxes), math renders, code shows a language label, links to other .md files point at the original files.
 32. ⋯ → Export as Markdown → `Guide.md` downloads.
-33. Ctrl/⌘ P → the print preview contains only the document, with diagrams rendered.
+33. Ctrl/⌘ P (in **dark** theme too) → the preview is light and readable, has margins, no front matter, diagrams rendered in light colors, external links show their URL.
 
 ## 9. Live reload
 34. ⋯ → enable Live reload; edit `tests/e2e/site/guide.md` on disk → the viewer updates within ~2 s and keeps the scroll position.

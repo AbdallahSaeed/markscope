@@ -1351,9 +1351,14 @@ body.zen .ms-zen-exit:not([hidden]) {
   .ms-status,
   .ms-sidebar-slot,
   .ms-ai-slot,
-  .ms-anchor,
-  .ms-diagram__source {
+  .ms-zen-exit,
+  .ms-progress,
+  .ms-banner,
+  .ms-search {
     display: none !important;
+  }
+  body {
+    background: none;
   }
   .ms-shell {
     display: block;
@@ -1366,23 +1371,11 @@ body.zen .ms-zen-exit:not([hidden]) {
   .ms-pane--source {
     display: none !important;
   }
+  .ms-panes,
   .ms-pane--preview {
     display: block !important;
-  }
-  .ms-doc {
-    max-width: none;
-    font-size: 11pt;
-  }
-  .ms-doc pre,
-  .ms-code pre {
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-  }
-  .ms-doc :is(pre, table, figure, .ms-diagram, .markdown-alert, img) {
-    break-inside: avoid;
-  }
-  .ms-doc :is(h1, h2, h3, h4) {
-    break-after: avoid;
+    height: auto !important;
+    overflow: visible !important;
   }
   .ms-doc.is-large > * {
     content-visibility: visible;

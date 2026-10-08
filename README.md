@@ -38,7 +38,8 @@ Developers read Markdown all day: READMEs, ADRs, runbooks, specs, changelogs. Br
 - **Find in document** (`/`), highlighted with the CSS Custom Highlight API
 - **Document doctor**: broken anchors, missing images, heading-level jumps, duplicate headings, empty links, missing alt text and TODO/FIXME
 - Document stats: words, reading time, lines, code blocks, links, images and render time
-- Recents and favorites, export to standalone HTML or Markdown, Print / Save as PDF, focus mode, fullscreen
+- Recents and favorites, focus mode, fullscreen
+- **Export**: a self-contained HTML file (no network requests, diagrams and math included), the Markdown source, or Print / Save as PDF with a print-optimized light layout
 
 **Appearance**: system, light and dark themes on an OKLCH token system; sans, serif or mono reading type; size, line height and width controls; responsive down to 320 px; keyboard-first; screen-reader friendly.
 

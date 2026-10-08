@@ -147,11 +147,27 @@ export class DiagramRenderer {
   }
 
   /** Render everything now (export/print need fully rendered diagrams). */
-  async renderAll(root: HTMLElement): Promise<void> {
-    const pending = Array.from(
-      root.querySelectorAll<HTMLElement>('.ms-diagram:not([data-state="ready"])'),
+  /**
+   * Render everything now (print/export need complete output). With `dark`
+   * given, Mermaid diagrams already rendered in another theme are redone.
+   */
+  async renderAll(root: HTMLElement, dark: boolean = this.dark): Promise<void> {
+    const all = Array.from(root.querySelectorAll<HTMLElement>('.ms-diagram'))
+    const todo = all.filter(
+      el =>
+        el.dataset.state !== 'ready' ||
+        (el.dataset.diagram === 'mermaid' && dark !== this.dark),
     )
-    await Promise.all(pending.map(el => renderOne(el, this.dark)))
+    await Promise.all(todo.map(el => renderOne(el, dark)))
+  }
+
+  /** Restores diagrams to the on-screen theme after a print/export pass. */
+  async restoreTheme(root: HTMLElement): Promise<void> {
+    await Promise.all(
+      Array.from(
+        root.querySelectorAll<HTMLElement>('.ms-diagram[data-diagram="mermaid"]'),
+      ).map(el => renderOne(el, this.dark)),
+    )
   }
 
   disconnect(): void {
