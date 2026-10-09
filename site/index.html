@@ -3,169 +3,304 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Markscope — Markdown, read like code deserves</title>
-    <meta name="description" content="A fast, secure Markdown reader for Chrome, Edge and Firefox: GitHub-flavored Markdown, Mermaid, math, outline, search, folders, live reload and an optional bring-your-own-key AI assistant." />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <title>Markscope — a secure Markdown reader for your browser</title>
+    <meta
+      name="description"
+      content="Open any .md file, local or remote, and get an outline, search, diagrams, math, live reload and a documentation doctor. No telemetry, no server, no code from the document ever runs."
+    />
     <meta name="color-scheme" content="light dark" />
-    <link rel="icon" href="assets/icon-128.png" />
-    <link rel="stylesheet" href="styles.css" />
-    <meta property="og:title" content="Markscope — Markdown, read like code deserves" />
-    <meta property="og:description" content="Open any .md file — local or remote — as a fast, safe, navigable document." />
-    <meta property="og:image" content="assets/1-reader-light.png" />
     <meta property="og:type" content="website" />
+    <meta property="og:title" content="Markscope — Markdown, read properly" />
+    <meta
+      property="og:description"
+      content="A fast, secure Markdown reader for developers, right in your browser."
+    />
+    <meta property="og:url" content="{{SITE_URL}}" />
+    <meta property="og:image" content="{{SITE_URL}}assets/screenshots/1-reader-light.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="tokens.css" />
+    <link rel="stylesheet" href="hero.css" />
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <a class="skip" href="#main">Skip to content</a>
-    <header class="site-head">
-      <div class="wrap">
-        <a class="brand" href="./"><img src="assets/icon-128.png" alt="" width="28" height="28" />Markscope</a>
-        <nav class="site-nav" aria-label="Main navigation">
-          <a href="#features">Features</a>
-          <a href="#privacy">Privacy</a>
-          <a href="#install">Install</a>
-          <a class="gh" href="{{REPO_URL}}">GitHub</a>
-        </nav>
-      </div>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <nav class="nav" aria-label="Main navigation">
+        <a class="brand" href="./" aria-label="Markscope home">
+          <img src="assets/logo.svg" width="28" height="28" alt="" />
+          <span>Markscope</span>
+        </a>
+        <ul class="nav-links">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#security">Security</a></li>
+          <li><a href="#install">Install</a></li>
+          <li><a class="nav-gh" href="{{REPO_URL}}">GitHub</a></li>
+        </ul>
+      </nav>
     </header>
 
     <main id="main">
-      <div class="wrap">
-        <section class="hero" aria-labelledby="hero-title" style="padding-top: clamp(48px, 9vw, 112px)">
-          <div>
-            <p class="eyebrow">Browser extension · Open source</p>
-            <h1 id="hero-title">Markdown, read like <em>code</em> deserves.</h1>
-            <p class="lede">
-              Markscope turns any <code>.md</code> file — on GitHub, a docs server or your own disk — into a fast, safe,
-              navigable document with an outline, search, diagrams, math, live reload and a documentation doctor.
-            </p>
-            <div class="cta">
-              <a class="btn btn--primary" href="{{CHROME_URL}}">Add to Chrome <small>{{CHROME_NOTE}}</small></a>
-              <a class="btn" href="{{FIREFOX_URL}}">Add to Firefox <small>{{FIREFOX_NOTE}}</small></a>
-              <a class="btn" href="{{RELEASE_URL}}">Download v{{VERSION}}</a>
-            </div>
-            <p class="cta-note">Free and open source (MIT). No account, no tracking, no ads.</p>
+      <!-- Hero -->
+      <section class="hero" aria-labelledby="hero-heading">
+        <div class="hero-copy">
+          <p class="eyebrow">Browser extension · Chrome, Edge, Firefox</p>
+          <h1 id="hero-heading">Markdown,<br /><em>read properly.</em></h1>
+          <p class="lede">
+            Browsers show <code>.md</code> files as a wall of raw text. Markscope turns every Markdown URL into a
+            navigable, well-typeset document with an outline, search, diagrams and math, and it never runs code from
+            the document.
+          </p>
+          <div class="cta-row">
+            {{HERO_CTA}}
+            <a class="btn btn-ghost" href="{{REPO_URL}}">View source</a>
           </div>
-          <figure class="hero-shot">
-            <img src="assets/1-reader-light.png" alt="Markscope showing the feature tour with an outline sidebar" width="1280" height="800" fetchpriority="high" />
-            <img class="offset" src="assets/5-code-dark.png" alt="" width="1280" height="800" loading="lazy" />
+          <ul class="facts" aria-label="At a glance">
+            <li>MIT licensed</li>
+            <li>No telemetry</li>
+            <li>No server</li>
+            <li>AI optional, off by default</li>
+          </ul>
+        </div>
+
+        <figure class="transform" aria-label="Raw Markdown on the left becomes a rendered document">
+          <div class="pane pane-raw" aria-hidden="true">
+            <div class="pane-bar"><span>runbook.md</span><span>text/plain</span></div>
+            <pre><span class="tk-meta">---</span>
+<span class="tk-key">owner:</span> platform
+<span class="tk-meta">---</span>
+<span class="tk-h"># Deploy runbook</span>
+
+<span class="tk-q">&gt; [!WARNING]</span>
+<span class="tk-q">&gt; Drain the queue first.</span>
+
+- [x] Tag the release
+- [ ] Roll out to 5%
+
+<span class="tk-meta">```mermaid</span>
+graph LR; build--&gt;ship
+<span class="tk-meta">```</span></pre>
+          </div>
+
+          <div class="pane pane-doc">
+            <div class="pane-bar"><span>Deploy runbook</span><span>Read · Edit · Source</span></div>
+            <div class="doc">
+              <p class="doc-h1">Deploy runbook</p>
+              <div class="doc-alert"><b>Warning</b> Drain the queue first.</div>
+              <ul class="doc-tasks">
+                <li><span class="box is-done" aria-hidden="true"></span>Tag the release</li>
+                <li><span class="box" aria-hidden="true"></span>Roll out to 5%</li>
+              </ul>
+              <svg class="doc-diagram" viewBox="0 0 220 56" role="img" aria-label="Diagram: build to ship">
+                <rect x="4" y="12" width="76" height="32" rx="6" />
+                <text x="42" y="33">build</text>
+                <path d="M84 28h44" />
+                <path class="arrow" d="M122 22l8 6-8 6" />
+                <rect x="136" y="12" width="76" height="32" rx="6" />
+                <text x="174" y="33">ship</text>
+              </svg>
+            </div>
+          </div>
+          <figcaption>Same file. Left: what the browser shows. Right: Markscope.</figcaption>
+        </figure>
+      </section>
+
+      <!-- Screens -->
+      <section class="screens" id="features" aria-labelledby="screens-heading">
+        <header class="section-head">
+          <p class="section-num">01</p>
+          <h2 id="screens-heading">A reader built for the docs developers live in</h2>
+          <p>READMEs, ADRs, runbooks, specs, changelogs. Open them from the web, from GitHub, or straight from disk.</p>
+        </header>
+
+        <div class="bento">
+          <figure class="shot shot-lead">
+            <a href="assets/screenshots/1-reader-light.png">
+              <img
+                src="assets/screenshots/1-reader-light.png"
+                width="1280"
+                height="800"
+                loading="lazy"
+                alt="Markscope rendering a document with a sidebar outline, table of contents and Read, Edit and Source views"
+              />
+            </a>
+            <figcaption><b>Outline and scrollspy.</b> GitHub-compatible anchors, inline <code>[[toc]]</code>, J/K heading jumps.</figcaption>
           </figure>
-        </section>
+          <figure class="shot">
+            <a href="assets/screenshots/2-diagrams.png">
+              <img src="assets/screenshots/2-diagrams.png" width="1280" height="800" loading="lazy" alt="Mermaid and Graphviz diagrams rendered in a document" />
+            </a>
+            <figcaption><b>Diagrams and math.</b> Mermaid, Graphviz and KaTeX, loaded only when a document uses them.</figcaption>
+          </figure>
+          <figure class="shot">
+            <a href="assets/screenshots/3-command-palette.png">
+              <img src="assets/screenshots/3-command-palette.png" width="1280" height="800" loading="lazy" alt="The command palette listing commands, headings and recent documents" />
+            </a>
+            <figcaption><b>Command palette.</b> <kbd>⌘</kbd><kbd>K</kbd> for commands, headings, recents and every file in a folder.</figcaption>
+          </figure>
+          <figure class="shot">
+            <a href="assets/screenshots/4-edit-and-doctor.png">
+              <img src="assets/screenshots/4-edit-and-doctor.png" width="1280" height="800" loading="lazy" alt="Edit view with live preview next to the document doctor panel" />
+            </a>
+            <figcaption><b>Edit and doctor.</b> Live preview, save back to disk, and a check for broken anchors and missing images.</figcaption>
+          </figure>
+          <figure class="shot">
+            <a href="assets/screenshots/5-code-dark.png">
+              <img src="assets/screenshots/5-code-dark.png" width="1280" height="800" loading="lazy" alt="Dark theme showing callouts and syntax-highlighted code blocks" />
+            </a>
+            <figcaption><b>Light and dark.</b> OKLCH themes, highlighted code with copy buttons and language badges.</figcaption>
+          </figure>
+        </div>
+      </section>
 
-        <p class="strip" aria-label="Highlights">
-          <span>GitHub-flavored Markdown</span><span>Mermaid &amp; Graphviz</span><span>KaTeX math</span
-          ><span>Open folders</span><span>Live reload</span><span>Edit &amp; save</span><span>No telemetry</span>
+      <!-- Feature index -->
+      <section class="index" aria-labelledby="index-heading">
+        <header class="section-head">
+          <p class="section-num">02</p>
+          <h2 id="index-heading">Everything in the box</h2>
+        </header>
+        <div class="index-grid">
+          <section aria-labelledby="ix-read">
+            <h3 id="ix-read">Reading</h3>
+            <ul>
+              <li>GitHub-flavored Markdown: tables, task lists, footnotes, emoji</li>
+              <li>Alerts (<code>&gt; [!NOTE]</code>) and <code>::: details</code> containers</li>
+              <li>Front matter as a collapsible table</li>
+              <li>Relative <code>.md</code> links open in place, at the right anchor</li>
+              <li>Image lightbox and click-to-load for third-party images</li>
+              <li>Find in document with <kbd>/</kbd></li>
+            </ul>
+          </section>
+          <section aria-labelledby="ix-flow">
+            <h3 id="ix-flow">Workflow</h3>
+            <ul>
+              <li>Auto-detects <code>.md</code>, <code>.mdx</code>, <code>.markdown</code> and more over http(s) and <code>file://</code></li>
+              <li>Opens GitHub, GitLab and Bitbucket blob pages as Markdown</li>
+              <li>Live reload with ETag and Last-Modified, keeps your place</li>
+              <li><b>Open folder</b>: browse a project's docs with Back and Forward</li>
+              <li>Edit with live preview, <kbd>⌘</kbd><kbd>S</kbd> saves to the file</li>
+              <li>Recents, favorites, focus mode</li>
+            </ul>
+          </section>
+          <section aria-labelledby="ix-out">
+            <h3 id="ix-out">Export</h3>
+            <ul>
+              <li>Self-contained HTML with no network requests, diagrams and math included</li>
+              <li>Print or save as PDF with a print-tuned light layout</li>
+              <li>The original Markdown, byte for byte</li>
+              <li>Document stats: words, reading time, render time</li>
+            </ul>
+          </section>
+          <section aria-labelledby="ix-ai">
+            <h3 id="ix-ai">AI, if you want it</h3>
+            <ul>
+              <li>Summarize, outline, review, explain a selection or code block</li>
+              <li>Ask questions about the document, generate a Mermaid diagram</li>
+              <li>Anthropic, OpenAI, or any local or OpenAI-compatible endpoint</li>
+              <li>Bring your own key. Requests go straight to your provider</li>
+            </ul>
+          </section>
+        </div>
+      </section>
+
+      <!-- Security -->
+      <section class="security" id="security" aria-labelledby="security-heading">
+        <header class="section-head">
+          <p class="section-num">03</p>
+          <h2 id="security-heading">A Markdown file can't attack you here</h2>
+          <p>
+            Many Markdown viewers inject rendered HTML into the web page itself, so a crafted file can run script in that
+            page. Markscope never renders in the page.
+          </p>
+        </header>
+
+        <ol class="pipeline">
+          <li>
+            <span class="step-tag">Content script</span>
+            <p>Reads the page's plain text and hands it off. It never renders anything, so its attack surface is tiny.</p>
+          </li>
+          <li>
+            <span class="step-tag">Service worker</span>
+            <p>Validates every message and its sender. A content script can only hand off its own top-frame URL.</p>
+          </li>
+          <li>
+            <span class="step-tag">Render worker</span>
+            <p>markdown-it, highlighting and math run off the main thread, so large documents stay responsive.</p>
+          </li>
+          <li>
+            <span class="step-tag">DOMPurify</span>
+            <p>One trust boundary. No scripts, event handlers, forms, frames or <code>&lt;style&gt;</code>. URLs pass a scheme allowlist.</p>
+          </li>
+          <li>
+            <span class="step-tag is-accent">Viewer page</span>
+            <p>An extension page with <code>script-src 'self'</code>. Even a sanitizer bypass has nothing it can execute.</p>
+          </li>
+        </ol>
+      </section>
+
+      <!-- Privacy -->
+      <section class="privacy" aria-labelledby="privacy-heading">
+        <h2 id="privacy-heading">
+          No analytics. No telemetry. No server.
+          <span>Your documents stay in your browser.</span>
+        </h2>
+        <p>
+          The only time text leaves your machine is when you run an AI action, and only to the provider you configured,
+          after you confirm. Keys are never synced or exported and are bound to the endpoint they were saved for. This
+          page follows the same rule: no scripts, no web fonts, no third-party requests.
         </p>
+      </section>
 
-        <section id="features" aria-labelledby="features-title">
-          <div class="section-head">
-            <h2 id="features-title">Everything a developer reads in Markdown.</h2>
-            <p>READMEs, ADRs, runbooks, specs and changelogs — rendered properly, navigable instantly.</p>
-          </div>
-          <div class="bento">
-            <article class="tile wide tall">
-              <h3>Diagrams and math that just render</h3>
-              <p>Mermaid and Graphviz diagrams, KaTeX formulas, GitHub alerts, task lists, footnotes and tables. Heavy renderers load only when a document needs them.</p>
-              <img src="assets/2-diagrams.png" alt="Mermaid flowchart, Graphviz diagram and a math formula" width="1280" height="800" loading="lazy" />
-            </article>
-            <article class="tile">
-              <h3>Navigate like your editor</h3>
-              <p>An outline that follows you, find-in-document, and a command palette for everything.</p>
-              <div class="kbd-row"><kbd>⌘ K</kbd><kbd>/</kbd><kbd>J</kbd><kbd>K</kbd><kbd>?</kbd></div>
-            </article>
-            <article class="tile accent">
-              <h3>Open a whole folder</h3>
-              <p>Browse a project's docs with a Files tab. Relative images and links just work.</p>
-            </article>
-            <article class="tile">
-              <h3>Edit, preview, save</h3>
-              <p>Live-preview editing that saves back to the file — with Discard and Undo.</p>
-            </article>
-            <article class="tile">
-              <h3>Document Doctor</h3>
-              <p>Finds broken anchors, missing images, skipped heading levels and TODOs.</p>
-            </article>
-            <article class="tile">
-              <h3>Live reload</h3>
-              <p>Watches the file and keeps your place. Pauses in background tabs.</p>
-            </article>
-            <article class="tile wide">
-              <h3>Optional AI — your key, your provider</h3>
-              <p>Summarize, review, explain code or a selection, or draw a diagram with Anthropic Claude, OpenAI, a local model or any compatible endpoint. Off by default; requests go straight from your browser to the provider you choose.</p>
-            </article>
-            <article class="tile">
-              <h3>Export &amp; print</h3>
-              <p>Self-contained HTML, the Markdown source, or a clean PDF — even from dark mode.</p>
-            </article>
-          </div>
-        </section>
+      <!-- Install -->
+      <section class="install" id="install" aria-labelledby="install-heading">
+        <header class="section-head">
+          <p class="section-num">04</p>
+          <h2 id="install-heading">Install in a minute</h2>
+          <p>{{INSTALL_INTRO}}</p>
+        </header>
 
-        <section id="privacy" aria-labelledby="privacy-title">
-          <div class="section-head">
-            <h2 id="privacy-title">Private and secure by design.</h2>
-            <p>Markdown files can contain anything. Markscope treats them that way.</p>
-          </div>
-          <div class="trust">
-            <div>
-              <h3>Scripts never run</h3>
-              <p>Documents render in an isolated extension page with a strict security policy, after HTML sanitizing. A malicious file can't execute code or overlay the interface.</p>
-            </div>
-            <div>
-              <h3>Nothing leaves your browser</h3>
-              <p>No analytics, no telemetry, no remote code, no Markscope servers. Documents are only sent anywhere if you run an AI action — to the provider you configured.</p>
-            </div>
-            <div>
-              <h3>Open source</h3>
-              <p>Every line is on GitHub, with hundreds of tests including a malicious-document suite. <a href="privacy.html">Read the privacy policy</a>.</p>
-            </div>
-          </div>
-        </section>
+        <div class="stores">{{STORE_CARDS}}</div>
 
-        <section aria-labelledby="gallery-title">
-          <div class="section-head">
-            <h2 id="gallery-title">A closer look.</h2>
-          </div>
-          <div class="gallery" tabindex="0" aria-label="Screenshots">
-            <figure><img src="assets/3-command-palette.png" alt="Command palette" width="1280" height="800" loading="lazy" /><figcaption>Command palette: commands, headings, files and recent documents.</figcaption></figure>
-            <figure><img src="assets/4-edit-and-doctor.png" alt="Edit view with live preview and the Doctor tab" width="1280" height="800" loading="lazy" /><figcaption>Edit with live preview; the Doctor checks your docs.</figcaption></figure>
-            <figure><img src="assets/5-code-dark.png" alt="Code blocks in the dark theme" width="1280" height="800" loading="lazy" /><figcaption>Dark theme, syntax highlighting and callouts.</figcaption></figure>
-            <figure><img src="assets/6-start-page.png" alt="Start page with recent documents" width="1280" height="800" loading="lazy" /><figcaption>Start page: open files, folders, URLs or a scratch document.</figcaption></figure>
-          </div>
-        </section>
+        <div class="install-grid">
+          <ol class="steps">
+            <li>
+              Download <a href="{{RELEASE_URL}}"><code>markscope-{{VERSION}}-chrome.zip</code></a>
+              and unzip it.
+            </li>
+            <li>Open <code>chrome://extensions</code> (or <code>edge://extensions</code>) and turn on <b>Developer mode</b>.</li>
+            <li>Click <b>Load unpacked</b> and choose the unzipped folder.</li>
+            <li>For local files, open the extension's <b>Details</b> and allow access to file URLs.</li>
+          </ol>
 
-        <section id="install" aria-labelledby="install-title">
-          <div class="section-head">
-            <h2 id="install-title">Install.</h2>
-            <p>Works in Chrome, Edge and other Chromium browsers. Firefox support is experimental.</p>
+          <div class="build">
+            <p class="build-label">Or build from source <span>Node.js ≥ 20</span></p>
+            <pre><code>git clone {{REPO_URL}}
+cd markscope
+npm install
+npm run build   <span class="tk-meta"># → dist/chrome</span></code></pre>
+            <p class="build-note">A Firefox build (<code>npm run build:firefox</code>) is available and experimental.</p>
           </div>
-          <div class="install">
-            <article>
-              <h3>Chrome &amp; Edge</h3>
-              <p>{{CHROME_INSTALL_TEXT}}</p>
-              <a class="btn btn--primary" href="{{CHROME_URL}}">Add to Chrome</a>
-            </article>
-            <article>
-              <h3>Firefox</h3>
-              <p>{{FIREFOX_INSTALL_TEXT}}</p>
-              <a class="btn" href="{{FIREFOX_URL}}">Add to Firefox</a>
-            </article>
-            <article>
-              <h3>From the release zip</h3>
-              <ol>
-                <li>Download and unzip <code>markscope-{{VERSION}}-chrome.zip</code>.</li>
-                <li>Open <code>chrome://extensions</code> and turn on Developer mode.</li>
-                <li>Click <strong>Load unpacked</strong> and pick the folder.</li>
-              </ol>
-              <a class="btn" href="{{RELEASE_URL}}">Latest release</a>
-            </article>
-          </div>
-        </section>
-      </div>
+        </div>
+      </section>
     </main>
 
-    <footer class="site-foot">
-      <div class="wrap">
-        <span>© 2026 Markscope contributors · MIT License</span>
-        <span><a href="privacy.html">Privacy policy</a> · <a href="{{REPO_URL}}">Source code</a> · <a href="{{REPO_URL}}/issues">Support</a></span>
-      </div>
+    <footer class="site-footer">
+      <p>
+        <img src="assets/logo.svg" width="20" height="20" alt="" />
+        Markscope · <a href="{{REPO_URL}}/blob/main/LICENSE">MIT License</a>
+      </p>
+      <ul>
+        <li><a href="{{REPO_URL}}/blob/main/docs/SECURITY.md">Security</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a href="{{REPO_URL}}/blob/main/docs/ARCHITECTURE.md">Architecture</a></li>
+        <li><a href="{{REPO_URL}}/blob/main/CHANGELOG.md">Changelog</a></li>
+      </ul>
     </footer>
   </body>
 </html>

@@ -3,21 +3,44 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <title>{{TITLE}} — Markscope</title>
     <meta name="color-scheme" content="light dark" />
-    <link rel="icon" href="assets/icon-128.png" />
+    <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="tokens.css" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header class="site-head">
-      <div class="wrap">
-        <a class="brand" href="./"><img src="assets/icon-128.png" alt="" width="28" height="28" />Markscope</a>
-        <nav class="site-nav" aria-label="Main navigation"><a href="./#features">Features</a><a href="./#install">Install</a><a class="gh" href="{{REPO_URL}}">GitHub</a></nav>
-      </div>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <nav class="nav" aria-label="Main navigation">
+        <a class="brand" href="./" aria-label="Markscope home">
+          <img src="assets/logo.svg" width="28" height="28" alt="" />
+          <span>Markscope</span>
+        </a>
+        <ul class="nav-links">
+          <li><a href="./#features">Features</a></li>
+          <li><a href="./#security">Security</a></li>
+          <li><a href="./#install">Install</a></li>
+          <li><a class="nav-gh" href="{{REPO_URL}}">GitHub</a></li>
+        </ul>
+      </nav>
     </header>
-    <main class="wrap"><article class="prose">{{CONTENT}}</article></main>
-    <footer class="site-foot">
-      <div class="wrap"><span>© 2026 Markscope contributors · MIT License</span><span><a href="./">Home</a> · <a href="{{REPO_URL}}">Source code</a></span></div>
+    <main id="main"><article class="prose">{{CONTENT}}</article></main>
+    <footer class="site-footer">
+      <p>
+        <img src="assets/logo.svg" width="20" height="20" alt="" />
+        Markscope · <a href="{{REPO_URL}}/blob/main/LICENSE">MIT License</a>
+      </p>
+      <ul>
+        <li><a href="./">Home</a></li>
+        <li><a href="{{REPO_URL}}/blob/main/docs/SECURITY.md">Security</a></li>
+        <li><a href="{{REPO_URL}}/blob/main/CHANGELOG.md">Changelog</a></li>
+      </ul>
     </footer>
   </body>
 </html>
