@@ -56,6 +56,15 @@ function fakeEditor() {
       },
       focus: () => void state.focused++,
       topVisibleLine: () => 42,
+      run: command => {
+        const edit = command(state.text, { from: 0, to: state.text.length })
+        if (!edit) return false
+        state.text = edit.changes.reduceRight(
+          (t, c) => t.slice(0, c.from) + c.insert + t.slice(c.to),
+          state.text,
+        )
+        return true
+      },
       destroy: () => undefined,
     }
   }
@@ -156,6 +165,35 @@ describe('EditorController', () => {
     await ctrl.show()
     expect(ctrl.mounted).toBe(true)
     expect(load).toHaveBeenCalledTimes(2)
+  })
+
+  test('run applies a command and refocuses; does nothing before mount', async () => {
+    const { ctrl, fake } = setup()
+    const upper = (text: string) => ({
+      changes: [{ from: 0, to: text.length, insert: text.toUpperCase() }],
+      selection: { from: 0, to: 0 },
+    })
+    ctrl.setValue('abc')
+    expect(ctrl.run(upper)).toBe(false)
+    await ctrl.show()
+    expect(ctrl.run(upper)).toBe(true)
+    expect(ctrl.value).toBe('ABC')
+    expect(ctrl.run(() => null)).toBe(false)
+    expect(fake.state.focused).toBe(3)
+  })
+
+  test('forwards cursor updates', async () => {
+    const onCursor = vi.fn()
+    const fake = fakeEditor()
+    const ctrl = new EditorController(document.createElement('div'), {
+      onChange: vi.fn(),
+      onScroll: vi.fn(),
+      onCursor,
+      load: async () => fake.create,
+    })
+    await ctrl.show()
+    fake.state.callbacks?.onCursor({ line: 2, col: 5, selected: 0 })
+    expect(onCursor).toHaveBeenCalledWith({ line: 2, col: 5, selected: 0 })
   })
 
   test('focus before mount is a no-op', () => {

@@ -2,6 +2,7 @@
  * CodeMirror 6 implementation of the editor. Loaded with `import()` the
  * first time the Edit view opens, so reading never pays for it.
  */
+import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import {
   defaultKeymap,
@@ -27,8 +28,10 @@ import {
   lineNumbers,
 } from '@codemirror/view'
 import { tags as t } from '@lezer/highlight'
-import type { CreateEditor, EditorCallbacks } from './adapter'
+import type { CreateEditor, CursorInfo, EditorCallbacks } from './adapter'
 import { minimalChange } from './diff'
+import { EDITOR_COMMANDS } from './keymap'
+import { wrapSelection, type MarkdownCommand } from './markdown-commands'
 
 /** Marks transactions made by `setValue`, which must not count as user edits. */
 const programmatic = Annotation.define<boolean>()
@@ -105,6 +108,58 @@ const markdownHighlight = HighlightStyle.define([
   { tag: t.atom, color: 'var(--hl-number)' },
 ])
 
+/** Pairs typed in prose; backticks are left alone so ``` fences type normally. */
+const pairs = markdownLanguage.data.of({
+  closeBrackets: { brackets: ['(', '[', '{', '"'] },
+})
+
+function cursorInfo(state: EditorState): CursorInfo {
+  const { main } = state.selection
+  const line = state.doc.lineAt(main.head)
+  return {
+    line: line.number,
+    col: main.head - line.from + 1,
+    selected: main.to - main.from,
+  }
+}
+
+/** Applies a pure Markdown command to the main selection as one undoable step. */
+function applyCommand(view: EditorView, command: MarkdownCommand): boolean {
+  const { main } = view.state.selection
+  const edit = command(view.state.doc.toString(), { from: main.from, to: main.to })
+  if (!edit) return false
+  view.dispatch({
+    changes: edit.changes,
+    selection: { anchor: edit.selection.from, head: edit.selection.to },
+    scrollIntoView: true,
+    userEvent: 'input.format',
+  })
+  return true
+}
+
+const formattingKeymap = keymap.of(
+  EDITOR_COMMANDS.map(spec => ({
+    key: spec.key,
+    run: (view: EditorView) => applyCommand(view, spec.command),
+    // Never fall through to the browser (e.g. ⌘B/⌘I in some browsers).
+    preventDefault: true,
+  })),
+)
+
+/** Typing `*`, `_`, `~` or `` ` `` over a selection wraps it. */
+const wrapOnType = EditorView.inputHandler.of((view, from, to, text) => {
+  const { ranges, main } = view.state.selection
+  if (ranges.length !== 1 || main.from !== from || main.to !== to) return false
+  const edit = wrapSelection(view.state.doc.toString(), main, text)
+  if (!edit) return false
+  view.dispatch({
+    changes: edit.changes,
+    selection: { anchor: edit.selection.from, head: edit.selection.to },
+    userEvent: 'input.type',
+  })
+  return true
+})
+
 function extensions(callbacks: EditorCallbacks): Extension[] {
   return [
     lineNumbers(),
@@ -121,8 +176,19 @@ function extensions(callbacks: EditorCallbacks): Extension[] {
     // GFM; its keymap continues lists/quotes on Enter and removes markup on Backspace.
     markdown({ base: markdownLanguage }),
     syntaxHighlighting(markdownHighlight),
+    closeBrackets(),
+    pairs,
+    wrapOnType,
+    // Before the defaults: ⌘I is italic here, not "select parent syntax".
+    formattingKeymap,
     // Tab indents; Esc then Tab still moves focus out (no keyboard trap).
-    keymap.of([...defaultKeymap, ...searchKeymap, ...historyKeymap, indentWithTab]),
+    keymap.of([
+      ...closeBracketsKeymap,
+      ...defaultKeymap,
+      ...searchKeymap,
+      ...historyKeymap,
+      indentWithTab,
+    ]),
     EditorView.contentAttributes.of({
       'aria-label': 'Markdown source editor',
       spellcheck: 'false',
@@ -134,6 +200,8 @@ function extensions(callbacks: EditorCallbacks): Extension[] {
         !update.transactions.some(tr => tr.annotation(programmatic))
       )
         callbacks.onChange()
+      if (update.docChanged || update.selectionSet)
+        callbacks.onCursor(cursorInfo(update.state))
     }),
   ]
 }
@@ -145,6 +213,7 @@ export const createCodeMirror: CreateEditor = (parent, text, callbacks) => {
     state: EditorState.create({ doc: text, extensions: exts }),
   })
   view.scrollDOM.addEventListener('scroll', callbacks.onScroll, { passive: true })
+  callbacks.onCursor(cursorInfo(view.state))
 
   return {
     getValue: () => view.state.doc.toString(),
@@ -152,6 +221,7 @@ export const createCodeMirror: CreateEditor = (parent, text, callbacks) => {
       if (opts?.resetHistory) {
         view.setState(EditorState.create({ doc: next, extensions: exts }))
         view.scrollDOM.scrollTop = 0
+        callbacks.onCursor(cursorInfo(view.state))
         return
       }
       const change = minimalChange(view.state.doc.toString(), next)
@@ -163,6 +233,7 @@ export const createCodeMirror: CreateEditor = (parent, text, callbacks) => {
       const block = view.lineBlockAtHeight(Math.max(0, top))
       return view.state.doc.lineAt(block.from).number
     },
+    run: command => applyCommand(view, command),
     destroy() {
       view.scrollDOM.removeEventListener('scroll', callbacks.onScroll)
       view.destroy()

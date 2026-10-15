@@ -3,11 +3,22 @@
  * lazy-loaded, so nothing outside `codemirror.ts` imports CodeMirror.
  */
 
+import type { MarkdownCommand } from './markdown-commands'
+
+/** Where the cursor is: 1-based line and column, and the selection length. */
+export interface CursorInfo {
+  line: number
+  col: number
+  selected: number
+}
+
 export interface EditorCallbacks {
   /** The user changed the text (not called for `setValue`). */
   onChange: () => void
   /** The editor scrolled. */
   onScroll: () => void
+  /** The cursor or selection moved (also called once on mount). */
+  onCursor: (info: CursorInfo) => void
 }
 
 export interface EditorAdapter {
@@ -20,6 +31,8 @@ export interface EditorAdapter {
   focus(): void
   /** 1-based number of the first line visible at the top of the editor. */
   topVisibleLine(): number
+  /** Applies a Markdown command to the main selection; false if it didn't apply. */
+  run(command: MarkdownCommand): boolean
   destroy(): void
 }
 

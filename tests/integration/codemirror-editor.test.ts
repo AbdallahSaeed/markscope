@@ -9,8 +9,9 @@ describe('CodeMirror editor (jsdom)', () => {
     document.body.append(parent)
     const onChange = vi.fn()
     const onScroll = vi.fn()
-    const editor = createCodeMirror(parent, text, { onChange, onScroll })
-    return { parent, editor, onChange, onScroll }
+    const onCursor = vi.fn()
+    const editor = createCodeMirror(parent, text, { onChange, onScroll, onCursor })
+    return { parent, editor, onChange, onScroll, onCursor }
   }
 
   test('renders the text in an accessible, non-spellchecked content area', () => {
@@ -29,6 +30,18 @@ describe('CodeMirror editor (jsdom)', () => {
     editor.setValue('three', { resetHistory: true })
     expect(editor.getValue()).toBe('three')
     expect(onChange).not.toHaveBeenCalled()
+    editor.destroy()
+  })
+
+  test('reports the cursor on mount and runs formatting commands as one edit', async () => {
+    const { toggleBold } = await import('@/viewer/editor/markdown-commands')
+    const { editor, onCursor, onChange } = mount('hello')
+    expect(onCursor).toHaveBeenLastCalledWith({ line: 1, col: 1, selected: 0 })
+    expect(editor.run(toggleBold)).toBe(true)
+    expect(editor.getValue()).toBe('****hello')
+    expect(onCursor).toHaveBeenLastCalledWith({ line: 1, col: 3, selected: 0 })
+    expect(onChange).toHaveBeenCalledTimes(1)
+    expect(editor.run(() => null)).toBe(false)
     editor.destroy()
   })
 

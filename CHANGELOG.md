@@ -7,6 +7,11 @@
   - Undo history survives Discard: ⌘/Ctrl Z in the editor brings discarded edits back.
   - Scroll sync is now accurate with wrapped lines.
   - The editor is loaded only when the Edit view is first opened, so reading pays nothing for it.
+- **Markdown writing help** in the editor:
+  - ⌘/Ctrl B bold, ⌘/Ctrl I italic, ⌘/Ctrl E inline code, ⇧⌘/Ctrl⇧X strikethrough, ⇧⌘/Ctrl⇧K link, ⌘⌥/Ctrl Alt T format the table under the cursor. Pressing again removes the formatting. They are listed in the shortcut help (?) and, in the Edit view, in the command palette.
+  - Typing `*`, `_`, `~` or `` ` `` over a selection wraps it; `(`, `[`, `{` and `"` close themselves.
+  - Pasting a URL over selected text turns it into a link.
+  - The status bar shows the cursor line, column and selection length in the Edit view.
 
 ## 1.0.0 — 2026-10-09
 

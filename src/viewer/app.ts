@@ -20,6 +20,7 @@ import type { DocumentRef, LibraryStore } from '@/storage/library-store'
 import type { SettingsStore } from '@/storage/settings-store'
 import { AIPanel } from './ai-panel'
 import { DocumentView } from './document-view'
+import type { CursorInfo } from './editor/adapter'
 import { EditorController } from './editor/editor-controller'
 import { exportDocument, printDocument } from './document-actions'
 import { saveDocument, saveDocumentAs } from './save-actions'
@@ -33,7 +34,7 @@ import { toast } from './toast'
 import { defaultLoaderDeps, loadSource, type Validators } from './source-loader'
 import { Watcher } from './watcher'
 import { ensurePermission, FileAccessNeededError, readIfPermitted } from './file-access'
-import { MOD_LABEL } from './shortcuts'
+import { renderCursor, renderStatus } from './status-bar'
 import { highlightSource } from './source-view'
 import { idFromHash, scrollToId, scrollToLine, topVisibleLine } from './navigation'
 import { FolderSession, readFileAsBlobUrl } from './folder-session'
@@ -80,6 +81,7 @@ export class ViewerApp {
   private savedSource = ''
   /** The Markdown editor (CodeMirror, loaded on first use). */
   readonly editor: EditorController
+  private cursor: CursorInfo | null = null
   private watcherInterval = 0
   private validators: Validators | null = null
   private renderSeq = 0
@@ -145,6 +147,10 @@ export class ViewerApp {
     this.editor = new EditorController(this.layout.editor, {
       onChange: () => void this.onEdit().catch(e => toast(errorMessage(e), 'error')),
       onScroll: () => this.syncPreviewToEditor(),
+      onCursor: info => {
+        this.cursor = info
+        if (this.view === 'split') renderCursor(this.layout.status, info)
+      },
     })
     window.addEventListener('beforeunload', e => {
       if (this.modified && !this.doc?.scratch) e.preventDefault()
@@ -339,28 +345,12 @@ export class ViewerApp {
     const result = this.result
     if (!doc || !result) return
     const stats = computeStats(doc.source)
-    const live = this.watcher?.active ? '● Live' : ''
-    const parts = [
-      `${stats.words.toLocaleString()} words`,
-      `${stats.readingMinutes || '<1'} min read`,
-      `${stats.lines.toLocaleString()} lines`,
-      `${Math.round(result.durationMs)} ms`,
-    ]
-    this.layout.status.replaceChildren(
-      ...parts.map(p =>
-        Object.assign(document.createElement('span'), { textContent: p }),
-      ),
-      Object.assign(document.createElement('span'), {
-        className: 'ms-status__live',
-        textContent: live,
-        hidden: !live,
-      }),
-      Object.assign(document.createElement('span'), {
-        className: 'ms-status__modified',
-        textContent: this.modified ? `Edited · ${MOD_LABEL} S to save` : '',
-        hidden: !this.modified,
-      }),
-    )
+    renderStatus(this.layout.status, {
+      stats,
+      renderMs: result.durationMs,
+      live: !!this.watcher?.active,
+      modified: this.modified,
+    })
     this.sidebar.setInfo(stats, {
       source: doc.sourceUrl ?? (doc.scratch ? 'Scratch document' : 'Local document'),
       renderMs: result.durationMs,
@@ -615,6 +605,7 @@ export class ViewerApp {
     for (const [id, btn] of Object.entries(this.layout.modeButtons))
       btn.setAttribute('aria-pressed', String(id === mode))
     if (mode === 'source') this.renderSourceView()
+    renderCursor(this.layout.status, mode === 'split' ? this.cursor : null)
     if (mode === 'split') {
       // Panes scroll independently; a leftover page scroll would cut them off.
       window.scrollTo(0, 0)

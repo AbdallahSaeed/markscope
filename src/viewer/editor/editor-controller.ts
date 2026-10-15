@@ -3,7 +3,8 @@
  * while it isn't loaded, and debounces edits before the app re-renders.
  */
 import { debounce } from '@/shared/dom'
-import type { CreateEditor, EditorAdapter } from './adapter'
+import type { CreateEditor, CursorInfo, EditorAdapter } from './adapter'
+import type { MarkdownCommand } from './markdown-commands'
 
 /** Typing pause before edits reach the document and the preview re-renders. */
 export const EDIT_DEBOUNCE_MS = 160
@@ -12,6 +13,8 @@ export interface EditorControllerOptions {
   /** Debounced: the user's edits are ready to apply. */
   onChange: () => void
   onScroll: () => void
+  /** The cursor or selection moved. */
+  onCursor?: (info: CursorInfo) => void
   /** Injected for tests; defaults to lazy-loading CodeMirror. */
   load?: () => Promise<CreateEditor>
 }
@@ -67,12 +70,21 @@ export class EditorController {
     return this.adapter?.topVisibleLine() ?? 1
   }
 
+  /** Runs a formatting command in the editor; false when it isn't mounted or didn't apply. */
+  run(command: MarkdownCommand): boolean {
+    if (!this.adapter) return false
+    const applied = this.adapter.run(command)
+    this.adapter.focus()
+    return applied
+  }
+
   private mount(): Promise<void> {
     this.mounting ??= (this.opts.load ?? loadCodeMirror)()
       .then(create => {
         this.adapter = create(this.host, this.buffer, {
           onChange: () => this.pending(),
           onScroll: () => this.opts.onScroll(),
+          onCursor: info => this.opts.onCursor?.(info),
         })
       })
       .catch(error => {
