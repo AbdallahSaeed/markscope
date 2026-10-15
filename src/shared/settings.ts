@@ -64,6 +64,8 @@ export interface Settings {
   }
   layout: {
     sidebar: boolean
+    /** Edit view: the editor's share of the width (the rest is the preview). */
+    splitRatio: number
   }
   /** Extra match patterns (beyond *.md etc.) that should open in Markscope. */
   urlPatterns: string[]
@@ -81,6 +83,7 @@ export const LIMITS = {
   fontSize: { min: 12, max: 24 },
   lineHeight: { min: 1.2, max: 2.2 },
   intervalMs: { min: 500, max: 60_000 },
+  splitRatio: { min: 0.2, max: 0.8 },
   urlPatterns: 50,
   modelLength: 120,
   baseUrlLength: 500,
@@ -121,7 +124,7 @@ export function defaultSettings(): Settings {
     },
     privacy: { remoteImages: 'allow' },
     liveReload: { enabled: false, intervalMs: 1500 },
-    layout: { sidebar: true },
+    layout: { sidebar: true, splitRatio: 0.5 },
     urlPatterns: [],
     ai: {
       enabled: false,
@@ -284,7 +287,15 @@ export function parseSettings(input: unknown): Settings {
         LIMITS.intervalMs.max,
       ),
     },
-    layout: { sidebar: bool(lay.sidebar, d.layout.sidebar) },
+    layout: {
+      sidebar: bool(lay.sidebar, d.layout.sidebar),
+      splitRatio: num(
+        lay.splitRatio,
+        d.layout.splitRatio,
+        LIMITS.splitRatio.min,
+        LIMITS.splitRatio.max,
+      ),
+    },
     urlPatterns: patterns(s.urlPatterns),
     ai: {
       enabled: bool(a.enabled, d.ai.enabled),

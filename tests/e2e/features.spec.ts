@@ -153,6 +153,100 @@ test('editor: formatting keys, auto-pairs, paste-as-link, table format, cursor s
   )
 })
 
+test('editor: two-way scroll sync, double-click to jump, cursor highlight, divider', async ({
+  context,
+  server,
+}) => {
+  const page = await openMarkdown(context, `${server.url}/guide.md`)
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.locator('[data-mode="split"]').click()
+  const editor = page.locator('.ms-editor .cm-content')
+  // 80 sections of 4 lines each: "## Section i" is on line 4i - 3.
+  const doc = Array.from(
+    { length: 80 },
+    (_, i) =>
+      `## Section ${i + 1}\n\nParagraph ${i + 1} with enough words to wrap a little.\n`,
+  ).join('\n')
+  await editor.fill(doc)
+  await expect(page.locator('.ms-doc h2').last()).toHaveText(/Section 80$/)
+
+  /** First section heading visible at the top of each pane. */
+  const tops = () =>
+    page.evaluate(() => {
+      const first = (sel: string, box: Element, re: RegExp) => {
+        const top = box.getBoundingClientRect().top
+        for (const el of document.querySelectorAll(sel)) {
+          const m = re.exec(el.textContent ?? '')
+          if (m && el.getBoundingClientRect().bottom > top) return Number(m[1])
+        }
+        return -1
+      }
+      return {
+        editor: first(
+          '.cm-line',
+          document.querySelector('.cm-scroller')!,
+          /^## Section (\d+)$/,
+        ),
+        preview: first(
+          '.ms-doc h2',
+          document.querySelector('.ms-pane--preview')!,
+          /Section (\d+)$/,
+        ),
+      }
+    })
+  const inSync = async () => {
+    const t = await tops()
+    return Math.abs(t.editor - t.preview) <= 1 && t.editor > 1
+  }
+  const scroller = page.locator('.ms-editor .cm-scroller')
+  const preview = page.locator('.ms-pane--preview')
+
+  // Editor → preview.
+  await scroller.evaluate(e => e.scrollTo(0, e.scrollHeight * 0.5))
+  await expect.poll(inSync).toBe(true)
+  // Preview → editor.
+  await preview.evaluate(e => e.scrollTo(0, e.scrollHeight * 0.25))
+  await expect.poll(inSync).toBe(true)
+  // Bottom follows bottom.
+  await scroller.evaluate(e => e.scrollTo(0, e.scrollHeight))
+  await expect
+    .poll(() => preview.evaluate(e => e.scrollTop + e.clientHeight >= e.scrollHeight - 2))
+    .toBe(true)
+
+  // Double-click a preview block → the editor cursor moves to its source line,
+  // and the block is highlighted as the cursor's block.
+  const target = page.locator('.ms-doc h2', { hasText: /Section 60$/ })
+  await target.scrollIntoViewIfNeeded()
+  await target.dblclick()
+  await expect(page.locator('.ms-status__cursor')).toHaveText(/^Ln 237, Col 1/)
+  await expect(target).toHaveClass(/ms-cursor-block/)
+  await expect(editor).toBeFocused()
+
+  // Divider: drag to ~30%, keyboard nudges by 2%, and the ratio is saved.
+  const panes = (await page.locator('.ms-panes').boundingBox())!
+  const divider = page.locator('.ms-split-divider')
+  const box = (await divider.boundingBox())!
+  await page.mouse.move(box.x + box.width / 2, box.y + 200)
+  await page.mouse.down()
+  await page.mouse.move(panes.x + panes.width * 0.3, box.y + 200, { steps: 5 })
+  await page.mouse.up()
+  const editorWidth = async () =>
+    ((await page.locator('.ms-pane--editor').boundingBox())?.width ?? 0) / panes.width
+  await expect.poll(editorWidth).toBeCloseTo(0.3, 1)
+  await divider.focus()
+  await page.keyboard.press('ArrowRight')
+  await expect.poll(editorWidth).toBeCloseTo(0.32, 1)
+  await expect(divider).toHaveAttribute('aria-valuenow', '32')
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const { settings } = await chrome.storage.sync.get('settings')
+        return (settings as { layout?: { splitRatio?: number } })?.layout?.splitRatio
+      }),
+    )
+    .toBeCloseTo(0.32, 2)
+})
+
 test('start page: open URL, recents, favorites, feature tour', async ({
   context,
   server,

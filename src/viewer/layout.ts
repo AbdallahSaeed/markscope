@@ -28,6 +28,8 @@ export interface Layout {
   /** Mount point for the lazily loaded CodeMirror editor. */
   editor: HTMLElement
   sourceView: HTMLElement
+  /** The preview pane: the element that scrolls in the Edit view. */
+  previewPane: HTMLElement
   article: HTMLElement
   aiSlot: HTMLElement
   status: HTMLElement
@@ -134,12 +136,13 @@ export function buildLayout(mount: HTMLElement): Layout {
     'aria-label': 'Markdown source',
   })
   const article = h('article', { class: 'ms-doc', id: 'ms-doc', tabindex: '-1' })
+  const previewPane = h('div', { class: 'ms-pane ms-pane--preview' }, article)
   const panes = h(
     'div',
     { class: 'ms-panes', dataset: { view: 'read' } },
     h('div', { class: 'ms-pane ms-pane--editor' }, editor),
     h('div', { class: 'ms-pane ms-pane--source' }, sourceView),
-    h('div', { class: 'ms-pane ms-pane--preview' }, article),
+    previewPane,
   )
   const banner = h('div', { class: 'ms-banner ms-ui', role: 'status', hidden: true })
   const main = h('main', { class: 'ms-main', id: 'ms-main' }, banner, panes)
@@ -194,6 +197,7 @@ export function buildLayout(mount: HTMLElement): Layout {
     panes,
     editor,
     sourceView,
+    previewPane,
     article,
     aiSlot,
     status,

@@ -228,11 +228,40 @@ export const createCodeMirror: CreateEditor = (parent, text, callbacks) => {
       if (change) view.dispatch({ changes: change, annotations: programmatic.of(true) })
     },
     focus: () => view.focus(),
-    topVisibleLine() {
-      const top = view.scrollDOM.getBoundingClientRect().top - view.documentTop
-      const block = view.lineBlockAtHeight(Math.max(0, top))
-      return view.state.doc.lineAt(block.from).number
+    topLine() {
+      const height = Math.max(
+        0,
+        view.scrollDOM.getBoundingClientRect().top - view.documentTop,
+      )
+      const block = view.lineBlockAtHeight(height)
+      const line = view.state.doc.lineAt(block.from).number
+      const frac = block.height > 0 ? (height - block.top) / block.height : 0
+      return line + Math.min(1, Math.max(0, frac))
     },
+    scrollToLine(line) {
+      const doc = view.state.doc
+      const n = Math.min(doc.lines, Math.max(1, Math.floor(line)))
+      const block = view.lineBlockAt(doc.line(n).from)
+      // Where the document starts inside the scroller (content padding etc.).
+      const docStart =
+        view.documentTop -
+        view.scrollDOM.getBoundingClientRect().top +
+        view.scrollDOM.scrollTop
+      view.scrollDOM.scrollTop = docStart + block.top + (line - n) * block.height
+    },
+    revealLine(line) {
+      const doc = view.state.doc
+      const pos = doc.line(Math.min(doc.lines, Math.max(1, Math.round(line)))).from
+      view.dispatch({
+        selection: { anchor: pos },
+        effects: EditorView.scrollIntoView(pos, { y: 'center' }),
+        userEvent: 'select',
+      })
+      view.focus()
+    },
+    lineCount: () => view.state.doc.lines,
+    length: () => view.state.doc.length,
+    scrollElement: () => view.scrollDOM,
     run: command => applyCommand(view, command),
     destroy() {
       view.scrollDOM.removeEventListener('scroll', callbacks.onScroll)

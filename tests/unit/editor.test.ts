@@ -1,6 +1,10 @@
 import type { CreateEditor, EditorCallbacks } from '@/viewer/editor/adapter'
 import { minimalChange } from '@/viewer/editor/diff'
-import { EDIT_DEBOUNCE_MS, EditorController } from '@/viewer/editor/editor-controller'
+import {
+  EDIT_DEBOUNCE_MS,
+  EditorController,
+  editDelay,
+} from '@/viewer/editor/editor-controller'
 
 function apply(text: string, change: ReturnType<typeof minimalChange>): string {
   if (!change) return text
@@ -43,6 +47,9 @@ function fakeEditor() {
     focused: 0,
     setCalls: [] as { text: string; resetHistory: boolean }[],
     callbacks: null as EditorCallbacks | null,
+    scrolledTo: [] as number[],
+    revealed: [] as number[],
+    scroller: document.createElement('div'),
   }
   const create: CreateEditor = (_parent, text, callbacks) => {
     state.created++
@@ -55,7 +62,12 @@ function fakeEditor() {
         state.setCalls.push({ text: next, resetHistory: !!opts?.resetHistory })
       },
       focus: () => void state.focused++,
-      topVisibleLine: () => 42,
+      topLine: () => 42.5,
+      scrollToLine: line => void state.scrolledTo.push(line),
+      revealLine: line => void state.revealed.push(line),
+      lineCount: () => state.text.split('\n').length,
+      length: () => state.text.length,
+      scrollElement: () => state.scroller,
       run: command => {
         const edit = command(state.text, { from: 0, to: state.text.length })
         if (!edit) return false
@@ -97,7 +109,9 @@ describe('EditorController', () => {
     ctrl.setValue('second')
     expect(ctrl.mounted).toBe(false)
     expect(ctrl.value).toBe('second')
-    expect(ctrl.topVisibleLine()).toBe(1)
+    expect(ctrl.topLine()).toBe(1)
+    expect(ctrl.lineCount()).toBe(1)
+    expect(ctrl.scrollElement()).toBeNull()
 
     await Promise.all([ctrl.show(), ctrl.show()])
     expect(load).toHaveBeenCalledTimes(1)
@@ -105,7 +119,7 @@ describe('EditorController', () => {
     expect(fake.state.text).toBe('second')
     expect(fake.state.focused).toBe(2)
     expect(ctrl.mounted).toBe(true)
-    expect(ctrl.topVisibleLine()).toBe(42)
+    expect(ctrl.topLine()).toBe(42.5)
   })
 
   test('setValue after mount passes resetHistory through to the editor', async () => {
@@ -194,6 +208,38 @@ describe('EditorController', () => {
     await ctrl.show()
     fake.state.callbacks?.onCursor({ line: 2, col: 5, selected: 0 })
     expect(onCursor).toHaveBeenCalledWith({ line: 2, col: 5, selected: 0 })
+  })
+
+  test('forwards scrolling, reveal and measurements once mounted', async () => {
+    const { ctrl, fake } = setup()
+    ctrl.scrollToLine(3)
+    ctrl.revealLine(4)
+    expect(fake.state.scrolledTo).toEqual([])
+    ctrl.setValue('a\nb\nc')
+    await ctrl.show()
+    ctrl.scrollToLine(2.5)
+    ctrl.revealLine(3)
+    expect(fake.state.scrolledTo).toEqual([2.5])
+    expect(fake.state.revealed).toEqual([3])
+    expect(ctrl.lineCount()).toBe(3)
+    expect(ctrl.scrollElement()).toBe(fake.state.scroller)
+  })
+
+  test('the typing pause grows with the document size', () => {
+    expect(editDelay(1000)).toBe(EDIT_DEBOUNCE_MS)
+    expect(editDelay(100 * 1024)).toBeGreaterThan(EDIT_DEBOUNCE_MS)
+    expect(editDelay(1024 * 1024)).toBeGreaterThan(editDelay(100 * 1024))
+  })
+
+  test('large documents wait longer before re-rendering', async () => {
+    vi.useFakeTimers()
+    const { fake, ctrl, onChange } = setup()
+    await ctrl.show()
+    fake.type('x'.repeat(100 * 1024))
+    vi.advanceTimersByTime(EDIT_DEBOUNCE_MS)
+    expect(onChange).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(editDelay(100 * 1024))
+    expect(onChange).toHaveBeenCalledTimes(1)
   })
 
   test('focus before mount is a no-op', () => {

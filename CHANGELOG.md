@@ -12,6 +12,12 @@
   - Typing `*`, `_`, `~` or `` ` `` over a selection wraps it; `(`, `[`, `{` and `"` close themselves.
   - Pasting a URL over selected text turns it into a link.
   - The status bar shows the cursor line, column and selection length in the Edit view.
+- **Editor and preview stay together** in the Edit view:
+  - Scroll sync works both ways and stays aligned inside long sections (it interpolates between blocks); reaching the bottom of one pane scrolls the other to its bottom.
+  - Double-click a block in the preview to put the editor cursor on its source line.
+  - The preview block under the editor cursor is highlighted.
+  - Drag the divider between the panes to resize them (or focus it and use ←/→, Home/End; double-click resets). The split is remembered.
+  - Large documents wait longer after typing before re-rendering (over 64 KB and 512 KB).
 
 ## 1.0.0 — 2026-10-09
 

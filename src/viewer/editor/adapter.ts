@@ -29,8 +29,17 @@ export interface EditorAdapter {
    */
   setValue(text: string, opts?: { resetHistory?: boolean }): void
   focus(): void
-  /** 1-based number of the first line visible at the top of the editor. */
-  topVisibleLine(): number
+  /** Fractional 1-based line at the top of the viewport (12.5 = halfway through line 12). */
+  topLine(): number
+  /** Scrolls so a fractional line is at the top of the viewport. */
+  scrollToLine(line: number): void
+  /** Puts the cursor at the start of a line, centers it and focuses the editor. */
+  revealLine(line: number): void
+  lineCount(): number
+  /** Length of the text in UTF-16 code units (cheap; no string copy). */
+  length(): number
+  /** The element that scrolls (for scroll events and bottom detection). */
+  scrollElement(): HTMLElement
   /** Applies a Markdown command to the main selection; false if it didn't apply. */
   run(command: MarkdownCommand): boolean
   destroy(): void

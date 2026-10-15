@@ -503,8 +503,10 @@ body[data-mode='home'] .ms-toolbar {
   display: block;
 }
 .ms-panes[data-view='split'] {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  /* --ms-split: the editor's share, set by the divider (split-divider.ts). */
+  grid-template-columns: minmax(0, var(--ms-split, 50%)) minmax(0, 1fr);
   gap: 0;
   padding: 0;
   height: calc(100vh - var(--toolbar-h) - var(--status-h));
@@ -519,6 +521,50 @@ body[data-mode='home'] .ms-toolbar {
 .ms-panes[data-view='split'] .ms-pane--preview {
   overflow: auto;
   padding: 32px 20px 80px;
+}
+/* Draggable divider on the editor/preview boundary (absolute: no grid cell). */
+.ms-split-divider {
+  display: none;
+}
+.ms-panes[data-view='split'] .ms-split-divider {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--ms-split, 50%) - 4px);
+  z-index: 2;
+  display: block;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.ms-split-divider::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 3px;
+  width: 2px;
+  background: transparent;
+  transition: background-color var(--dur) var(--ease);
+}
+.ms-split-divider:hover::after,
+.ms-split-divider:focus-visible::after,
+body.ms-resizing .ms-split-divider::after {
+  background: var(--accent);
+}
+.ms-split-divider:focus-visible {
+  outline: none;
+}
+body.ms-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+/* The preview block under the editor cursor (split-view.ts). */
+.ms-panes[data-view='split'] .ms-doc > .ms-cursor-block {
+  border-radius: 4px;
+  background: color-mix(in oklch, var(--accent-soft) 45%, transparent);
+  box-shadow: 0 0 0 6px color-mix(in oklch, var(--accent-soft) 45%, transparent);
+  transition:
+    background-color var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease);
 }
 /* CodeMirror mounts here; its theme lives in viewer/editor/codemirror.ts. */
 .ms-editor {
@@ -1309,6 +1355,9 @@ body.zen .ms-zen-exit:not([hidden]) {
     grid-template-columns: 1fr;
     grid-template-rows: 40% 60%;
   }
+  .ms-panes[data-view='split'] .ms-split-divider {
+    display: none;
+  }
 }
 @media (max-width: 640px) {
   .ms-seg__btn span,
@@ -1349,6 +1398,10 @@ body.zen .ms-zen-exit:not([hidden]) {
   .ms-banner,
   .ms-search {
     display: none !important;
+  }
+  .ms-doc > .ms-cursor-block {
+    background: none !important;
+    box-shadow: none !important;
   }
   body {
     background: none;

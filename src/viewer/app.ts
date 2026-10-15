@@ -34,6 +34,8 @@ import { toast } from './toast'
 import { defaultLoaderDeps, loadSource, type Validators } from './source-loader'
 import { Watcher } from './watcher'
 import { ensurePermission, FileAccessNeededError, readIfPermitted } from './file-access'
+import { createSplitDivider, type SplitDivider } from './split-divider'
+import { SplitView } from './split-view'
 import { renderCursor, renderStatus } from './status-bar'
 import { highlightSource } from './source-view'
 import { idFromHash, scrollToId, scrollToLine, topVisibleLine } from './navigation'
@@ -82,6 +84,9 @@ export class ViewerApp {
   /** The Markdown editor (CodeMirror, loaded on first use). */
   readonly editor: EditorController
   private cursor: CursorInfo | null = null
+  /** Edit view: scroll sync, jump to source, cursor highlight. */
+  readonly split: SplitView
+  private readonly divider: SplitDivider
   private watcherInterval = 0
   private validators: Validators | null = null
   private renderSeq = 0
@@ -146,12 +151,23 @@ export class ViewerApp {
     this.layout.aiSlot.append(this.ai.el)
     this.editor = new EditorController(this.layout.editor, {
       onChange: () => void this.onEdit().catch(e => toast(errorMessage(e), 'error')),
-      onScroll: () => this.syncPreviewToEditor(),
+      onScroll: () => this.split.onEditorScroll(),
       onCursor: info => {
         this.cursor = info
+        this.split.onCursor(info.line)
         if (this.view === 'split') renderCursor(this.layout.status, info)
       },
     })
+    this.split = new SplitView({
+      preview: this.layout.previewPane,
+      article: this.layout.article,
+      editor: this.editor,
+      active: () => this.view === 'split',
+    })
+    this.divider = createSplitDivider(this.layout.panes, splitRatio =>
+      this.updateSettings({ layout: { splitRatio } }),
+    )
+    this.layout.panes.append(this.divider.el)
     window.addEventListener('beforeunload', e => {
       if (this.modified && !this.doc?.scratch) e.preventDefault()
     })
@@ -172,6 +188,7 @@ export class ViewerApp {
     applyAppearance(next)
     document.body.classList.toggle('sidebar-hidden', !next.layout.sidebar)
     this.updateSidebarButton()
+    this.divider.set(next.layout.splitRatio)
     this.layout.aiBtn.hidden = !next.ai.enabled
     if (!next.ai.enabled) this.closeAI()
     this.ai.configure(next)
@@ -282,7 +299,9 @@ export class ViewerApp {
     const doc = this.doc
     if (!doc) return
     const seq = ++this.renderSeq
-    const anchorLine = opts.preserveScroll ? this.topVisibleLine() : 0
+    // The Edit view re-aligns the preview with the editor instead.
+    const anchorLine =
+      opts.preserveScroll && this.view !== 'split' ? this.topVisibleLine() : 0
     let result: RenderResult
     try {
       result = await this.renderer.render(doc.source, {
@@ -322,7 +341,8 @@ export class ViewerApp {
       toast('Large document: syntax highlighting was limited to keep things fast.')
     if (this.view === 'source') this.renderSourceView()
     else this.sourceRendered = false
-    if (anchorLine) this.scrollToLine(anchorLine, 'instant')
+    if (this.view === 'split') this.split.syncPreview()
+    else if (anchorLine) this.scrollToLine(anchorLine, 'instant')
   }
 
   runDoctor(): void {
@@ -596,7 +616,6 @@ export class ViewerApp {
       if (stored) await localDocs.put({ ...stored, text, updatedAt: Date.now() })
     }
     await this.render({ preserveScroll: false })
-    this.syncPreviewToEditor()
   }
 
   setView(mode: ViewMode): void {
@@ -611,19 +630,15 @@ export class ViewerApp {
       window.scrollTo(0, 0)
       void this.editor
         .show()
+        .then(() => this.split.syncPreview())
         .catch(e => toast(`Could not load the editor: ${errorMessage(e)}`, 'error'))
-    }
+    } else this.split.deactivate()
   }
 
   private renderSourceView(): void {
     if (this.sourceRendered || !this.doc) return
     this.sourceRendered = true
     highlightSource(this.layout.sourceView, this.doc.source)
-  }
-
-  private syncPreviewToEditor(): void {
-    if (this.view !== 'split') return
-    this.scrollToLine(this.editor.topVisibleLine(), 'instant')
   }
 
   // --------------------------------------------------------------- navigation

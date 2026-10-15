@@ -2,12 +2,18 @@
  * Owns the Markdown editor: loads CodeMirror on first use, keeps the text
  * while it isn't loaded, and debounces edits before the app re-renders.
  */
-import { debounce } from '@/shared/dom'
 import type { CreateEditor, CursorInfo, EditorAdapter } from './adapter'
 import type { MarkdownCommand } from './markdown-commands'
 
 /** Typing pause before edits reach the document and the preview re-renders. */
 export const EDIT_DEBOUNCE_MS = 160
+
+/** The pause grows with the document so large files don't re-render on every word. */
+export function editDelay(length: number): number {
+  if (length > 512 * 1024) return 600
+  if (length > 64 * 1024) return 350
+  return EDIT_DEBOUNCE_MS
+}
 
 export interface EditorControllerOptions {
   /** Debounced: the user's edits are ready to apply. */
@@ -27,14 +33,12 @@ export class EditorController {
   private mounting: Promise<void> | null = null
   /** The text while the editor isn't mounted yet. */
   private buffer = ''
-  private readonly pending: ReturnType<typeof debounce<[]>>
+  private timer: ReturnType<typeof setTimeout> | undefined
 
   constructor(
     private readonly host: HTMLElement,
     private readonly opts: EditorControllerOptions,
-  ) {
-    this.pending = debounce(() => this.opts.onChange(), EDIT_DEBOUNCE_MS)
-  }
+  ) {}
 
   get mounted(): boolean {
     return this.adapter !== null
@@ -63,11 +67,35 @@ export class EditorController {
 
   /** Drop edits waiting in the debounce (Discard). */
   cancelPending(): void {
-    this.pending.cancel()
+    clearTimeout(this.timer)
   }
 
-  topVisibleLine(): number {
-    return this.adapter?.topVisibleLine() ?? 1
+  /** Fractional line at the top of the editor viewport (1 when not mounted). */
+  topLine(): number {
+    return this.adapter?.topLine() ?? 1
+  }
+
+  scrollToLine(line: number): void {
+    this.adapter?.scrollToLine(line)
+  }
+
+  revealLine(line: number): void {
+    this.adapter?.revealLine(line)
+  }
+
+  lineCount(): number {
+    return this.adapter?.lineCount() ?? this.buffer.split('\n').length
+  }
+
+  /** The editor's scroll container, once mounted. */
+  scrollElement(): HTMLElement | null {
+    return this.adapter?.scrollElement() ?? null
+  }
+
+  private schedule(): void {
+    clearTimeout(this.timer)
+    const length = this.adapter?.length() ?? this.buffer.length
+    this.timer = setTimeout(() => this.opts.onChange(), editDelay(length))
   }
 
   /** Runs a formatting command in the editor; false when it isn't mounted or didn't apply. */
@@ -82,7 +110,7 @@ export class EditorController {
     this.mounting ??= (this.opts.load ?? loadCodeMirror)()
       .then(create => {
         this.adapter = create(this.host, this.buffer, {
-          onChange: () => this.pending(),
+          onChange: () => this.schedule(),
           onScroll: () => this.opts.onScroll(),
           onCursor: info => this.opts.onCursor?.(info),
         })
