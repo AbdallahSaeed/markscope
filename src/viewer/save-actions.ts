@@ -25,7 +25,7 @@ import { toast } from './toast'
  */
 function commitEditor(app: ViewerApp): void {
   if (!app.doc) return
-  const text = app.layout.editor.value
+  const text = app.editor.value
   if (text === app.doc.source) return
   app.doc = { ...app.doc, source: text }
   if (!app.doc.scratch) app.modified = true

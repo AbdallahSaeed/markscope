@@ -25,7 +25,8 @@ export interface Layout {
   main: HTMLElement
   banner: HTMLElement
   panes: HTMLElement
-  editor: HTMLTextAreaElement
+  /** Mount point for the lazily loaded CodeMirror editor. */
+  editor: HTMLElement
   sourceView: HTMLElement
   article: HTMLElement
   aiSlot: HTMLElement
@@ -126,12 +127,7 @@ export function buildLayout(mount: HTMLElement): Layout {
     ),
   )
 
-  const editor = h('textarea', {
-    class: 'ms-editor',
-    spellcheck: 'false',
-    'aria-label': 'Markdown source editor',
-    wrap: 'off',
-  })
+  const editor = h('div', { class: 'ms-editor' })
   const sourceView = h('pre', {
     class: 'ms-source',
     tabindex: '0',

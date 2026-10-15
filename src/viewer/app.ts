@@ -20,6 +20,7 @@ import type { DocumentRef, LibraryStore } from '@/storage/library-store'
 import type { SettingsStore } from '@/storage/settings-store'
 import { AIPanel } from './ai-panel'
 import { DocumentView } from './document-view'
+import { EditorController } from './editor/editor-controller'
 import { exportDocument, printDocument } from './document-actions'
 import { saveDocument, saveDocumentAs } from './save-actions'
 import { hideBanner, showBanner, type Layout, type ViewMode } from './layout'
@@ -77,11 +78,8 @@ export class ViewerApp {
   private watcher: Watcher | null = null
   /** Text as last loaded or saved: what Discard reverts to. */
   private savedSource = ''
-  /** Debounced editor → document sync; Discard cancels a pending run. */
-  private readonly pendingEdit = debounce(
-    () => void this.onEdit().catch(e => toast(errorMessage(e), 'error')),
-    160,
-  )
+  /** The Markdown editor (CodeMirror, loaded on first use). */
+  readonly editor: EditorController
   private watcherInterval = 0
   private validators: Validators | null = null
   private renderSeq = 0
@@ -144,13 +142,15 @@ export class ViewerApp {
       () => this.closeAI(),
     )
     this.layout.aiSlot.append(this.ai.el)
-    this.layout.editor.addEventListener('input', this.pendingEdit)
+    this.editor = new EditorController(this.layout.editor, {
+      onChange: () => void this.onEdit().catch(e => toast(errorMessage(e), 'error')),
+      onScroll: () => this.syncPreviewToEditor(),
+    })
     window.addEventListener('beforeunload', e => {
       if (this.modified && !this.doc?.scratch) e.preventDefault()
     })
     window.addEventListener('pagehide', () => void this.flushScratch())
     window.addEventListener('beforeprint', () => this.prepareForPrint())
-    this.layout.editor.addEventListener('scroll', () => this.syncPreviewToEditor())
     onSystemThemeChange(() => {
       if (this.settings) this.applySettings(this.settings)
     })
@@ -216,7 +216,7 @@ export class ViewerApp {
     this.sourceRendered = false
     document.body.dataset.mode = 'document'
     this.layout.home.hidden = true
-    this.layout.editor.value = doc.source
+    this.editor.setValue(doc.source, { resetHistory: true })
     this.updateHeader()
     await this.render({ preserveScroll: false })
     this.scrollToHash()
@@ -430,7 +430,7 @@ export class ViewerApp {
       source: text,
       ...(lastModified !== undefined ? { lastModified } : {}),
     }
-    this.layout.editor.value = text
+    this.editor.setValue(text)
     if (this.doc.localId && !this.doc.scratch) {
       const stored = await localDocs.get(this.doc.localId)
       if (stored)
@@ -562,11 +562,12 @@ export class ViewerApp {
   async discardChanges(): Promise<void> {
     const doc = this.doc
     if (!doc) return
-    this.pendingEdit.cancel()
-    const edited = this.layout.editor.value
+    this.editor.cancelPending()
+    const edited = this.editor.value
     if (!this.modified && edited === this.savedSource) return
     this.doc = { ...doc, source: this.savedSource }
-    this.layout.editor.value = this.savedSource
+    // A transaction, not a reset: ⌘Z in the editor also brings the edits back.
+    this.editor.setValue(this.savedSource)
     this.modified = false
     this.updateHeader()
     this.configureWatcher()
@@ -580,7 +581,7 @@ export class ViewerApp {
   private async restoreEdits(text: string): Promise<void> {
     if (!this.doc) return
     this.doc = { ...this.doc, source: text }
-    this.layout.editor.value = text
+    this.editor.setValue(text)
     this.modified = text !== this.savedSource
     hideBanner(this.layout)
     this.updateHeader()
@@ -592,7 +593,7 @@ export class ViewerApp {
 
   private async onEdit(): Promise<void> {
     if (!this.doc) return
-    const text = this.layout.editor.value
+    const text = this.editor.value
     if (text === this.doc.source) return
     this.doc = { ...this.doc, source: text }
     if (!this.doc.scratch && !this.modified) {
@@ -617,7 +618,9 @@ export class ViewerApp {
     if (mode === 'split') {
       // Panes scroll independently; a leftover page scroll would cut them off.
       window.scrollTo(0, 0)
-      this.layout.editor.focus({ preventScroll: true })
+      void this.editor
+        .show()
+        .catch(e => toast(`Could not load the editor: ${errorMessage(e)}`, 'error'))
     }
   }
 
@@ -629,10 +632,7 @@ export class ViewerApp {
 
   private syncPreviewToEditor(): void {
     if (this.view !== 'split') return
-    const ta = this.layout.editor
-    const lineHeight = parseFloat(getComputedStyle(ta).lineHeight) || 20
-    const line = Math.floor(ta.scrollTop / lineHeight) + 1
-    this.scrollToLine(line, 'instant')
+    this.scrollToLine(this.editor.topVisibleLine(), 'instant')
   }
 
   // --------------------------------------------------------------- navigation
@@ -712,7 +712,7 @@ export class ViewerApp {
     if (on) {
       toast('Focus mode — press Z or Esc to exit')
       // Keep the reader where they were; the hidden toolbar no longer offsets it.
-      if (this.view === 'split') this.layout.editor.focus({ preventScroll: true })
+      if (this.view === 'split') this.editor.focus()
     }
   }
 
@@ -739,7 +739,7 @@ export class ViewerApp {
   async flushScratch(): Promise<void> {
     const doc = this.doc
     if (!doc?.scratch || !doc.localId) return
-    const text = this.layout.editor.value
+    const text = this.editor.value
     const stored = await localDocs.get(doc.localId)
     if (stored && stored.text !== text)
       await localDocs.put({ ...stored, text, updatedAt: Date.now() })

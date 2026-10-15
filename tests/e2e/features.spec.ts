@@ -41,13 +41,57 @@ test('command palette, view modes and live-preview editing', async ({
   await expect(page.locator('.ms-source .ms-gutter')).toContainText('1')
 
   await page.locator('body').press('2')
-  const editor = page.locator('.ms-editor')
+  const editor = page.locator('.ms-editor .cm-content')
   await expect(editor).toBeVisible()
   await editor.fill('# Edited live\n\nNew content')
   await expect(page.locator('.ms-doc h1')).toHaveText(/Edited live/)
   await expect(page.locator('.ms-status__modified')).toBeVisible()
   await page.locator('[data-mode="read"]').click()
   await expect(page.locator('.ms-pane--editor')).toBeHidden()
+})
+
+test('editor: CodeMirror lists, Tab indent, and ⌘Z undoes a Discard', async ({
+  context,
+  server,
+}) => {
+  const page = await openMarkdown(context, `${server.url}/guide.md`)
+  await page.locator('[data-mode="split"]').click()
+  const editor = page.locator('.ms-editor .cm-content')
+  await expect(editor).toBeFocused()
+  await expect(page.locator('.ms-editor .cm-lineNumbers')).toContainText('1')
+
+  // The editor fits its pane (scrolling inside it), and scrolling syncs the preview.
+  const editorBox = await page.locator('.ms-editor .cm-editor').boundingBox()
+  const statusBox = await page.locator('.ms-status').boundingBox()
+  expect((editorBox?.y ?? 0) + (editorBox?.height ?? 0)).toBeLessThanOrEqual(
+    (statusBox?.y ?? 0) + 1,
+  )
+  await page
+    .locator('.ms-editor .cm-scroller')
+    .evaluate(e => e.scrollTo(0, e.scrollHeight))
+  await expect
+    .poll(() => page.locator('.ms-pane--preview').evaluate(e => e.scrollTop))
+    .toBeGreaterThan(0)
+
+  // Enter continues a list; Tab nests the item, Shift+Tab brings it back.
+  await editor.fill('# Notes\n\n- first')
+  await page.keyboard.press('ControlOrMeta+End')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('second')
+  await expect(page.locator('.ms-doc ul > li')).toHaveText(['first', 'second'])
+  await page.keyboard.press('Tab')
+  await expect(page.locator('.ms-doc li li')).toHaveText('second')
+  await page.keyboard.press('Shift+Tab')
+  await expect(page.locator('.ms-doc ul > li')).toHaveText(['first', 'second'])
+
+  // Discard is an editor transaction, so ⌘Z in the editor restores the edits.
+  const discard = page.getByRole('button', { name: 'Discard', exact: true })
+  await discard.click()
+  await expect(page.locator('.ms-doc h1').first()).toHaveText(/Guide/)
+  await editor.click()
+  await page.keyboard.press('ControlOrMeta+z')
+  await expect(page.locator('.ms-doc h1').first()).toHaveText(/Notes/)
+  await expect(discard).toBeVisible()
 })
 
 test('start page: open URL, recents, favorites, feature tour', async ({
@@ -77,7 +121,7 @@ test('start page: open URL, recents, favorites, feature tour', async ({
 test('scratch document persists edits', async ({ viewer }) => {
   const page = await viewer()
   await page.getByRole('button', { name: /Scratch document/ }).click()
-  const editor = page.locator('.ms-editor')
+  const editor = page.locator('.ms-editor .cm-content')
   await expect(editor).toBeVisible()
   await editor.fill('# My notes\n\nRemember this.')
   await expect(page.locator('.ms-doc h1')).toHaveText(/My notes/)

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **New editor (CodeMirror 6)** in the Edit view: Markdown syntax highlighting, line numbers, active-line highlight, bracket matching, soft wrap, and find & replace inside the editor (⌘/Ctrl F).
+  - Enter continues lists, task lists and quotes; Backspace removes list markup. Tab / Shift+Tab indent and outdent (Esc then Tab leaves the editor).
+  - Undo history survives Discard: ⌘/Ctrl Z in the editor brings discarded edits back.
+  - Scroll sync is now accurate with wrapped lines.
+  - The editor is loaded only when the Edit view is first opened, so reading pays nothing for it.
+
 ## 1.0.0 — 2026-10-09
 
 First release of Markscope.

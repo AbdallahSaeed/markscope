@@ -49,7 +49,7 @@ test('save: edits to a web document are saved via "Save as", then saved in place
   const page = await openMarkdown(context, `${server.url}/guide.md`)
   await installFakeFileSystem(page)
   await page.locator('[data-mode="split"]').click()
-  const editor = page.locator('.ms-editor')
+  const editor = page.locator('.ms-editor .cm-content')
   await editor.fill('# Edited guide\n\nFirst edit.')
 
   // Unsaved state is visible: status hint, Save button, title marker.
@@ -88,7 +88,7 @@ test('save: lost file permission pauses live reload and Reconnect restores it', 
   const page = await openMarkdown(context, `${server.url}/guide.md`)
   await installFakeFileSystem(page)
   await page.locator('[data-mode="split"]').click()
-  await page.locator('.ms-editor').fill('# Saved once')
+  await page.locator('.ms-editor .cm-content').fill('# Saved once')
   await page.keyboard.press('Control+s')
   await expect.poll(() => writes(page)).toHaveLength(1)
 
@@ -121,9 +121,9 @@ test('save: scratch documents autosave and offer "Save as" for a real file', asy
 }) => {
   const page = await viewer()
   await page.getByRole('button', { name: /Scratch document/ }).click()
-  await expect(page.locator('.ms-editor')).toBeVisible()
+  await expect(page.locator('.ms-editor .cm-content')).toBeVisible()
   await installFakeFileSystem(page)
-  await page.locator('.ms-editor').fill('# Scratch')
+  await page.locator('.ms-editor .cm-content').fill('# Scratch')
   await page.keyboard.press('Control+s')
   await expect(page.locator('.ms-toast').last()).toContainText('save automatically')
   await page.keyboard.press('Control+Shift+s')
@@ -137,7 +137,7 @@ test('discard: reverts unsaved edits, offers Undo, and respects the last save', 
   const page = await openMarkdown(context, `${server.url}/guide.md`)
   await installFakeFileSystem(page)
   await page.locator('[data-mode="split"]').click()
-  const editor = page.locator('.ms-editor')
+  const editor = page.locator('.ms-editor .cm-content')
   const discard = page.getByRole('button', { name: 'Discard', exact: true })
   await expect(discard).toBeHidden()
 
@@ -147,7 +147,7 @@ test('discard: reverts unsaved edits, offers Undo, and respects the last save', 
   await expect(discard).toBeVisible()
   await discard.click()
   await expect(page.locator('.ms-doc h1')).toHaveText(/Guide/)
-  await expect(editor).toHaveValue(/^# Guide/)
+  await expect(editor).toHaveText(/^# Guide/)
   await expect(discard).toBeHidden()
   await expect(page.locator('.ms-save-btn')).toBeHidden()
   await expect(page.locator('.ms-status__modified')).toBeHidden()
@@ -156,7 +156,7 @@ test('discard: reverts unsaved edits, offers Undo, and respects the last save', 
   // Undo brings the edits back (still unsaved).
   await page.locator('.ms-banner').getByRole('button', { name: 'Undo' }).click()
   await expect(page.locator('.ms-doc h1')).toHaveText(/Scribbles/)
-  await expect(editor).toHaveValue('# Scribbles')
+  await expect(editor).toHaveText('# Scribbles')
   await expect(discard).toBeVisible()
 
   // Save, edit again, discard → reverts to the SAVED text, not the original.
@@ -164,13 +164,13 @@ test('discard: reverts unsaved edits, offers Undo, and respects the last save', 
   await expect.poll(() => writes(page)).toEqual(['# Scribbles'])
   await editor.fill('# Second draft')
   await discard.click()
-  await expect(editor).toHaveValue('# Scribbles')
+  await expect(editor).toHaveText('# Scribbles')
   await expect(page.locator('.ms-doc h1')).toHaveText(/Scribbles/)
 
   // Typing then discarding immediately (inside the editor's debounce) sticks.
   await editor.pressSequentially('!!', { delay: 0 })
   await discard.click()
   await page.waitForTimeout(400)
-  await expect(editor).toHaveValue('# Scribbles')
+  await expect(editor).toHaveText('# Scribbles')
   await expect(discard).toBeHidden()
 })

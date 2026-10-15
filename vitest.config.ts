@@ -26,6 +26,8 @@ export default defineConfig({
         'src/viewer/search.ts',
         'src/viewer/fuzzy.ts',
         'src/viewer/source-loader.ts',
+        'src/viewer/editor/diff.ts',
+        'src/viewer/editor/editor-controller.ts',
       ],
       exclude: ['src/engine/worker.ts', 'src/background/index.ts'],
       thresholds: { lines: 80, functions: 80, statements: 80, branches: 75 },
