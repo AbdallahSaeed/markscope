@@ -18,11 +18,19 @@ export async function launch(
       `--load-extension=${EXTENSION_PATH}`,
     ],
   })
+  // The welcome tab opened on install is not part of the tests. It can open
+  // after launch (it raced CI tests by taking the foreground mid-test), so
+  // close it whenever it appears, not only if it is already there.
+  const isWelcome = (p: Page) => p.url().includes('welcome=1')
+  context.on('page', p => {
+    p.once('domcontentloaded', () => {
+      if (isWelcome(p)) void p.close().catch(() => undefined)
+    })
+  })
   let [worker] = context.serviceWorkers()
   worker ??= await context.waitForEvent('serviceworker')
   const extensionId = new URL(worker.url()).host
-  // The welcome tab opened on install is not part of the tests.
-  for (const p of context.pages()) if (p.url().includes('welcome=1')) await p.close()
+  for (const p of context.pages()) if (isWelcome(p)) await p.close()
   return { context, extensionId }
 }
 
@@ -36,14 +44,45 @@ type Fixtures = {
   diagnostics: void
 }
 
-/** What the browser said, so CI logs explain failures even without artifacts. */
+/**
+ * Records every toast, banner and view switch for the page's whole life:
+ * toasts vanish after a few seconds, long before a timed-out assertion.
+ */
+function recordUi(): void {
+  const log: string[] = []
+  ;(window as unknown as { __msUiLog: string[] }).__msUiLog = log
+  const t0 = performance.now()
+  const push = (s: string) => log.push(`+${Math.round(performance.now() - t0)}ms ${s}`)
+  new MutationObserver(mutations => {
+    for (const m of mutations) {
+      const el = m.target instanceof Element ? m.target : null
+      if (m.type === 'attributes' && el?.classList.contains('ms-panes'))
+        push(`view=${el.getAttribute('data-view')}`)
+      for (const n of m.addedNodes)
+        if (n instanceof HTMLElement && n.matches('.ms-toast'))
+          push(`toast: ${n.textContent?.trim()}`)
+      const banner = el?.closest('.ms-banner')
+      if (m.type === 'childList' && banner) push(`banner: ${banner.textContent?.trim()}`)
+    }
+  }).observe(document, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ['data-view'],
+  })
+}
+
+/** What the browser showed, so CI logs explain failures even without artifacts. */
 async function collectUi(page: Page): Promise<string[]> {
   return page
-    .evaluate(() =>
-      [...document.querySelectorAll('.ms-toast, .ms-banner:not([hidden])')].map(
-        el => `${el.className}: ${el.textContent?.trim() ?? ''}`,
-      ),
-    )
+    .evaluate(() => {
+      const log = (window as unknown as { __msUiLog?: string[] }).__msUiLog ?? []
+      const focus = document.activeElement
+      return [
+        ...log,
+        `now: view=${document.querySelector('.ms-panes')?.getAttribute('data-view')} focus=${focus?.tagName}.${focus?.className} openDialogs=${document.querySelectorAll('dialog[open]').length}`,
+      ]
+    })
     .catch(() => [])
 }
 
@@ -78,6 +117,7 @@ export const test = base.extend<Fixtures>({
       }
       context.pages().forEach(watch)
       context.on('page', watch)
+      await context.addInitScript(recordUi)
       await use()
       if (testInfo.status === testInfo.expectedStatus) return
       for (const page of context.pages())
