@@ -32,6 +32,19 @@ type Fixtures = {
   extensionId: string
   server: FixtureServer
   viewer: (src?: string) => Promise<Page>
+  /** Automatic: on failure, reports browser errors and visible toasts/banners. */
+  diagnostics: void
+}
+
+/** What the browser said, so CI logs explain failures even without artifacts. */
+async function collectUi(page: Page): Promise<string[]> {
+  return page
+    .evaluate(() =>
+      [...document.querySelectorAll('.ms-toast, .ms-banner:not([hidden])')].map(
+        el => `${el.className}: ${el.textContent?.trim() ?? ''}`,
+      ),
+    )
+    .catch(() => [])
 }
 
 export const test = base.extend<Fixtures>({
@@ -53,6 +66,29 @@ export const test = base.extend<Fixtures>({
     await use(server)
     await server.close()
   },
+  diagnostics: [
+    async ({ context }, use, testInfo) => {
+      const lines: string[] = []
+      const watch = (page: Page) => {
+        page.on('console', m => {
+          if (m.type() === 'error')
+            lines.push(`[console.error] ${page.url()}: ${m.text()}`)
+        })
+        page.on('pageerror', e => lines.push(`[pageerror] ${page.url()}: ${e.message}`))
+      }
+      context.pages().forEach(watch)
+      context.on('page', watch)
+      await use()
+      if (testInfo.status === testInfo.expectedStatus) return
+      for (const page of context.pages())
+        for (const ui of await collectUi(page)) lines.push(`[ui] ${page.url()}: ${ui}`)
+      if (lines.length === 0) return
+      const body = lines.join('\n')
+      await testInfo.attach('browser-diagnostics', { body, contentType: 'text/plain' })
+      process.stdout.write(`\n--- browser diagnostics: ${testInfo.title} ---\n${body}\n`)
+    },
+    { auto: true },
+  ],
   viewer: async ({ context, extensionId }, use) => {
     await use(async (src?: string) => {
       const page = await context.newPage()
