@@ -24,6 +24,13 @@ export interface DiskVersion {
   lastModified?: number
 }
 
+/** Same version of the source: by modification time for files, by text for URLs. */
+export function sameVersion(a: DiskVersion, b: DiskVersion): boolean {
+  return a.lastModified !== undefined || b.lastModified !== undefined
+    ? a.lastModified === b.lastModified
+    : a.text === b.text
+}
+
 /** Remote URLs are polled at most this often, whatever the setting. */
 const REMOTE_MIN_INTERVAL_MS = 2000
 
@@ -40,6 +47,11 @@ export class LiveReload {
   private validators: Validators | null = null
   /** An error banner from polling is showing; a successful poll clears it. */
   private errorShown = false
+  /**
+   * The disk version the conflict banner is asking about. Later polls see the
+   * same version and must not rebuild the banner (focus, clicks, screen readers).
+   */
+  private conflict: DiskVersion | null = null
 
   constructor(private readonly app: ViewerApp) {}
 
@@ -51,6 +63,7 @@ export class LiveReload {
   reset(): void {
     this.validators = null
     this.errorShown = false
+    this.conflict = null
   }
 
   /** Starts, retunes or stops polling for the current document and settings. */
@@ -124,14 +137,15 @@ export class LiveReload {
       this.adoptBaseline(disk)
       return
     }
-    if (app.modified) this.showConflict(disk)
-    else await this.applyExternalChange(disk)
+    if (!app.modified) await this.applyExternalChange(disk)
+    else if (!this.conflict || !sameVersion(this.conflict, disk)) this.showConflict(disk)
   }
 
   /** The disk version becomes the base the edits are compared and saved against. */
   private adoptBaseline(disk: DiskVersion): void {
     const { app } = this
     if (!app.doc) return
+    this.conflict = null
     app.savedSource = disk.text
     if (disk.lastModified !== undefined)
       app.doc = { ...app.doc, lastModified: disk.lastModified }
@@ -144,6 +158,7 @@ export class LiveReload {
   showConflict(disk: DiskVersion, opts: { saving?: boolean } = {}): void {
     const { app } = this
     if (!app.doc) return
+    this.conflict = disk
     const name = documentName(app.doc)
     showBanner(
       app.layout,
@@ -204,6 +219,7 @@ export class LiveReload {
   async applyExternalChange(disk: DiskVersion): Promise<void> {
     const { app } = this
     if (!app.doc) return
+    this.conflict = null
     const { text, lastModified } = disk
     app.savedSource = text
     app.doc = {

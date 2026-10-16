@@ -269,7 +269,13 @@ test('conflict: a change on disk while editing can be compared, merged or loaded
   await expect(banner).toContainText('changed on disk while you were editing', {
     timeout: 10_000,
   })
-  await banner.getByRole('button', { name: 'Load theirs' }).click()
+  // Later polls see the same disk version and must not rebuild the banner
+  // (that would steal keyboard focus and make the buttons unclickable).
+  const loadTheirs = banner.getByRole('button', { name: 'Load theirs' })
+  const button = await loadTheirs.elementHandle()
+  await page.waitForTimeout(1200) // more than two 500 ms polls
+  expect(await button?.evaluate(el => el.isConnected)).toBe(true)
+  await loadTheirs.click()
   await expect(page.locator('.ms-doc h1')).toHaveText(/Theirs 2/)
   await expect(page.locator('.ms-save-btn')).toBeHidden()
   await banner.getByRole('button', { name: 'Undo' }).click()
