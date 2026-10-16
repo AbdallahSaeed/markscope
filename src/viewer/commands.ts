@@ -3,6 +3,7 @@ import { describeSource } from '@/shared/urls'
 import type { ViewerApp } from './app'
 import { entryHref, entryLabel } from './home'
 import type { MenuItem } from './menu'
+import { displayKey, EDITOR_COMMANDS } from './editor/keymap'
 import type { PaletteItem } from './palette'
 import { key, modKey, MOD_LABEL, showShortcutHelp, type Shortcut } from './shortcuts'
 import type { LibraryStore } from '@/storage/library-store'
@@ -143,6 +144,14 @@ export function shortcutTable(ctx: CommandContext): Shortcut[] {
         if (app.openAI()) app.ai.explainSelection()
       },
     },
+    ...EDITOR_COMMANDS.map(spec => ({
+      keys: displayKey(spec.key, MOD_LABEL),
+      description: `${spec.label} (editor)`,
+      // CodeMirror handles the key; the global handler never does.
+      match: () => false,
+      run: () => app.editor.run(spec.command),
+      editor: true,
+    })),
     {
       keys: `${MOD_LABEL} P`,
       description: 'Print / Save as PDF (renders all diagrams first)',
@@ -251,6 +260,7 @@ export async function paletteItems(ctx: CommandContext): Promise<PaletteItem[]> 
   const commands: PaletteItem[] = [
     ...shortcutTable(ctx)
       .filter(s => !['?', 'Esc', `${MOD_LABEL} K`].includes(s.keys))
+      .filter(s => !s.editor || app.view === 'split')
       .map(s => ({
         id: `cmd:${s.description}`,
         label: s.description,

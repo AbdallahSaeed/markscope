@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+- **New editor (CodeMirror 6)** in the Edit view: Markdown syntax highlighting, line numbers, active-line highlight, bracket matching, soft wrap, and find & replace inside the editor (⌘/Ctrl F).
+  - Enter continues lists, task lists and quotes; Backspace removes list markup. Tab / Shift+Tab indent and outdent (Esc then Tab leaves the editor).
+  - Undo history survives Discard: ⌘/Ctrl Z in the editor brings discarded edits back.
+  - Scroll sync is now accurate with wrapped lines.
+  - The editor is loaded only when the Edit view is first opened, so reading pays nothing for it.
+- **Markdown writing help** in the editor:
+  - ⌘/Ctrl B bold, ⌘/Ctrl I italic, ⌘/Ctrl E inline code, ⇧⌘/Ctrl⇧X strikethrough, ⇧⌘/Ctrl⇧K link, ⌘⌥/Ctrl Alt T format the table under the cursor. Pressing again removes the formatting. They are listed in the shortcut help (?) and, in the Edit view, in the command palette.
+  - Typing `*`, `_`, `~` or `` ` `` over a selection wraps it; `(`, `[`, `{` and `"` close themselves.
+  - Pasting a URL over selected text turns it into a link.
+  - The status bar shows the cursor line, column and selection length in the Edit view.
+- **Editor and preview stay together** in the Edit view:
+  - Scroll sync works both ways and stays aligned inside long sections (it interpolates between blocks); reaching the bottom of one pane scrolls the other to its bottom.
+  - Double-click a block in the preview to put the editor cursor on its source line.
+  - The preview block under the editor cursor is highlighted.
+  - Drag the divider between the panes to resize them (or focus it and use ←/→, Home/End; double-click resets). The split is remembered.
+  - Large documents wait longer after typing before re-rendering (over 64 KB and 512 KB).
+- **Edits are protected:**
+  - Live reload keeps watching while you edit. If the file or URL changes underneath unsaved edits, a banner offers **Keep mine**, **Load theirs** (with Undo) or **Compare…**.
+  - Save checks the file first: if it changed on disk since you opened it, you choose **Overwrite**, **Load theirs** or **Compare…** instead of silently overwriting it.
+  - **Compare** opens a side-by-side view of the disk version and yours. Arrows copy a change from disk into your version, which you can also edit.
+  - Unsaved edits are backed up in this browser while you type. After a crash or an accidental close, reopening the document offers to restore them (or to compare first, if the document changed since). Backups are removed when you save or discard, and after 30 days.
+
 ## 1.0.0 — 2026-10-09
 
 First release of Markscope.

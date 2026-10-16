@@ -1,19 +1,21 @@
 /** Shared IndexedDB access for the viewer's local stores. */
 const DB_NAME = 'markscope'
-const DB_VERSION = 2
+const DB_VERSION = 3
 
-export type StoreName = 'docs' | 'workspaces'
+export type StoreName = 'docs' | 'workspaces' | 'drafts'
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION)
     req.onupgradeneeded = () => {
       const db = req.result
-      // v1: docs. v2: workspaces (opened folders).
+      // v1: docs. v2: workspaces (opened folders). v3: drafts (unsaved edits).
       if (!db.objectStoreNames.contains('docs'))
         db.createObjectStore('docs', { keyPath: 'id' })
       if (!db.objectStoreNames.contains('workspaces'))
         db.createObjectStore('workspaces', { keyPath: 'id' })
+      if (!db.objectStoreNames.contains('drafts'))
+        db.createObjectStore('drafts', { keyPath: 'key' })
     }
     req.onsuccess = () => resolve(req.result)
     req.onerror = () => reject(req.error ?? new Error('IndexedDB unavailable'))

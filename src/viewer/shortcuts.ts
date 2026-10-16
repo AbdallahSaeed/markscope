@@ -11,6 +11,8 @@ export interface Shortcut {
   run: () => void
   /** Allowed even when focus is in a text field. */
   global?: boolean
+  /** Bound by the editor's own keymap: listed in help and the palette (Edit view only). */
+  editor?: boolean
 }
 
 const isMod = (e: KeyboardEvent) => e.metaKey || e.ctrlKey
