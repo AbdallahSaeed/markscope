@@ -458,6 +458,16 @@ export class ViewerApp {
     await this.render({ preserveScroll: true })
   }
 
+  /**
+   * Unsaved edits, including keystrokes still inside the editor debounce
+   * (`modified` only flips when the debounce fires).
+   */
+  hasUnsavedEdits(): boolean {
+    const doc = this.doc
+    if (!doc || doc.scratch) return false
+    return this.modified || this.editor.value !== this.savedSource
+  }
+
   /** Keeps the crash backup in step: written while there are unsaved edits, removed after. */
   syncDraft(): void {
     const doc = this.doc

@@ -249,9 +249,11 @@ test('conflict: a change on disk while editing can be compared, merged or loaded
   // Compare: take the disk change with the merge arrow, then use the result.
   await editor.fill('# Mine v2\n\nShared line.')
   await changeOnDisk(page, '# Theirs\n\nShared line.')
-  await expect(banner).toContainText('changed on disk while you were editing', {
+  // Wait for the visible button: a hidden earlier banner can still hold this text.
+  await expect(banner.getByRole('button', { name: 'Keep mine' })).toBeVisible({
     timeout: 10_000,
   })
+  await expect(banner).toContainText('changed on disk while you were editing')
   await banner.getByRole('button', { name: 'Compare…' }).click()
   const dialog = page.locator('dialog.ms-merge')
   await expect(dialog).toBeVisible()
@@ -266,9 +268,11 @@ test('conflict: a change on disk while editing can be compared, merged or loaded
   // Load theirs replaces the edits, and Undo brings them back.
   await editor.fill('# Mine v3')
   await changeOnDisk(page, '# Theirs 2')
-  await expect(banner).toContainText('changed on disk while you were editing', {
+  // Wait for the visible button: a hidden earlier banner can still hold this text.
+  await expect(banner.getByRole('button', { name: 'Keep mine' })).toBeVisible({
     timeout: 10_000,
   })
+  await expect(banner).toContainText('changed on disk while you were editing')
   // Later polls see the same disk version and must not rebuild the banner
   // (that would steal keyboard focus and make the buttons unclickable).
   const loadTheirs = banner.getByRole('button', { name: 'Load theirs' })

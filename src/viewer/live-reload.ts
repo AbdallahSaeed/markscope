@@ -107,7 +107,7 @@ export class LiveReload {
       this.errorShown = false
       hideBanner(this.app.layout)
     }
-    if (disk && stillCurrent()) await this.onDiskChange(disk)
+    if (disk && stillCurrent()) await this.receive(disk)
   }
 
   /** The source's current version, or null when it hasn't changed since we last looked. */
@@ -123,21 +123,31 @@ export class LiveReload {
     return res.changed ? { text: res.text } : null
   }
 
-  /** New content at the source: apply it, or ask when it would replace edits. */
-  private async onDiskChange(disk: DiskVersion): Promise<void> {
+  /**
+   * A new version arrived from the source: apply it, or ask when it would
+   * replace unsaved edits (including text still inside the typing debounce).
+   */
+  async receive(disk: DiskVersion): Promise<void> {
     const { app } = this
     if (!app.doc) return
-    if (disk.text === app.doc.source) {
+    const current = app.editor.value
+    // Decide before adoptBaseline moves savedSource.
+    const edited = app.hasUnsavedEdits()
+    if (disk.text === current) {
       // Same text (a touch, or someone saved what we have): just catch up.
       this.adoptBaseline(disk)
-      if (app.modified) app.markSaved()
+      if (edited) {
+        app.editor.cancelPending()
+        app.doc = { ...app.doc, source: current }
+        app.markSaved()
+      }
       return
     }
     if (disk.text === app.savedSource) {
       this.adoptBaseline(disk)
       return
     }
-    if (!app.modified) await this.applyExternalChange(disk)
+    if (!edited) await this.applyExternalChange(disk)
     else if (!this.conflict || !sameVersion(this.conflict, disk)) this.showConflict(disk)
   }
 
@@ -245,7 +255,10 @@ export class LiveReload {
     const { app } = this
     const doc = app.doc
     if (!doc) return
-    if (app.modified && !confirm('Discard your edits and reload the original document?'))
+    if (
+      app.hasUnsavedEdits() &&
+      !confirm('Discard your edits and reload the original document?')
+    )
       return
     try {
       if (doc.handle) {
@@ -327,7 +340,7 @@ export class LiveReload {
     try {
       const file = await doc.handle.getFile()
       if (file.lastModified !== doc.lastModified)
-        await this.onDiskChange({
+        await this.receive({
           text: await file.text(),
           lastModified: file.lastModified,
         })
