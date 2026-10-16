@@ -11,6 +11,7 @@ Markscope is a browser extension that displays Markdown documents.
 - Settings, in browser sync storage if you are signed in to your browser.
 - Recent and favorite documents (URLs, file names and titles), in local extension storage.
 - Documents you drop, pick or write in scratch mode, in the extension's IndexedDB.
+- A backup copy of unsaved edits, in the extension's IndexedDB, so they can be restored after a crash. It is deleted when you save or discard the edits, and after 30 days.
 - Folders you open: a reference to the folder (granted through your browser's folder picker) so you can reopen it from the start page. Files are read on demand to display them and are not copied into storage. You can forget a folder from the start page.
 - An AI provider API key, only if you enter one. It is stored in local or session extension storage and is never synced or exported.
 

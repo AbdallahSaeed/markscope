@@ -87,7 +87,7 @@ Support: open an issue in the project repository.
 
 - Website content: processed locally to display it. Sent to a third party only if the user runs an AI action, and only to the AI service the user configured.
 - Settings are stored with `chrome.storage.sync`, so Chrome syncs them through the user's Google account if browser sync is enabled. They contain display preferences only, never document content or API keys.
-- Recent documents (addresses and titles), local documents and an optional AI key stay in this browser's local extension storage.
+- Recent documents (addresses and titles), local documents, backups of unsaved edits and an optional AI key stay in this browser's local extension storage.
 
 ### Data Use Certification
 - [x] Not sold to third parties

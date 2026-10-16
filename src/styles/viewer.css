@@ -447,6 +447,10 @@ body[data-mode='home'] .ms-toolbar {
 }
 .ms-banner > span {
   flex: 1;
+  min-width: min(260px, 100%);
+}
+.ms-banner {
+  flex-wrap: wrap;
 }
 .ms-banner--warn {
   border-color: color-mix(in oklch, var(--c-warning) 50%, var(--rule));
@@ -834,6 +838,93 @@ dialog.ms-help {
   background: var(--raised);
   color: var(--ink);
   box-shadow: var(--shadow-2);
+}
+/* Compare with disk / restore edits (merge-dialog.ts). */
+dialog.ms-merge {
+  width: min(1180px, calc(100vw - 32px));
+  height: min(86vh, 900px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  background: var(--raised);
+  color: var(--ink);
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+}
+dialog[open].ms-merge {
+  display: flex;
+  flex-direction: column;
+  animation: ms-pop var(--dur) var(--ease);
+}
+.ms-merge__header {
+  padding: 18px 22px 10px;
+}
+.ms-merge__header h2 {
+  margin: 0 0 4px;
+  font-size: 17px;
+}
+.ms-merge__header p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.ms-merge__labels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 6px 22px;
+  border-block: 1px solid var(--rule);
+  font: 600 11px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.ms-merge__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--paper-2);
+}
+/* The merge view scrolls as a whole; its editors size to their content. */
+.ms-merge__body .cm-mergeView,
+.ms-merge__body .cm-editor {
+  height: auto;
+}
+.ms-merge__body .cm-changedLine {
+  background: color-mix(in oklch, var(--accent-soft) 55%, transparent);
+}
+.ms-merge__body .cm-merge-revert {
+  width: 30px;
+}
+.ms-merge__body .cm-merge-revert button {
+  width: 24px;
+  height: 22px;
+  margin-inline-start: 3px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 6px;
+  background: var(--raised);
+  color: var(--accent);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.ms-merge__body .cm-merge-revert button:hover,
+.ms-merge__body .cm-merge-revert button:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.ms-merge__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 22px;
+  border-top: 1px solid var(--rule);
+}
+.ms-merge__status {
+  flex: 1;
+  font: 12px var(--font-mono);
+  color: var(--ink-3);
 }
 dialog[open].ms-palette,
 dialog[open].ms-help {

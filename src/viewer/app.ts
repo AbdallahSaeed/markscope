@@ -6,12 +6,11 @@ import { diagnose } from '@/analysis/doctor'
 import { RenderClient } from '@/engine/render-client'
 import type { RenderResult } from '@/engine/types'
 import { debounce } from '@/shared/dom'
-import { PermissionNeededError, errorMessage } from '@/shared/errors'
+import { errorMessage } from '@/shared/errors'
 import { computeStats } from '@/shared/stats'
 import { renderKey, type Settings } from '@/shared/settings'
 import {
   describeSource,
-  isRemoteUrl,
   parseWorkspaceUrl,
   withRawMarker,
   type ViewerParams,
@@ -31,9 +30,9 @@ import { SearchBar } from './search-bar'
 import { Sidebar } from './sidebar'
 import { applyAppearance, onSystemThemeChange, resolvedTheme } from './theme'
 import { toast } from './toast'
-import { defaultLoaderDeps, loadSource, type Validators } from './source-loader'
-import { Watcher } from './watcher'
-import { ensurePermission, FileAccessNeededError, readIfPermitted } from './file-access'
+import { draftKey, DraftSaver, draftStore } from './drafts'
+import { offerDraftRestore } from './draft-restore'
+import { LiveReload } from './live-reload'
 import { createSplitDivider, type SplitDivider } from './split-divider'
 import { SplitView } from './split-view'
 import { renderCursor, renderStatus } from './status-bar'
@@ -78,17 +77,18 @@ export class ViewerApp {
   readonly palette: CommandPalette
   readonly ai: AIPanel
   private renderer: RenderClient
-  private watcher: Watcher | null = null
-  /** Text as last loaded or saved: what Discard reverts to. */
-  private savedSource = ''
+  /** Live reload and disk-change conflicts. */
+  readonly live: LiveReload
+  /** Crash backup of unsaved edits. */
+  private readonly drafts = new DraftSaver(draftStore, onceToast)
+  /** Text as last loaded or saved: what Discard reverts to and edits are measured against. */
+  savedSource = ''
   /** The Markdown editor (CodeMirror, loaded on first use). */
   readonly editor: EditorController
   private cursor: CursorInfo | null = null
   /** Edit view: scroll sync, jump to source, cursor highlight. */
   readonly split: SplitView
   private readonly divider: SplitDivider
-  private watcherInterval = 0
-  private validators: Validators | null = null
   private renderSeq = 0
   private lastRenderKey = ''
   private sourceRendered = false
@@ -149,6 +149,8 @@ export class ViewerApp {
       () => this.closeAI(),
     )
     this.layout.aiSlot.append(this.ai.el)
+    this.live = new LiveReload(this)
+    void draftStore.prune().catch(() => undefined) // stale backups; harmless if it fails
     this.editor = new EditorController(this.layout.editor, {
       onChange: () => void this.onEdit().catch(e => toast(errorMessage(e), 'error')),
       onScroll: () => this.split.onEditorScroll(),
@@ -171,7 +173,10 @@ export class ViewerApp {
     window.addEventListener('beforeunload', e => {
       if (this.modified && !this.doc?.scratch) e.preventDefault()
     })
-    window.addEventListener('pagehide', () => void this.flushScratch())
+    window.addEventListener('pagehide', () => {
+      void this.flushScratch()
+      void this.drafts.flush()
+    })
     window.addEventListener('beforeprint', () => this.prepareForPrint())
     onSystemThemeChange(() => {
       if (this.settings) this.applySettings(this.settings)
@@ -233,7 +238,7 @@ export class ViewerApp {
   async openDocument(doc: LoadedDoc): Promise<void> {
     this.doc = doc
     this.savedSource = doc.source
-    this.validators = null
+    this.live.reset()
     this.modified = false
     hideBanner(this.layout)
     this.sourceRendered = false
@@ -246,6 +251,7 @@ export class ViewerApp {
     // Record after rendering so recents show the real title, not the file name.
     if (doc.ref) void this.deps.library.visit(doc.ref, this.doc?.title ?? doc.title)
     this.configureWatcher()
+    void offerDraftRestore(this)
     if (doc.scratch) this.setView('split')
   }
 
@@ -253,7 +259,7 @@ export class ViewerApp {
     return this.doc?.source ?? ''
   }
 
-  private updateHeader(): void {
+  updateHeader(): void {
     const doc = this.doc
     if (!doc) return
     const where = doc.sourceUrl ? describeSource(doc.sourceUrl) : null
@@ -360,7 +366,7 @@ export class ViewerApp {
     )
   }
 
-  private updateStatus(): void {
+  updateStatus(): void {
     const doc = this.doc
     const result = this.result
     if (!doc || !result) return
@@ -368,7 +374,7 @@ export class ViewerApp {
     renderStatus(this.layout.status, {
       stats,
       renderMs: result.durationMs,
-      live: !!this.watcher?.active,
+      live: this.live.active,
       modified: this.modified,
     })
     this.sidebar.setInfo(stats, {
@@ -381,166 +387,15 @@ export class ViewerApp {
   // ------------------------------------------------------------ live reload
 
   private configureWatcher(): void {
-    const doc = this.doc
-    const want =
-      !!doc &&
-      this.settings.liveReload.enabled &&
-      !this.modified &&
-      !!(doc.sourceUrl || doc.handle)
-    if (!want) {
-      this.watcher?.stop()
-      this.watcher = null
-      this.updateStatus()
-      return
-    }
-    const intervalMs =
-      doc?.sourceUrl && isRemoteUrl(doc.sourceUrl)
-        ? Math.max(this.settings.liveReload.intervalMs, 2000)
-        : this.settings.liveReload.intervalMs
-    if (this.watcher?.active && this.watcherInterval === intervalMs) return
-    this.watcher?.stop()
-    this.watcherInterval = intervalMs
-    this.watcher = new Watcher({
-      intervalMs,
-      check: () => this.checkForChanges(),
-      onError: error => this.onLoadError(error),
-    })
-    this.watcher.start()
-    this.updateStatus()
+    this.live.configure()
   }
 
-  private async checkForChanges(): Promise<void> {
-    const doc = this.doc
-    if (!doc || this.modified) return
-    // Edits or a document switch during the awaits below win over the poll.
-    const stillCurrent = () =>
-      this.doc?.localId === doc.localId &&
-      this.doc?.sourceUrl === doc.sourceUrl &&
-      !this.modified
-    if (doc.handle) {
-      const file = await readIfPermitted(doc.handle)
-      if (file.lastModified === doc.lastModified) return
-      const text = await file.text()
-      if (stillCurrent()) await this.applyExternalChange(text, file.lastModified)
-      return
-    }
-    if (!doc.sourceUrl) return
-    const res = await loadSource(doc.sourceUrl, this.validators, defaultLoaderDeps())
-    this.validators = res.validators
-    if (res.changed && res.text !== doc.source && stillCurrent())
-      await this.applyExternalChange(res.text)
-    hideBanner(this.layout)
-  }
-
-  private async applyExternalChange(text: string, lastModified?: number): Promise<void> {
-    if (!this.doc) return
-    this.savedSource = text
-    this.doc = {
-      ...this.doc,
-      source: text,
-      ...(lastModified !== undefined ? { lastModified } : {}),
-    }
-    this.editor.setValue(text)
-    if (this.doc.localId && !this.doc.scratch) {
-      const stored = await localDocs.get(this.doc.localId)
-      if (stored)
-        await localDocs.put({
-          ...stored,
-          text,
-          updatedAt: Date.now(),
-          ...(lastModified !== undefined ? { lastModified } : {}),
-        })
-    }
-    await this.render({ preserveScroll: true })
-  }
-
-  async reload(): Promise<void> {
-    const doc = this.doc
-    if (!doc) return
-    if (this.modified && !confirm('Discard your edits and reload the original document?'))
-      return
-    try {
-      if (doc.handle) {
-        if (!(await ensurePermission(doc.handle, 'read')))
-          throw new FileAccessNeededError(doc.handle.name)
-        const file = await doc.handle.getFile()
-        this.modified = false
-        await this.applyExternalChange(await file.text(), file.lastModified)
-      } else if (doc.sourceUrl) {
-        const res = await loadSource(doc.sourceUrl, null, defaultLoaderDeps())
-        this.validators = res.validators
-        this.modified = false
-        if (res.changed) await this.applyExternalChange(res.text)
-      } else {
-        toast('This document has no source to reload from.')
-        return
-      }
-      hideBanner(this.layout)
-      this.updateHeader()
-      this.configureWatcher()
-      toast('Reloaded')
-    } catch (error) {
-      this.onLoadError(error)
-    }
+  reload(): Promise<void> {
+    return this.live.reload()
   }
 
   onLoadError(error: unknown): void {
-    if (error instanceof FileAccessNeededError) {
-      // Permission can only be re-granted from a click, so ask once and pause.
-      this.watcher?.stop()
-      this.watcher = null
-      showBanner(
-        this.layout,
-        `Live reload paused: Chrome needs your permission to read ${error.fileName} again.`,
-        { label: 'Reconnect', run: () => void this.reconnectFile() },
-        'warn',
-      )
-      return
-    }
-    if (error instanceof PermissionNeededError) {
-      showBanner(
-        this.layout,
-        `Reloading needs access to ${error.origin.replace('/*', '')}.`,
-        {
-          label: 'Grant access',
-          run: () =>
-            void chrome.permissions.request({ origins: [error.origin] }).then(ok => {
-              if (ok) void this.reload()
-            }),
-        },
-        'warn',
-      )
-      this.watcher?.stop()
-      this.watcher = null
-      return
-    }
-    showBanner(
-      this.layout,
-      errorMessage(error),
-      { label: 'Retry', run: () => void this.reload() },
-      'error',
-    )
-  }
-
-  /** Click handler for the Reconnect banner (a user gesture). */
-  private async reconnectFile(): Promise<void> {
-    const doc = this.doc
-    if (!doc?.handle) return
-    if (!(await ensurePermission(doc.handle, 'read'))) {
-      toast('Permission was not granted. Use Reload (R) to try again.', 'error')
-      return
-    }
-    hideBanner(this.layout)
-    try {
-      const file = await doc.handle.getFile()
-      if (file.lastModified !== doc.lastModified && !this.modified) {
-        await this.applyExternalChange(await file.text(), file.lastModified)
-      }
-      this.configureWatcher()
-      toast(`Reconnected to ${doc.handle.name}`)
-    } catch (error) {
-      this.onLoadError(error)
-    }
+    this.live.onLoadError(error)
   }
 
   // --------------------------------------------------------------------- save
@@ -563,6 +418,7 @@ export class ViewerApp {
     this.updateHeader()
     this.updateStatus()
     this.configureWatcher()
+    this.syncDraft()
   }
 
   /**
@@ -581,22 +437,34 @@ export class ViewerApp {
     this.modified = false
     this.updateHeader()
     this.configureWatcher()
+    this.syncDraft()
     await this.render({ preserveScroll: true })
     showBanner(this.layout, 'Edits discarded — reverted to the last saved version.', {
       label: 'Undo',
-      run: () => void this.restoreEdits(edited),
+      run: () => void this.applyText(edited),
     })
   }
 
-  private async restoreEdits(text: string): Promise<void> {
+  /** Replaces the text as an edit (undoable in the editor): Undo banners, merges, restores. */
+  async applyText(text: string): Promise<void> {
     if (!this.doc) return
     this.doc = { ...this.doc, source: text }
     this.editor.setValue(text)
-    this.modified = text !== this.savedSource
+    this.modified = !this.doc.scratch && text !== this.savedSource
     hideBanner(this.layout)
     this.updateHeader()
     this.configureWatcher()
+    this.syncDraft()
     await this.render({ preserveScroll: true })
+  }
+
+  /** Keeps the crash backup in step: written while there are unsaved edits, removed after. */
+  syncDraft(): void {
+    const doc = this.doc
+    const key = doc ? draftKey(doc) : null
+    if (!doc || !key) return
+    if (this.modified) this.drafts.schedule(key, doc.source, this.savedSource)
+    else void this.drafts.clear(key)
   }
 
   // ------------------------------------------------------------------ editing
@@ -611,6 +479,7 @@ export class ViewerApp {
       this.configureWatcher()
       this.updateHeader()
     }
+    this.syncDraft()
     if (this.doc.scratch && this.doc.localId) {
       const stored = await localDocs.get(this.doc.localId)
       if (stored) await localDocs.put({ ...stored, text, updatedAt: Date.now() })
@@ -760,6 +629,17 @@ export class ViewerApp {
     await navigator.clipboard.writeText(this.currentSource())
     toast('Markdown copied')
   }
+}
+
+/** Backup failures are reported once per page, not on every keystroke. */
+let backupWarned = false
+function onceToast(error: unknown): void {
+  if (backupWarned) return
+  backupWarned = true
+  toast(
+    `Unsaved edits can't be backed up in this browser: ${errorMessage(error)}`,
+    'error',
+  )
 }
 
 export function deriveTitle(result: RenderResult, doc: LoadedDoc): string {

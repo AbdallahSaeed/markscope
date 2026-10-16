@@ -18,6 +18,11 @@
   - The preview block under the editor cursor is highlighted.
   - Drag the divider between the panes to resize them (or focus it and use ←/→, Home/End; double-click resets). The split is remembered.
   - Large documents wait longer after typing before re-rendering (over 64 KB and 512 KB).
+- **Edits are protected:**
+  - Live reload keeps watching while you edit. If the file or URL changes underneath unsaved edits, a banner offers **Keep mine**, **Load theirs** (with Undo) or **Compare…**.
+  - Save checks the file first: if it changed on disk since you opened it, you choose **Overwrite**, **Load theirs** or **Compare…** instead of silently overwriting it.
+  - **Compare** opens a side-by-side view of the disk version and yours. Arrows copy a change from disk into your version, which you can also edit.
+  - Unsaved edits are backed up in this browser while you type. After a crash or an accidental close, reopening the document offers to restore them (or to compare first, if the document changed since). Backups are removed when you save or discard, and after 30 days.
 
 ## 1.0.0 — 2026-10-09
 

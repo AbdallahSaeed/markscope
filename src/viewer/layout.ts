@@ -206,26 +206,30 @@ export function buildLayout(mount: HTMLElement): Layout {
   }
 }
 
+export interface BannerAction {
+  label: string
+  run: () => void
+}
+
 export function showBanner(
   layout: Layout,
   message: string,
-  action?: { label: string; run: () => void },
+  action?: BannerAction | readonly BannerAction[],
   kind: 'info' | 'warn' | 'error' = 'info',
 ): void {
   const b = layout.banner
+  const actions = action === undefined ? [] : 'label' in action ? [action] : action
   b.className = `ms-banner ms-ui ms-banner--${kind}`
   b.replaceChildren(
     h('span', { text: message }),
-    ...(action
-      ? [
-          h('button', {
-            type: 'button',
-            class: 'ms-btn ms-btn--small',
-            text: action.label,
-            on: { click: action.run },
-          }),
-        ]
-      : []),
+    ...actions.map(a =>
+      h('button', {
+        type: 'button',
+        class: 'ms-btn ms-btn--small',
+        text: a.label,
+        on: { click: a.run },
+      }),
+    ),
     h(
       'button',
       {

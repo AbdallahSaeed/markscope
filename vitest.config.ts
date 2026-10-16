@@ -33,6 +33,8 @@ export default defineConfig({
         'src/viewer/status-bar.ts',
         'src/viewer/editor/scroll-map.ts',
         'src/viewer/split-divider.ts',
+        'src/viewer/drafts.ts',
+        'src/viewer/draft-restore.ts',
       ],
       exclude: ['src/engine/worker.ts', 'src/background/index.ts'],
       thresholds: { lines: 80, functions: 80, statements: 80, branches: 75 },

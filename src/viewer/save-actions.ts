@@ -49,6 +49,7 @@ export async function saveDocument(app: ViewerApp): Promise<void> {
       toast('Saving needs permission to edit the file.', 'error')
       return
     }
+    if (await changedOnDisk(app, doc.handle)) return
     await writeTo(app, doc.handle)
     toast(`Saved to ${doc.handle.name}`)
   } catch (error) {
@@ -108,6 +109,24 @@ export async function saveDocumentAs(app: ViewerApp): Promise<void> {
   } catch (error) {
     toast(`Could not save: ${errorMessage(error)}`, 'error')
   }
+}
+
+/**
+ * True (and a conflict banner is shown) when the file changed on disk since
+ * it was loaded or last saved, so saving would silently overwrite it.
+ */
+async function changedOnDisk(
+  app: ViewerApp,
+  handle: FileSystemFileHandle,
+): Promise<boolean> {
+  const known = app.doc?.lastModified
+  if (known === undefined) return false
+  const file = await handle.getFile()
+  if (file.lastModified === known) return false
+  const text = await file.text()
+  if (text === app.savedSource || text === app.doc?.source) return false
+  app.live.showConflict({ text, lastModified: file.lastModified }, { saving: true })
+  return true
 }
 
 async function writeTo(app: ViewerApp, handle: FileSystemFileHandle): Promise<void> {

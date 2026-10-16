@@ -174,3 +174,130 @@ test('discard: reverts unsaved edits, offers Undo, and respects the last save', 
   await expect(editor).toHaveText('# Scribbles')
   await expect(discard).toBeHidden()
 })
+
+/** Simulates another program writing the file. */
+const changeOnDisk = (page: Page, text: string) =>
+  page.evaluate(t => {
+    const f = (window as unknown as { __fakeFile: { content: string; mtime: number } })
+      .__fakeFile
+    f.content = t
+    f.mtime += 5
+  }, text)
+
+/** Number of unsaved-edit backups in the viewer's IndexedDB. */
+const draftCount = (page: Page) =>
+  page.evaluate(
+    () =>
+      new Promise<number>((resolve, reject) => {
+        const req = indexedDB.open('markscope')
+        req.onerror = () => reject(req.error)
+        req.onsuccess = () => {
+          const db = req.result
+          if (!db.objectStoreNames.contains('drafts')) return resolve(0)
+          const count = db.transaction('drafts').objectStore('drafts').count()
+          count.onsuccess = () => {
+            resolve(count.result)
+            db.close()
+          }
+        }
+      }),
+  )
+
+/** Opens guide.md and saves it once to the fake file, so it has a handle. */
+async function openSavedCopy(page: Page) {
+  await installFakeFileSystem(page)
+  await page.locator('[data-mode="split"]').click()
+  const editor = page.locator('.ms-editor .cm-content')
+  await editor.fill('# Mine\n\nShared line.')
+  await page.keyboard.press('Control+s')
+  await expect.poll(() => writes(page)).toHaveLength(1)
+  return editor
+}
+
+test('conflict: saving over a file that changed on disk asks first', async ({
+  context,
+  server,
+}) => {
+  const page = await openMarkdown(context, `${server.url}/guide.md`)
+  const editor = await openSavedCopy(page)
+  await editor.fill('# Mine v2')
+  await changeOnDisk(page, '# Theirs')
+
+  await page.keyboard.press('Control+s')
+  const banner = page.locator('.ms-banner')
+  await expect(banner).toContainText('Saving now would overwrite that change')
+  expect(await writes(page)).toHaveLength(1) // nothing written yet
+
+  await banner.getByRole('button', { name: 'Overwrite' }).click()
+  await expect.poll(() => writes(page)).toEqual(['# Mine\n\nShared line.', '# Mine v2'])
+  await expect(page.locator('.ms-save-btn')).toBeHidden()
+})
+
+test('conflict: a change on disk while editing can be compared, merged or loaded', async ({
+  context,
+  server,
+}) => {
+  const page = await openMarkdown(context, `${server.url}/guide.md`)
+  const editor = await openSavedCopy(page)
+  await page.evaluate(() =>
+    chrome.storage.sync.set({
+      settings: { liveReload: { enabled: true, intervalMs: 500 } },
+    }),
+  )
+  const banner = page.locator('.ms-banner')
+
+  // Compare: take the disk change with the merge arrow, then use the result.
+  await editor.fill('# Mine v2\n\nShared line.')
+  await changeOnDisk(page, '# Theirs\n\nShared line.')
+  await expect(banner).toContainText('changed on disk while you were editing', {
+    timeout: 10_000,
+  })
+  await banner.getByRole('button', { name: 'Compare…' }).click()
+  const dialog = page.locator('dialog.ms-merge')
+  await expect(dialog).toBeVisible()
+  await expect(dialog.locator('.ms-merge__status')).toHaveText('1 difference')
+  await dialog.locator('.cm-merge-revert button').first().click()
+  await expect(dialog.locator('.ms-merge__status')).toHaveText('No differences')
+  await dialog.getByRole('button', { name: 'Use my version' }).click()
+  await expect(dialog).toBeHidden()
+  await expect(page.locator('.ms-doc h1')).toHaveText(/Theirs/)
+  await expect(page.locator('.ms-save-btn')).toBeHidden() // matches disk now
+
+  // Load theirs replaces the edits, and Undo brings them back.
+  await editor.fill('# Mine v3')
+  await changeOnDisk(page, '# Theirs 2')
+  await expect(banner).toContainText('changed on disk while you were editing', {
+    timeout: 10_000,
+  })
+  await banner.getByRole('button', { name: 'Load theirs' }).click()
+  await expect(page.locator('.ms-doc h1')).toHaveText(/Theirs 2/)
+  await expect(page.locator('.ms-save-btn')).toBeHidden()
+  await banner.getByRole('button', { name: 'Undo' }).click()
+  await expect(editor).toHaveText('# Mine v3')
+  await expect(page.locator('.ms-save-btn')).toBeVisible()
+})
+
+test('drafts: unsaved edits survive a reload and can be restored', async ({
+  context,
+  server,
+}) => {
+  const page = await openMarkdown(context, `${server.url}/guide.md`)
+  page.on('dialog', d => void d.accept()) // the "leave site?" prompt
+  await page.locator('[data-mode="split"]').click()
+  await page.locator('.ms-editor .cm-content').fill('# Draft text')
+  await expect.poll(() => draftCount(page)).toBe(1)
+
+  await page.reload()
+  const banner = page.locator('.ms-banner')
+  await expect(banner).toContainText('Unsaved edits from')
+  await banner.getByRole('button', { name: 'Restore' }).click()
+  await expect(page.locator('.ms-doc h1')).toHaveText(/Draft text/)
+  await expect(page.locator('.ms-save-btn')).toBeVisible()
+
+  // Discarding the edits removes the backup, so nothing is offered next time.
+  await page.getByRole('button', { name: 'Discard', exact: true }).click()
+  await expect.poll(() => draftCount(page)).toBe(0)
+  await page.reload()
+  await expect(page.locator('.ms-doc h1')).toHaveText(/Guide/)
+  await expect(banner).toBeHidden()
+})
