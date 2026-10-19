@@ -31,7 +31,7 @@ A fast, secure Markdown preview for developers. Diagrams, math, an outline, and 
 | Markscope: Export as HTML                          | Save the rendered document as one self-contained HTML file          |
 | Markscope: Open in Reader                          | Read a file in a full tab (also under Reopen Editor With…)          |
 
-In the preview: `J` / `K` jump between headings, `/` finds, `B` toggles the outline, `Z` is focus mode.
+In the preview: `J` / `K` jump between headings, `/` finds, `B` toggles the outline, `Z` is focus mode, `T` switches theme, `R` refreshes, `A` opens the AI assistant and `?` lists the shortcuts. The toolbar has the same theme button, **Commands** button and ⋯ menu as the browser extension; the menu also opens this extension's **Settings**.
 
 ## AI assistant (optional)
 

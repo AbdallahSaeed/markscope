@@ -15,6 +15,7 @@ await esbuild.build({
   format: 'cjs',
   target: 'node20',
   external: ['vscode'],
+  alias: { '@': path.join(root, 'src') },
   outExtension: { '.js': '.cjs' },
   logLevel: 'warning',
 })

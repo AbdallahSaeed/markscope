@@ -32,6 +32,28 @@ export const WEBVIEW_COMMANDS = [
 ] as const
 export type WebviewCommand = (typeof WEBVIEW_COMMANDS)[number]
 
+/**
+ * What the toolbar and the ⋯ menu can ask of the host. A fixed list: the host decides
+ * what each name does, so a message can never name a command or a path.
+ */
+export const PREVIEW_ACTIONS = [
+  'refresh',
+  'showSource',
+  'copyMarkdown',
+  'copyHtml',
+  'exportHtml',
+  'openSettings',
+  'openCommands',
+  'toggleLineNumbers',
+  'setTheme',
+  'toggleLock',
+] as const
+export type PreviewAction = (typeof PREVIEW_ACTIONS)[number]
+
+/** Values of `markscope.theme`. */
+export const THEME_CHOICES = ['vscode', 'light', 'dark'] as const
+export type ThemeChoice = (typeof THEME_CHOICES)[number]
+
 // ---------------------------------------------------------------- host → webview
 
 export interface WebviewAssets {
@@ -44,7 +66,14 @@ export interface WebviewAssets {
 }
 
 export type HostMessage =
-  | { type: 'init'; settings: Settings; assets: WebviewAssets; aiAvailable: boolean }
+  | {
+      type: 'init'
+      settings: Settings
+      assets: WebviewAssets
+      aiAvailable: boolean
+      /** A Reader tab is always tied to its file, so it has no lock. */
+      kind: 'preview' | 'reader'
+    }
   | {
       type: 'document'
       /** Document URI as a string; echoed back with doctor results. */
@@ -83,6 +112,7 @@ export type WebviewMessage =
   | { type: 'exportHtml'; html: string; fileName: string }
   | { type: 'copy'; text: string }
   | { type: 'ai'; request: AIPortRequest }
+  | { type: 'action'; name: PreviewAction; value?: ThemeChoice }
 
 type Rec = Record<string, unknown>
 const isRecord = (v: unknown): v is Rec =>
@@ -159,6 +189,15 @@ export function parseWebviewMessage(raw: unknown): WebviewMessage | null {
       const request = parseAIRequest(raw.request)
       return request ? { type: 'ai', request } : null
     }
+    case 'action': {
+      if (!(PREVIEW_ACTIONS as readonly unknown[]).includes(raw.name)) return null
+      const name = raw.name as PreviewAction
+      if (name !== 'setTheme')
+        return raw.value === undefined ? { type: 'action', name } : null
+      return (THEME_CHOICES as readonly unknown[]).includes(raw.value)
+        ? { type: 'action', name, value: raw.value as ThemeChoice }
+        : null
+    }
     default:
       return null
   }
@@ -193,6 +232,7 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
             settings: parseSettings(raw.settings),
             assets,
             aiAvailable: raw.aiAvailable,
+            kind: raw.kind === 'reader' ? 'reader' : 'preview',
           }
         : null
     }

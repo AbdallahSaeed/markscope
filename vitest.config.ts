@@ -28,6 +28,7 @@ export default defineConfig({
         'src/vscode/extension/html.ts',
         'src/vscode/extension/diagnostic-map.ts',
         'src/vscode/extension/status-text.ts',
+        'src/vscode/webview/menu.ts',
         'src/vscode/extension/ai-host.ts',
         'src/vscode/extension/secret-area.ts',
         'src/ai/service.ts',

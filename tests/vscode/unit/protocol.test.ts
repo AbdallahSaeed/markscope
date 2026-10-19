@@ -103,6 +103,55 @@ describe('parseWebviewMessage (untrusted input)', () => {
   })
 })
 
+describe('action messages', () => {
+  test('only the fixed actions are accepted', () => {
+    for (const name of [
+      'refresh',
+      'showSource',
+      'copyMarkdown',
+      'copyHtml',
+      'exportHtml',
+      'openSettings',
+      'openCommands',
+      'toggleLineNumbers',
+      'toggleLock',
+    ])
+      expect(parseWebviewMessage({ v, type: 'action', name })).toEqual({
+        type: 'action',
+        name,
+      })
+    for (const name of [
+      'runCommand',
+      'workbench.action.reloadWindow',
+      '',
+      'REFRESH',
+      5,
+      null,
+    ])
+      expect(parseWebviewMessage({ v, type: 'action', name })).toBeNull()
+  })
+
+  test('a value is accepted only for setTheme, and only a known theme', () => {
+    expect(
+      parseWebviewMessage({ v, type: 'action', name: 'setTheme', value: 'dark' }),
+    ).toEqual({
+      type: 'action',
+      name: 'setTheme',
+      value: 'dark',
+    })
+    for (const value of ['purple', '', undefined, 3, {}])
+      expect(
+        parseWebviewMessage({ v, type: 'action', name: 'setTheme', value }),
+      ).toBeNull()
+    expect(
+      parseWebviewMessage({ v, type: 'action', name: 'refresh', value: 'dark' }),
+    ).toBeNull()
+    expect(
+      parseWebviewMessage({ v, type: 'action', name: 'openSettings', value: '--evil' }),
+    ).toBeNull()
+  })
+})
+
 describe('parseHostMessage', () => {
   const assets = {
     worker: 'vscode-resource:/w.js',
@@ -117,6 +166,7 @@ describe('parseHostMessage', () => {
       settings: { theme: 'nope', typography: { fontSize: 9999 } },
       assets,
       aiAvailable: false,
+      kind: 'reader',
     })
     expect(msg?.type).toBe('init')
     if (msg?.type === 'init') {

@@ -58,6 +58,7 @@ export class PreviewManager
   constructor(
     readonly extensionUri: vscode.Uri,
     readonly secrets: SecretsStore,
+    readonly extensionId: string,
   ) {}
 
   // --------------------------------------------------------------- PanelHost

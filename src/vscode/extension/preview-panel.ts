@@ -17,6 +17,7 @@ import {
 import type { SecretsStore } from '@/storage/secrets-store'
 import type { AIPortRequest } from '@/shared/messages'
 import { createPanelAI, type PanelAI } from './ai-host'
+import { runPreviewAction } from './panel-actions'
 import { readPreviewOptions, readSettings } from './config'
 import { isRealPathInside } from './confine'
 import type { DiagnosticsSink } from './diagnostics'
@@ -45,6 +46,8 @@ export interface PanelHost {
   readonly diagnostics: DiagnosticsSink
   /** API keys, bound to the endpoint origin they were saved for. */
   readonly secrets: SecretsStore
+  /** `publisher.name`, for opening this extension's settings. */
+  readonly extensionId: string
   /** Called once when the panel closes (the host stops tracking it). */
   panelClosed(panel: PreviewPanel): void
   /** Another panel shows this document? (decides when diagnostics are cleared). */
@@ -259,6 +262,26 @@ export class PreviewPanel {
     this.sendCommand('exportHtml')
   }
 
+  private actionTarget() {
+    const panel = this
+    return {
+      get document() {
+        return panel.doc
+      },
+      extensionId: this.host.extensionId,
+      refresh: () => this.refreshNow(),
+      showSource: async () => {
+        if (!this.doc) return
+        await vscode.window.showTextDocument(this.doc, {
+          viewColumn: this.editorColumn(),
+        })
+      },
+      requestCopy: () => this.requestCopy(),
+      requestExport: () => this.requestExport(),
+      toggleLock: () => this.setLocked(!this.locked),
+    }
+  }
+
   /**
    * AI requests are served here, never in the webview: the key stays in the host and the
    * webview only sees streamed text. An untrusted workspace gets no AI at all.
@@ -368,6 +391,7 @@ export class PreviewPanel {
           settings: readSettings(this.doc?.uri),
           assets: this.assets(),
           aiAvailable: readSettings(this.doc?.uri).ai.enabled,
+          kind: this.kind,
         })
         this.post({ type: 'lock', locked: this.locked })
         this.sendDocument()
@@ -391,6 +415,8 @@ export class PreviewPanel {
         return this.saveCopy(message.text)
       case 'ai':
         return this.handleAI(message.request)
+      case 'action':
+        return runPreviewAction(this.actionTarget(), message.name, message.value)
     }
   }
 

@@ -6,6 +6,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const manager = new PreviewManager(
     context.extensionUri,
     createVscodeSecrets(context.secrets),
+    context.extension.id,
   )
   context.subscriptions.push(...manager.register())
 }

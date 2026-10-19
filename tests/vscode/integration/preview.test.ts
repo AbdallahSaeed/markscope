@@ -9,6 +9,10 @@ import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as vscode from 'vscode'
+import {
+  runPreviewAction,
+  type ActionTarget,
+} from '../../../src/vscode/extension/panel-actions'
 
 const folder = () => vscode.workspace.workspaceFolders![0]!.uri
 const fixture = (name: string) => vscode.Uri.joinPath(folder(), name)
@@ -256,6 +260,37 @@ describe('Markscope preview', () => {
       assert.doesNotMatch(written, /<script/)
     } finally {
       await fs.rm(target.fsPath, { force: true })
+    }
+  })
+
+  it('the settings actions of the menu write the user settings', async () => {
+    const cfg = () => vscode.workspace.getConfiguration('markscope')
+    const target: ActionTarget = {
+      document: null,
+      extensionId: 'AbdallahSaeed.markscope',
+      refresh: () => undefined,
+      showSource: async () => undefined,
+      requestCopy: () => undefined,
+      requestExport: () => undefined,
+      toggleLock: () => undefined,
+    }
+    // Don't assume a pristine profile: flip relative to whatever is there, then put it back.
+    const lineNumbers = cfg().get<boolean>('code.lineNumbers') ?? false
+    const theme = cfg().get<string>('theme') ?? 'vscode'
+    const other = theme === 'dark' ? 'light' : 'dark'
+    try {
+      await runPreviewAction(target, 'toggleLineNumbers')
+      assert.strictEqual(cfg().get('code.lineNumbers'), !lineNumbers)
+      await runPreviewAction(target, 'toggleLineNumbers')
+      assert.strictEqual(cfg().get('code.lineNumbers'), lineNumbers)
+
+      await runPreviewAction(target, 'setTheme', other)
+      assert.strictEqual(cfg().get('theme'), other)
+      await runPreviewAction(target, 'setTheme') // no value: nothing changes
+      assert.strictEqual(cfg().get('theme'), other)
+    } finally {
+      await cfg().update('code.lineNumbers', undefined, true)
+      await cfg().update('theme', undefined, true)
     }
   })
 

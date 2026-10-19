@@ -131,11 +131,13 @@ export function sendInit(
   page: Page,
   host: FakeHost,
   settings: Settings = defaultSettings(),
+  kind: 'preview' | 'reader' = 'preview',
 ) {
   return send(page, {
     type: 'init',
     settings,
     aiAvailable: false,
+    kind,
     assets: {
       worker: `${host.origin}/webview/js/render-worker.js`,
       documentCss: `${host.origin}/webview/css/document.css`,

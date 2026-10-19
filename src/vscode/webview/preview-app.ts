@@ -13,6 +13,8 @@ import { renderKey, type Settings } from '@/shared/settings'
 import { computeStats } from '@/shared/stats'
 import { parseWorkspaceUrl } from '@/shared/urls'
 import { AIPanel } from '@/viewer/ai-panel'
+import { Menu } from '@/viewer/menu'
+import { showShortcutHelp } from '@/viewer/shortcuts'
 import type { AITransport } from '@/viewer/ai-client'
 import { DocumentView } from '@/viewer/document-view'
 import {
@@ -28,7 +30,9 @@ import { Sidebar } from '@/viewer/sidebar'
 import { renderStatus } from '@/viewer/status-bar'
 import { applyAppearance, resolvedTheme } from '@/viewer/theme'
 import { toast } from '@/viewer/toast'
-import type { WebviewCommand } from '../protocol'
+import type { PreviewAction, ThemeChoice, WebviewCommand } from '../protocol'
+import { previewShortcuts, type PreviewKeyActions } from './keys'
+import { previewMenuItems } from './menu'
 import type { Bridge } from './host-bridge'
 import { ScrollEcho } from './scroll-echo'
 
@@ -68,6 +72,7 @@ export class PreviewApp {
   private doc: PreviewDoc | null = null
   private result: RenderResult | null = null
   private locked = false
+  private kind: 'preview' | 'reader' = 'preview'
   private renderSeq = 0
   private lastRenderKey = ''
   private lastSentLine = 0
@@ -157,6 +162,22 @@ export class PreviewApp {
     this.layout.aiBtn.addEventListener('click', () => this.toggleAI())
 
     this.layout.sidebarBtn.addEventListener('click', () => this.toggleSidebar())
+    this.layout.themeBtn.addEventListener('click', () => this.cycleTheme())
+    this.layout.paletteBtn.addEventListener('click', () => this.act('openCommands'))
+    // ⌘K is a VS Code chord prefix: the button opens VS Code's palette, filtered to Markscope.
+    this.layout.paletteBtn.querySelector('kbd')?.remove()
+    new Menu(this.layout.moreBtn, () =>
+      previewMenuItems({
+        settings: () => this.settings,
+        kind: () => this.kind,
+        locked: () => this.locked,
+        focusModeOn: () => document.body.classList.contains('zen'),
+        act: (name, value) => this.act(name, value),
+        toggleFocus: () => this.toggleFocus(),
+        toggleAI: () => this.toggleAI(),
+        showShortcuts: () => this.showShortcuts(),
+      }),
+    )
     this.layout.searchBtn.addEventListener('click', () => this.search.open())
     this.layout.zenExit.addEventListener('click', () => this.toggleFocus(false))
     this.installScrollReporting()
@@ -172,6 +193,7 @@ export class PreviewApp {
     document.body.classList.toggle('sidebar-hidden', this.sidebarHidden)
     this.layout.sidebarBtn.setAttribute('aria-expanded', String(this.sidebarOpen()))
     this.layout.aiBtn.hidden = !next.ai.enabled
+    this.updateThemeButton()
     if (!next.ai.enabled) this.closeAI()
     this.ai.configure(next)
     if (
@@ -214,6 +236,56 @@ export class PreviewApp {
       else window.scrollTo(0, 0)
     }
     this.persistState()
+  }
+
+  setKind(kind: 'preview' | 'reader'): void {
+    this.kind = kind
+  }
+
+  /** Asks the host to do one of the fixed toolbar/menu actions. */
+  act(name: PreviewAction, value?: ThemeChoice): void {
+    this.bridge.post(
+      value === undefined ? { type: 'action', name } : { type: 'action', name, value },
+    )
+  }
+
+  private updateThemeButton(): void {
+    const labels = { system: 'VS Code theme', light: 'Light theme', dark: 'Dark theme' }
+    this.layout.themeBtn.title = `${labels[this.settings.theme]} — switch (T)`
+    this.layout.themeBtn.setAttribute('aria-label', this.layout.themeBtn.title)
+    this.layout.themeBtn.dataset.theme = this.settings.theme
+  }
+
+  /** VS Code theme → light → dark → …; the choice is saved as the `markscope.theme` setting. */
+  cycleTheme(): void {
+    const order: ThemeChoice[] = ['vscode', 'light', 'dark']
+    const current: ThemeChoice =
+      this.settings.theme === 'system' ? 'vscode' : this.settings.theme
+    this.act('setTheme', order[(order.indexOf(current) + 1) % order.length])
+  }
+
+  showShortcuts(): void {
+    showShortcutHelp(previewShortcuts(this.keyActions()))
+  }
+
+  /** The keyboard actions, shared by the key handler and the shortcut help. */
+  keyActions(): PreviewKeyActions {
+    return {
+      find: () => this.run('find'),
+      toggleSidebar: () => this.toggleSidebar(),
+      focusMode: () => this.toggleFocus(),
+      toggleAI: () => this.toggleAI(),
+      exitFocus: () => this.toggleFocus(false),
+      jumpHeading: delta => this.jumpHeading(delta),
+      refresh: () => this.act('refresh'),
+      cycleTheme: () => this.cycleTheme(),
+      showHelp: () => this.showShortcuts(),
+      isBlocked: () => this.searchOpen,
+    }
+  }
+
+  get isLocked(): boolean {
+    return this.locked
   }
 
   setLocked(locked: boolean): void {

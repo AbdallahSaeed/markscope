@@ -32,7 +32,8 @@ async function main(): Promise<void> {
   const bridge = createBridge()
   const mount = document.getElementById('ms-root') ?? document.body
   const layout = buildLayout(mount, {
-    hide: ['home', 'favorite', 'save', 'modes', 'palette', 'theme', 'more'],
+    // The editor is the source view and VS Code owns saving, so these stay out.
+    hide: ['home', 'favorite', 'save', 'modes'],
   })
   readHostTheme()
 
@@ -54,15 +55,8 @@ async function main(): Promise<void> {
         documentCssUrl: message.assets.documentCss,
         aiTransport,
       })
-      installPreviewKeys({
-        find: () => app?.run('find'),
-        toggleSidebar: () => app?.toggleSidebar(),
-        focusMode: () => app?.toggleFocus(),
-        toggleAI: () => app?.toggleAI(),
-        exitFocus: () => app?.toggleFocus(false),
-        jumpHeading: delta => app?.jumpHeading(delta),
-        isBlocked: () => app?.searchOpen ?? false,
-      })
+      app.setKind(message.kind)
+      installPreviewKeys(app.keyActions())
       new MutationObserver(() => {
         readHostTheme()
         app?.refreshTheme()

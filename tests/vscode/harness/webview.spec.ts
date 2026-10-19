@@ -246,16 +246,14 @@ test('hash links from the host land on the heading; commands drive the UI', asyn
 test('the toolbar shows only what applies in VS Code', async ({ page }) => {
   await openWebview(page, host)
   await start(page, '# T\n')
-  for (const sel of [
-    '.ms-home-btn',
-    '.ms-star',
-    '.ms-save-btn',
-    '.ms-seg',
-    '.ms-palette-btn',
-  ])
+  for (const sel of ['.ms-home-btn', '.ms-star', '.ms-save-btn', '.ms-seg'])
     await expect(page.locator(sel)).toBeHidden()
   await expect(page.getByRole('button', { name: /Find in document/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Toggle sidebar/ })).toBeVisible()
+  // The browser viewer's theme button, Commands button and ⋯ menu are here too.
+  await expect(page.getByRole('button', { name: /theme/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Commands' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'More actions' })).toBeVisible()
 })
 
 test('diagrams are re-themed when VS Code switches theme', async ({ page }) => {
@@ -469,4 +467,153 @@ test('links to project files go to the host with their path and line anchor', as
     .poll(async () => (await last(page, 'openLink')) as Posted | undefined)
     .toMatchObject({ kind: 'file', target: 'src', hash: '' })
   expect(page.url()).toContain('/index.html') // the page itself never navigated
+})
+
+const action = async (page: Page) => (await last(page, 'action')) as Posted | undefined
+
+/** Menu entries: checkable ones have role menuitemcheckbox, so select by class and label. */
+const menuItem = (page: Page, label: string | RegExp) =>
+  page.locator('.ms-menu__item').filter({
+    has: page.locator('span', {
+      hasText: typeof label === 'string' ? new RegExp(`^${label}`) : label,
+    }),
+  })
+
+async function openMenu(page: Page) {
+  await page.getByRole('button', { name: 'More actions' }).click()
+  await expect(page.getByRole('menu')).toBeVisible()
+}
+
+test('the ⋯ menu has the browser viewer’s options that make sense in VS Code', async ({
+  page,
+}) => {
+  await openWebview(page, host)
+  await start(page, '# T\n')
+  await openMenu(page)
+  const names = await page.locator('.ms-menu__item > span').allTextContents()
+  for (const label of [
+    'Refresh',
+    'Show source in the editor',
+    'Copy Markdown',
+    'Copy rendered HTML',
+    'Export as HTML',
+    'Focus mode',
+    'Keyboard shortcuts',
+    'Command palette',
+    'Settings',
+  ])
+    expect(names.join('|'), label).toContain(label)
+  // Browser-only options are absent; the AI item needs the assistant switched on.
+  for (const gone of [
+    'Save',
+    'Start page',
+    'Print',
+    'Live reload',
+    'View original file',
+    'AI assistant',
+  ])
+    expect(names.join('|'), gone).not.toContain(gone)
+})
+
+test('menu items ask the host for their fixed action', async ({ page }) => {
+  await openWebview(page, host)
+  await start(page, '# T\n')
+  const expected: [string, string][] = [
+    ['Refresh', 'refresh'],
+    ['Show source in the editor', 'showSource'],
+    ['Copy Markdown', 'copyMarkdown'],
+    ['Copy rendered HTML', 'copyHtml'],
+    ['Export as HTML', 'exportHtml'],
+    ['Command palette', 'openCommands'],
+    ['Settings', 'openSettings'],
+    ['Line numbers in code', 'toggleLineNumbers'],
+    ['Lock preview to this file', 'toggleLock'],
+  ]
+  for (const [label, name] of expected) {
+    await openMenu(page)
+    await menuItem(page, label).click()
+    await expect.poll(async () => (await action(page))?.name, label).toBe(name)
+  }
+})
+
+test('the theme button cycles VS Code theme → light → dark and saves the choice via the host', async ({
+  page,
+}) => {
+  await openWebview(page, host)
+  await start(page, '# T\n')
+  const button = page.getByRole('button', { name: /theme/i })
+  await button.click()
+  await expect
+    .poll(async () => await action(page))
+    .toMatchObject({ name: 'setTheme', value: 'light' })
+  await send(page, {
+    type: 'settings',
+    settings: { ...defaultSettings(), theme: 'light' },
+  })
+  await button.click()
+  await expect
+    .poll(async () => await action(page))
+    .toMatchObject({ name: 'setTheme', value: 'dark' })
+  await send(page, {
+    type: 'settings',
+    settings: { ...defaultSettings(), theme: 'dark' },
+  })
+  await expect(button).toHaveAttribute('data-theme', 'dark')
+  await button.click()
+  await expect
+    .poll(async () => await action(page))
+    .toMatchObject({ name: 'setTheme', value: 'vscode' })
+})
+
+test('the Commands button opens VS Code’s palette, filtered to Markscope', async ({
+  page,
+}) => {
+  await openWebview(page, host)
+  await start(page, '# T\n')
+  await page.getByRole('button', { name: 'Commands' }).click()
+  await expect.poll(async () => (await action(page))?.name).toBe('openCommands')
+})
+
+test('Focus mode and Keyboard shortcuts work from the menu; the shortcut list matches the keys', async ({
+  page,
+}) => {
+  await openWebview(page, host)
+  await start(page, '# T\n')
+  await openMenu(page)
+  await menuItem(page, 'Focus mode').click()
+  await expect(page.locator('body')).toHaveClass(/zen/)
+  await page.keyboard.press('Escape')
+  await expect(page.locator('body')).not.toHaveClass(/zen/)
+
+  await openMenu(page)
+  await menuItem(page, 'Keyboard shortcuts').click()
+  // A closed dialog may linger in the DOM for a moment: look at the open one.
+  const help = page.locator('dialog.ms-help[open]')
+  await expect(help).toBeVisible()
+  for (const text of [
+    'Find in document',
+    'Switch theme',
+    'Refresh the preview',
+    'AI assistant',
+  ])
+    await expect(help).toContainText(text)
+  await page.keyboard.press('Escape')
+  await expect(help).toBeHidden()
+  // The same keys work: R refreshes, ? opens the help again.
+  await page.keyboard.press('r')
+  await expect.poll(async () => (await action(page))?.name).toBe('refresh')
+  await page.keyboard.press('?')
+  await expect(page.locator('dialog.ms-help[open]')).toBeVisible()
+})
+
+test('the AI item appears in the menu only when the assistant is on, and the Reader has no lock item', async ({
+  page,
+}) => {
+  await openWebview(page, host)
+  await sendInit(page, host, aiOn(), 'reader')
+  await sendDocument(page, '# T\n')
+  await expect(page.locator('.ms-doc h1')).toBeVisible()
+  await openMenu(page)
+  await expect(menuItem(page, 'AI assistant')).toBeVisible()
+  await expect(menuItem(page, 'Lock preview')).toHaveCount(0)
 })
