@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.2.0 — 2026-10-20
 
 - **35 named color themes** in the browser extension and the VS Code preview: 10 light (Ayu Light, Catppuccin Latte, Everforest Light, Graphite Light, Gruvbox Light, Rosé Pine Dawn, Solarized Light, Tokyo Night Light, Ulysses Light, Cadmium Light) and 25 dark (Ayu Dark and Mirage, Catppuccin Mocha, cyberdream, Dracula, Everforest, GitHub Dark, Gruvbox, Horizon, Kanagawa, Material, Monokai Pro, Night Owl, Nightfox, Nord, One Dark, Oxocarbon, Palenight, Rosé Pine and Moon, Solarized Dark, Synthwave ’84, Tokyo Night and Storm, Cadmium Dark).
   - `theme` stays System / Light / Dark; the new `themeLight` and `themeDark` pick the palette for each scheme (`markscope.themeLight` / `markscope.themeDark` in VS Code). Defaults are the existing look, so nothing changes until you choose.
