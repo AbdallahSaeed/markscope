@@ -103,6 +103,26 @@ describe('parseWebviewMessage (untrusted input)', () => {
   })
 })
 
+describe('build id in init', () => {
+  const assets = { worker: 'w', documentCss: 'd', katexCss: 'k' }
+  const init = (extra: object) =>
+    parseHostMessage({
+      v,
+      type: 'init',
+      settings: {},
+      assets,
+      aiAvailable: false,
+      ...extra,
+    })
+
+  test('is passed through, and an old host without one reads as empty', () => {
+    expect(init({ build: '1.0.0+abc' })).toMatchObject({ build: '1.0.0+abc' })
+    expect(init({})).toMatchObject({ build: '' })
+    expect(init({ build: 5 })).toMatchObject({ build: '' })
+    expect(init({ build: 'x'.repeat(500) })).toMatchObject({ build: '' })
+  })
+})
+
 describe('action messages', () => {
   test('only the fixed actions are accepted', () => {
     for (const name of [

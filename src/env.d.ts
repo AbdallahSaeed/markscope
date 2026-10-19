@@ -47,3 +47,5 @@ declare module 'markdown-it-container' {
 
 /** Injected by the build script. */
 declare const __MARKSCOPE_VERSION__: string
+/** VS Code build only: unique per build, baked into both the host and the webview bundle. */
+declare const __MARKSCOPE_BUILD__: string

@@ -13,6 +13,7 @@ import { createVscodeManifest } from './vscode-manifest.mjs'
 const DEFAULT_PUBLISHER = 'AbdallahSaeed'
 
 export async function buildVscode({ root, pkg, watch, dev }) {
+  const buildId = `${pkg.version}+${Date.now().toString(36)}`
   const out = path.join(root, 'dist', 'vscode')
   const webview = path.join(out, 'webview')
   const common = {
@@ -22,6 +23,7 @@ export async function buildVscode({ root, pkg, watch, dev }) {
     alias: { '@': path.join(root, 'src') },
     define: {
       __MARKSCOPE_VERSION__: JSON.stringify(pkg.version),
+      __MARKSCOPE_BUILD__: JSON.stringify(buildId),
       'process.env.NODE_ENV': JSON.stringify(dev ? 'development' : 'production'),
     },
     legalComments: 'none',
@@ -94,6 +96,8 @@ export async function buildVscode({ root, pkg, watch, dev }) {
       publisher: process.env.VSCODE_PUBLISHER || DEFAULT_PUBLISHER,
     })
     await writeFile(path.join(out, 'package.json'), JSON.stringify(manifest, null, 2))
+    // Beside dist/vscode, not in it: tests read it, the .vsix does not ship it.
+    await writeFile(path.join(root, 'dist', 'vscode-build-id.txt'), buildId)
   }
 
   await rm(out, { recursive: true, force: true })

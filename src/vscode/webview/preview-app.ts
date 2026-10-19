@@ -73,6 +73,7 @@ export class PreviewApp {
   private result: RenderResult | null = null
   private locked = false
   private kind: 'preview' | 'reader' = 'preview'
+  private hostIsStale = false
   private renderSeq = 0
   private lastRenderKey = ''
   private lastSentLine = 0
@@ -223,6 +224,7 @@ export class PreviewApp {
     this.doc = doc
     document.body.dataset.mode = 'document'
     hideBanner(this.layout)
+    if (this.hostIsStale) this.showStaleNotice()
     this.layout.title.textContent = doc.fileName
     this.layout.subtitle.textContent = ''
     await this.render({ preserveScroll: sameFile })
@@ -498,6 +500,24 @@ export class PreviewApp {
     } catch (error) {
       this.banner(`Could not export: ${errorMessage(error)}`)
     }
+  }
+
+  /**
+   * The extension was replaced on disk but VS Code still runs the old code. This page is
+   * new, so it keeps working, but the old host ignores what the toolbar asks of it.
+   */
+  markHostStale(): void {
+    this.hostIsStale = true
+    this.showStaleNotice()
+  }
+
+  private showStaleNotice(): void {
+    showBanner(
+      this.layout,
+      'Markscope was updated. Reload the window to finish: open the Command Palette and run “Developer: Reload Window”. Until then some toolbar items won’t respond.',
+      undefined,
+      'warn',
+    )
   }
 
   banner(message: string): void {

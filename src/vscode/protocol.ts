@@ -73,6 +73,8 @@ export type HostMessage =
       aiAvailable: boolean
       /** A Reader tab is always tied to its file, so it has no lock. */
       kind: 'preview' | 'reader'
+      /** Build id of the host; empty when it predates build ids (an old, still-running host). */
+      build: string
     }
   | {
       type: 'document'
@@ -233,6 +235,7 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
             assets,
             aiAvailable: raw.aiAvailable,
             kind: raw.kind === 'reader' ? 'reader' : 'preview',
+            build: isString(raw.build, 100) ? raw.build : '',
           }
         : null
     }

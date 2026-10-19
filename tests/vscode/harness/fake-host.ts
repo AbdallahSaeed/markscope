@@ -8,6 +8,7 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { Page } from '@playwright/test'
 import { defaultSettings, type Settings } from '../../../src/shared/settings'
+import { readFileSync } from 'node:fs'
 import { buildWebviewHtml } from '../../../src/vscode/extension/html'
 
 const root = path.resolve(process.cwd(), 'dist/vscode/webview')
@@ -127,17 +128,23 @@ export const posted = (page: Page): Promise<Posted[]> =>
 export const send = (page: Page, message: Record<string, unknown>) =>
   page.evaluate(m => window.postMessage({ v: 1, ...m }, '*'), message)
 
+/** The build id baked into dist/vscode (written by the build); a matching host sends the same. */
+export const currentBuildId = (): string =>
+  readFileSync(path.resolve(process.cwd(), 'dist/vscode-build-id.txt'), 'utf8').trim()
+
 export function sendInit(
   page: Page,
   host: FakeHost,
   settings: Settings = defaultSettings(),
   kind: 'preview' | 'reader' = 'preview',
+  build: string = currentBuildId(),
 ) {
   return send(page, {
     type: 'init',
     settings,
     aiAvailable: false,
     kind,
+    build,
     assets: {
       worker: `${host.origin}/webview/js/render-worker.js`,
       documentCss: `${host.origin}/webview/css/document.css`,

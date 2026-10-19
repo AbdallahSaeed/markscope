@@ -17,6 +17,7 @@ import {
 import type { SecretsStore } from '@/storage/secrets-store'
 import type { AIPortRequest } from '@/shared/messages'
 import { createPanelAI, type PanelAI } from './ai-host'
+import { BUILD_ID } from '../build-id'
 import { runPreviewAction } from './panel-actions'
 import { readPreviewOptions, readSettings } from './config'
 import { isRealPathInside } from './confine'
@@ -392,6 +393,7 @@ export class PreviewPanel {
           assets: this.assets(),
           aiAvailable: readSettings(this.doc?.uri).ai.enabled,
           kind: this.kind,
+          build: BUILD_ID,
         })
         this.post({ type: 'lock', locked: this.locked })
         this.sendDocument()

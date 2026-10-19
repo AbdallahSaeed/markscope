@@ -5,6 +5,7 @@ import { configureKatexCss } from '@/viewer/document-view'
 import { buildLayout } from '@/viewer/layout'
 import { setHostTheme, themeFromVsCodeClasses } from '@/viewer/theme'
 import type { HostMessage } from '../protocol'
+import { sameBuild } from '../build-id'
 import { bridgeAITransport } from './ai-transport'
 import { createBridge } from './host-bridge'
 import { installPreviewKeys } from './keys'
@@ -56,6 +57,7 @@ async function main(): Promise<void> {
         aiTransport,
       })
       app.setKind(message.kind)
+      if (!sameBuild(message.build)) app.markHostStale()
       installPreviewKeys(app.keyActions())
       new MutationObserver(() => {
         readHostTheme()

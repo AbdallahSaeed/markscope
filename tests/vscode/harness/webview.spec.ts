@@ -617,3 +617,32 @@ test('the AI item appears in the menu only when the assistant is on, and the Rea
   await expect(menuItem(page, 'AI assistant')).toBeVisible()
   await expect(menuItem(page, 'Lock preview')).toHaveCount(0)
 })
+
+const STALE = /Reload the window/
+
+test('no update notice when the host is from the same build', async ({ page }) => {
+  await openWebview(page, host)
+  await start(page, '# T\n')
+  await expect(page.locator('.ms-banner')).toBeHidden()
+})
+
+test('an old host (no build id) or another build gets an update notice that survives re-renders', async ({
+  page,
+}) => {
+  await openWebview(page, host)
+  // An old, still-running host sends an init without a build id.
+  await sendInit(page, host, defaultSettings(), 'preview', '')
+  await sendDocument(page, '# T\n')
+  await expect(page.locator('.ms-doc h1')).toBeVisible()
+  await expect(page.locator('.ms-banner')).toContainText(STALE)
+  await sendDocument(page, '# T2\n', { version: 2 })
+  await expect(page.locator('.ms-doc h1')).toContainText('T2')
+  await expect(page.locator('.ms-banner')).toContainText(STALE)
+})
+
+test('a different build id also gets the notice', async ({ page }) => {
+  await openWebview(page, host)
+  await sendInit(page, host, defaultSettings(), 'preview', '0.9.0+other')
+  await sendDocument(page, '# T\n')
+  await expect(page.locator('.ms-banner')).toContainText(STALE)
+})
