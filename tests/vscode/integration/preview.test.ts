@@ -68,17 +68,28 @@ async function replaceText(
   await editor.edit(b => b.replace(new vscode.Range(start, end), to))
 }
 
+/**
+ * Tests edit the fixtures without saving. Put every dirty file back to its on-disk text
+ * (and save, which writes identical content) so no test sees another's leftovers; relying on
+ * "revert the active editor" breaks when focus happens to be elsewhere.
+ */
+async function restoreDirtyFixtures(): Promise<void> {
+  for (const doc of vscode.workspace.textDocuments) {
+    if (!doc.isDirty || doc.uri.scheme !== 'file') continue
+    const onDisk = await fs.readFile(doc.uri.fsPath, 'utf8')
+    const edit = new vscode.WorkspaceEdit()
+    edit.replace(doc.uri, new vscode.Range(0, 0, doc.lineCount, 0), onDisk)
+    await vscode.workspace.applyEdit(edit)
+    await doc.save()
+  }
+}
+
 describe('Markscope preview', () => {
   afterEach(async () => {
     await vscode.workspace
       .getConfiguration('markscope')
       .update('doctor.enabled', undefined, true)
-    await vscode.commands
-      .executeCommand('workbench.action.revertAndCloseActiveEditor')
-      .then(
-        () => undefined,
-        () => undefined,
-      )
+    await restoreDirtyFixtures()
     await vscode.commands.executeCommand('workbench.action.closeAllEditors')
     await waitFor('previews to close', () => previewTabs().length === 0)
   })
