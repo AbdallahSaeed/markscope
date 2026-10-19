@@ -5,6 +5,7 @@ import { configureKatexCss } from '@/viewer/document-view'
 import { buildLayout } from '@/viewer/layout'
 import { setHostTheme, themeFromVsCodeClasses } from '@/viewer/theme'
 import type { HostMessage } from '../protocol'
+import { bridgeAITransport } from './ai-transport'
 import { createBridge } from './host-bridge'
 import { installPreviewKeys } from './keys'
 import { PreviewApp } from './preview-app'
@@ -35,6 +36,7 @@ async function main(): Promise<void> {
   })
   readHostTheme()
 
+  const aiTransport = bridgeAITransport(bridge)
   let app: PreviewApp | null = null
   // Messages are handled one at a time: `init` is async and `document` follows it.
   let queue: Promise<void> = Promise.resolve()
@@ -50,11 +52,13 @@ async function main(): Promise<void> {
         renderer: new RenderClient(url),
         settings: message.settings,
         documentCssUrl: message.assets.documentCss,
+        aiTransport,
       })
       installPreviewKeys({
         find: () => app?.run('find'),
         toggleSidebar: () => app?.toggleSidebar(),
         focusMode: () => app?.toggleFocus(),
+        toggleAI: () => app?.toggleAI(),
         exitFocus: () => app?.toggleFocus(false),
         jumpHeading: delta => app?.jumpHeading(delta),
         isBlocked: () => app?.searchOpen ?? false,
@@ -93,7 +97,7 @@ async function main(): Promise<void> {
       case 'banner':
         return app.banner(message.message)
       case 'ai.event':
-        return // AI arrives in a later release
+        return aiTransport.deliver(message.event)
     }
   }
 

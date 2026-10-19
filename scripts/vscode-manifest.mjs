@@ -20,7 +20,7 @@ export function createVscodeManifest({ version, publisher }) {
     name: 'markscope',
     displayName: 'Markscope: Markdown Reader, Diagrams & Doctor',
     description:
-      'Fast, secure Markdown preview with Mermaid, Graphviz, KaTeX, an outline, and a documentation doctor in the Problems panel.',
+      'Fast, secure Markdown preview with Mermaid, Graphviz, KaTeX, an outline, a documentation doctor in the Problems panel, and optional bring-your-own-key AI.',
     version,
     publisher,
     license: 'MIT',
@@ -83,6 +83,9 @@ export function createVscodeManifest({ version, publisher }) {
         { command: 'markscope.runDoctor', title: 'Run Document Doctor', category },
         { command: 'markscope.exportHtml', title: 'Export as HTML', category },
         { command: 'markscope.copyHtml', title: 'Copy Rendered HTML', category },
+        { command: 'markscope.toggleAi', title: 'Toggle AI Assistant', category },
+        { command: 'markscope.setAiKey', title: 'Set AI API Key', category },
+        { command: 'markscope.clearAiKey', title: 'Clear AI API Key', category },
         { command: 'markscope.openInReader', title: 'Open in Reader', category },
       ],
       menus: {
@@ -103,6 +106,7 @@ export function createVscodeManifest({ version, publisher }) {
           { command: 'markscope.runDoctor', when: inPreview },
           { command: 'markscope.exportHtml', when: inPreview },
           { command: 'markscope.copyHtml', when: inPreview },
+          { command: 'markscope.toggleAi', when: inPreview },
           { command: 'markscope.openInReader', when: isMarkdown },
         ],
       },

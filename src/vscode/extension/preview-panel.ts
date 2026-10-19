@@ -14,6 +14,9 @@ import {
   type HostMessage,
   type WebviewMessage,
 } from '../protocol'
+import type { SecretsStore } from '@/storage/secrets-store'
+import type { AIPortRequest } from '@/shared/messages'
+import { createPanelAI, type PanelAI } from './ai-host'
 import { readPreviewOptions, readSettings } from './config'
 import { isRealPathInside } from './confine'
 import type { DiagnosticsSink } from './diagnostics'
@@ -39,6 +42,8 @@ const EXTERNAL_OPEN_INTERVAL_MS = 1000
 export interface PanelHost {
   readonly extensionUri: vscode.Uri
   readonly diagnostics: DiagnosticsSink
+  /** API keys, bound to the endpoint origin they were saved for. */
+  readonly secrets: SecretsStore
   /** Called once when the panel closes (the host stops tracking it). */
   panelClosed(panel: PreviewPanel): void
   /** Another panel shows this document? (decides when diagnostics are cleared). */
@@ -93,6 +98,7 @@ export class PreviewPanel {
   private exportRequested = false
   private exportTarget: vscode.Uri | undefined
   private copyRequested = false
+  private ai: PanelAI | undefined
   private lastExternalOpen = 0
 
   constructor(
@@ -252,6 +258,31 @@ export class PreviewPanel {
     this.sendCommand('exportHtml')
   }
 
+  /**
+   * AI requests are served here, never in the webview: the key stays in the host and the
+   * webview only sees streamed text. An untrusted workspace gets no AI at all.
+   */
+  private handleAI(request: AIPortRequest): void {
+    if (request.type === 'ai.abort') return void this.ai?.handle(request)
+    if (!vscode.workspace.isTrusted) {
+      return this.post({
+        type: 'ai.event',
+        event: {
+          type: 'error',
+          id: request.id,
+          message:
+            'AI is turned off in untrusted workspaces. Trust this folder to use it.',
+        },
+      })
+    }
+    this.ai ??= createPanelAI({
+      loadSettings: async () => readSettings(this.doc?.uri),
+      secrets: this.host.secrets,
+      post: event => this.post({ type: 'ai.event', event }),
+    })
+    this.ai.handle(request)
+  }
+
   /** Asks the webview for the rendered HTML of the article; the answer goes to the clipboard. */
   requestCopy(): void {
     this.copyRequested = true
@@ -335,7 +366,7 @@ export class PreviewPanel {
           type: 'init',
           settings: readSettings(this.doc?.uri),
           assets: this.assets(),
-          aiAvailable: false,
+          aiAvailable: readSettings(this.doc?.uri).ai.enabled,
         })
         this.post({ type: 'lock', locked: this.locked })
         this.sendDocument()
@@ -357,7 +388,7 @@ export class PreviewPanel {
       case 'copy':
         return this.saveCopy(message.text)
       case 'ai':
-        return // a later release
+        return this.handleAI(message.request)
     }
   }
 
@@ -472,6 +503,7 @@ export class PreviewPanel {
     const doc = this.doc
     if (doc && !this.host.isShownElsewhere(doc, this))
       this.host.diagnostics.clear(doc.uri)
+    this.ai?.dispose()
     for (const d of this.disposables) d.dispose()
     this.panel.dispose()
     this.host.panelClosed(this)

@@ -1,4 +1,4 @@
-import { chromeArea } from './area'
+import { chromeArea } from './chrome-area'
 import { createLibraryStore } from './library-store'
 import { createSecretsStore } from './secrets-store'
 import { createSettingsStore } from './settings-store'

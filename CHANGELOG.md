@@ -13,7 +13,9 @@
   - **Markscope Reader**: a full-tab, read-only view of one file (Explorer or editor → Reopen Editor With… → Markscope Reader, or **Markscope: Open in Reader**). It never becomes the default editor for Markdown.
   - **Status bar item** while a preview is visible: words, reading time and the number of doctor problems; clicking it opens the Problems panel.
   - **Copy Rendered HTML**: the rendered article (diagrams included) as an HTML fragment on the clipboard.
-  - Not in this release: editing inside Markscope and AI.
+  - **Optional AI assistant** (off by default): summarize, outline, review, improve, explain a selection or a code block, ask questions, generate a Mermaid diagram. Providers: Anthropic, OpenAI, a local model (Ollama, LM Studio) or any OpenAI-compatible endpoint. Settings are `markscope.ai.*`; **Markscope: Set AI API Key** stores the key in VS Code's secret storage (the OS keychain), bound to the endpoint it was saved for.
+    - Requests run in the extension host and the key never reaches the preview. AI settings are application-scoped, so a cloned repository's `.vscode/settings.json` cannot redirect your document text, and the assistant is off in untrusted workspaces.
+  - Not in this release: editing inside Markscope.
 - **Accessibility** (found by an automated axe check, so this also applies to the browser extension): task-list checkboxes are now named after their item, the muted text color (`--ink-3`) and alert titles meet WCAG AA contrast, and unselected sidebar tabs are readable in the light theme.
   - Build and test: `npm run build:vscode`, `npm run package:vscode`, `npm run test:vscode:webview`, `npm run test:vscode`.
 - **New editor (CodeMirror 6)** in the Edit view: Markdown syntax highlighting, line numbers, active-line highlight, bracket matching, soft wrap, and find & replace inside the editor (⌘/Ctrl F).

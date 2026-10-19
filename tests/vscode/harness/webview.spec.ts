@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { defaultSettings } from '../../../src/shared/settings'
 import {
   openWebview,
   posted,
@@ -365,4 +366,91 @@ test('nothing is exported unless the host asks', async ({ page }) => {
   await start(page, '# T\n')
   await page.waitForTimeout(300)
   expect((await posted(page)).some(m => m.type === 'exportHtml')).toBe(false)
+})
+
+/** Settings with the assistant switched on (what the host sends in a trusted workspace). */
+const aiOn = (extra: Record<string, unknown> = {}) => {
+  const s = defaultSettings()
+  return { ...s, ai: { ...s.ai, enabled: true, confirmBeforeSend: false, ...extra } }
+}
+
+test('the AI button and panel exist only while the assistant is enabled', async ({
+  page,
+}) => {
+  await openWebview(page, host)
+  await sendInit(page, host)
+  await sendDocument(page, '# T\n')
+  await expect(page.locator('.ms-doc h1')).toBeVisible()
+  await expect(page.getByRole('button', { name: /AI assistant/ })).toBeHidden()
+  await send(page, { type: 'command', name: 'toggleAI' })
+  await expect(page.locator('.ms-ai')).toBeHidden()
+
+  await send(page, { type: 'settings', settings: aiOn() })
+  await expect(page.getByRole('button', { name: /AI assistant/ })).toBeVisible()
+  await page.getByRole('button', { name: /AI assistant/ }).click()
+  await expect(page.locator('.ms-ai')).toBeVisible()
+  await send(page, { type: 'settings', settings: defaultSettings() })
+  await expect(page.locator('.ms-ai')).toBeHidden()
+})
+
+test('AI requests go to the host and its streamed answer appears; the document is not sent elsewhere', async ({
+  page,
+}) => {
+  await openWebview(page, host)
+  await sendInit(page, host, aiOn())
+  await sendDocument(page, '# T\n\nSecret body text.\n')
+  await expect(page.locator('.ms-doc h1')).toBeVisible()
+  await page.getByRole('button', { name: /AI assistant/ }).click()
+  await page.getByRole('button', { name: 'Summarize document' }).click()
+
+  await expect.poll(async () => (await last(page, 'ai')) !== undefined).toBe(true)
+  const sent = (await last(page, 'ai'))!.request as {
+    type: string
+    id: number
+    task: string
+    document: string
+  }
+  expect(sent).toMatchObject({ type: 'ai.run', task: 'summarize' })
+  expect(sent.document).toContain('Secret body text.')
+
+  await send(page, {
+    type: 'ai.event',
+    event: { type: 'delta', id: sent.id, text: 'A **short** ' },
+  })
+  await send(page, {
+    type: 'ai.event',
+    event: { type: 'delta', id: sent.id, text: 'summary.' },
+  })
+  await send(page, {
+    type: 'ai.event',
+    event: { type: 'done', id: sent.id, truncated: false },
+  })
+  await expect(page.locator('.ms-ai__log')).toContainText('short summary.')
+
+  // A late event from an older request is ignored.
+  await send(page, { type: 'ai.event', event: { type: 'delta', id: 999, text: 'STALE' } })
+  await page.waitForTimeout(150)
+  await expect(page.locator('.ms-ai__log')).not.toContainText('STALE')
+})
+
+test('a host error (for example an untrusted workspace) is shown, not swallowed', async ({
+  page,
+}) => {
+  await openWebview(page, host)
+  await sendInit(page, host, aiOn())
+  await sendDocument(page, '# T\n\ntext\n')
+  await expect(page.locator('.ms-doc h1')).toBeVisible()
+  await page.getByRole('button', { name: /AI assistant/ }).click()
+  await page.getByRole('button', { name: 'Summarize document' }).click()
+  await expect.poll(async () => (await last(page, 'ai')) !== undefined).toBe(true)
+  const id = ((await last(page, 'ai'))!.request as { id: number }).id
+  await send(page, {
+    type: 'ai.event',
+    event: {
+      type: 'error',
+      id,
+      message: 'AI is turned off in untrusted workspaces. Trust this folder to use it.',
+    },
+  })
+  await expect(page.locator('.ms-ai__log')).toContainText('untrusted workspaces')
 })

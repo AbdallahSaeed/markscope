@@ -11,6 +11,7 @@ A fast, secure Markdown preview for developers. Diagrams, math, an outline, and 
 - **Document doctor**: broken anchors, missing images, heading-level jumps, duplicate headings, empty links, missing alt text and TODO/FIXME show up as real problems on the right line.
 - **Reader features**: outline with scrollspy, find in preview, image lightbox, focus mode, reading stats.
 - **Stays in step with your editor**: the preview updates as you type, scrolls with the editor (and the editor with the preview), and double-clicking a block jumps to its source line.
+- **Optional AI (bring your own key)**: summarize, review, explain a code block, ask questions, or generate a Mermaid diagram with Anthropic, OpenAI or a local model. Off by default; see below.
 - **Secure by design**: the preview never runs code from your document. HTML is sanitized, the content security policy blocks scripts, and remote images can be blocked entirely.
 
 ## Use it
@@ -31,6 +32,16 @@ A fast, secure Markdown preview for developers. Diagrams, math, an outline, and 
 
 In the preview: `J` / `K` jump between headings, `/` finds, `B` toggles the outline, `Z` is focus mode.
 
+## AI assistant (optional)
+
+Off by default. To use it:
+
+1. In **User** settings (not workspace settings) set `markscope.ai.enabled`, pick `markscope.ai.provider` and, for a local or custom endpoint, `markscope.ai.baseUrl`.
+2. Run **Markscope: Set AI API Key**. The key goes into VS Code's secret storage (your OS keychain), is sent only to the endpoint it was saved for, and is never shown to the preview.
+3. Press `A` in the preview (or run **Markscope: Toggle AI Assistant**).
+
+The text of the document you ask about is sent directly from VS Code to the provider you chose; Markscope has no server. A local model (Ollama, LM Studio) keeps it on your machine. AI is off in untrusted workspaces.
+
 ## Settings
 
 Search for **Markscope** in Settings. Highlights:
@@ -43,7 +54,7 @@ Search for **Markscope** in Settings. Highlights:
 
 ## Privacy and security
 
-Markscope has no telemetry and no server. It makes no network requests of its own; the only requests are the images a document references, and you can block those with `markscope.images.remote`. Links to other files open only inside your workspace folder. See the [privacy policy](https://abdallahsaeed.github.io/markscope/privacy.html).
+Markscope has no telemetry and no server. It makes no network requests of its own; the only requests are the images a document references (you can block those with `markscope.images.remote`) and, if you turn the optional AI assistant on, the requests to the provider you chose. Links to other files open only inside your workspace folder. See the [privacy policy](https://abdallahsaeed.github.io/markscope/privacy.html).
 
 ## Also in your browser
 

@@ -10,7 +10,7 @@ import { copyText, h, icon } from '@/shared/dom'
 import { ICONS } from '@/shared/icons'
 import type { AITask, ChatTurn } from '@/shared/messages'
 import { defaultSettings, type Settings } from '@/shared/settings'
-import { AIClient } from './ai-client'
+import { AIClient, type AITransport } from './ai-client'
 import { DiagramRenderer } from './diagrams'
 
 export interface AIContext {
@@ -43,7 +43,7 @@ export class AIPanel {
     icon(ICONS.send),
   )
   private modelLabel = h('span', { class: 'ms-ai__model' })
-  private client = new AIClient()
+  private readonly client: AIClient
   private busy = false
   /** Finalises the in-flight answer when the user presses Stop. */
   private finishCurrent: (() => void) | null = null
@@ -54,7 +54,9 @@ export class AIPanel {
   constructor(
     private readonly ctx: AIContext,
     private readonly onClose: () => void,
+    transport: AITransport,
   ) {
+    this.client = new AIClient(transport)
     const quick = h(
       'div',
       { class: 'ms-ai__quick' },
@@ -313,10 +315,14 @@ export class AIPanel {
 
   private confirmed(): boolean {
     if (!this.settings.ai.confirmBeforeSend) return true
-    return (
-      sessionStorage.getItem(CONFIRM_KEY) ===
-      this.settings.ai.provider + this.settings.ai.baseUrl
-    )
+    try {
+      return (
+        sessionStorage.getItem(CONFIRM_KEY) ===
+        this.settings.ai.provider + this.settings.ai.baseUrl
+      )
+    } catch {
+      return false // storage unavailable: ask every time
+    }
   }
 
   private askConfirmation(proceed: () => void): void {
@@ -346,10 +352,14 @@ export class AIPanel {
           text: 'Send',
           on: {
             click: () => {
-              sessionStorage.setItem(
-                CONFIRM_KEY,
-                this.settings.ai.provider + this.settings.ai.baseUrl,
-              )
+              try {
+                sessionStorage.setItem(
+                  CONFIRM_KEY,
+                  this.settings.ai.provider + this.settings.ai.baseUrl,
+                )
+              } catch {
+                // storage unavailable: the question is asked again next time
+              }
               box.remove()
               proceed()
             },

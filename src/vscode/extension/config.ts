@@ -10,10 +10,21 @@ import {
 const section = (resource?: vscode.Uri) =>
   vscode.workspace.getConfiguration(CONFIG_SECTION, resource)
 
-/** Validated settings for a document (resource-scoped values apply). */
-export function readSettings(resource?: vscode.Uri): Settings {
+/** The configured settings, whether or not the workspace is trusted (for choosing a key's origin). */
+export function readConfiguredSettings(resource?: vscode.Uri): Settings {
   const cfg = section(resource)
   return settingsFromConfig(key => cfg.get(key))
+}
+
+/**
+ * Validated settings for a document. In an untrusted workspace the AI assistant is
+ * forced off: nothing may send document text anywhere until the user trusts the folder.
+ */
+export function readSettings(resource?: vscode.Uri): Settings {
+  const settings = readConfiguredSettings(resource)
+  return vscode.workspace.isTrusted
+    ? settings
+    : { ...settings, ai: { ...settings.ai, enabled: false } }
 }
 
 export function readPreviewOptions(resource?: vscode.Uri): PreviewOptions {

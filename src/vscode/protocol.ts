@@ -28,6 +28,7 @@ export const WEBVIEW_COMMANDS = [
   'runDoctor',
   'exportHtml',
   'copyHtml',
+  'toggleAI',
 ] as const
 export type WebviewCommand = (typeof WEBVIEW_COMMANDS)[number]
 

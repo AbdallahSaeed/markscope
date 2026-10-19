@@ -1,5 +1,5 @@
 /** Viewer-side client for the service worker AI port. */
-import { AI_PORT_NAME, type AIPortEvent, type AIRunMessage } from '@/shared/messages'
+import type { AIPortEvent, AIRunMessage } from '@/shared/messages'
 
 export interface AIStreamHandlers {
   onDelta: (text: string) => void
@@ -17,37 +17,13 @@ export interface AITransport {
   dispose(): void
 }
 
-/** The extension's service worker, over a long-lived Port. */
-export function chromePortTransport(): AITransport {
-  let port: chrome.runtime.Port | null = null
-  return {
-    connect(onEvent, onClose) {
-      if (port) return
-      const p = chrome.runtime.connect({ name: AI_PORT_NAME })
-      p.onMessage.addListener(onEvent)
-      p.onDisconnect.addListener(() => {
-        port = null
-        onClose()
-      })
-      port = p
-    },
-    send(message) {
-      port?.postMessage(message)
-    },
-    dispose() {
-      port?.disconnect()
-      port = null
-    },
-  }
-}
-
 export class AIClient {
   private connected = false
   private handlers: AIStreamHandlers | null = null
   /** Events carry the request id, so late events from aborted runs are ignored. */
   private currentId = 0
 
-  constructor(private readonly transport: AITransport = chromePortTransport()) {}
+  constructor(private readonly transport: AITransport) {}
 
   run(message: RunInput, handlers: AIStreamHandlers): void {
     this.handlers = handlers

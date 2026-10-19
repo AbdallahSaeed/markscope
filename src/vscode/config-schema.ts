@@ -7,6 +7,8 @@
  * Must stay free of `vscode` and `@/` imports: Node loads it directly.
  */
 import {
+  AI_PRESETS,
+  AI_PROVIDERS,
   CONTENT_WIDTHS,
   FONT_FAMILIES,
   FRONT_MATTER_MODES,
@@ -34,6 +36,8 @@ interface Entry {
   toSetting?: (value: unknown) => unknown
   /** Settings value → VS Code default shown in the UI. */
   fromSetting?: (value: unknown) => Json
+  /** `application` settings ignore a workspace's `.vscode/settings.json`. */
+  scope?: 'resource' | 'application'
 }
 
 const flag = (key: string, path: string[], description: string): Entry => ({
@@ -120,6 +124,51 @@ export const SETTING_ENTRIES: readonly Entry[] = [
     enum: REMOTE_IMAGE_MODES,
   },
   flag('sidebar', ['layout', 'sidebar'], 'Show the outline sidebar by default.'),
+  // AI settings are `application`-scoped: a cloned repository's settings must never be
+  // able to point document text at another server. The API key is not a setting at all
+  // (see the "Set AI API Key" command; it lives in VS Code's secret storage).
+  {
+    key: 'ai.enabled',
+    path: ['ai', 'enabled'],
+    description:
+      'Turn on the AI assistant. Document text (and your question or selection) is sent from VS Code straight to the provider you configure; Markscope has no server. Needs a trusted workspace.',
+    scope: 'application',
+  },
+  {
+    key: 'ai.provider',
+    path: ['ai', 'provider'],
+    description:
+      'Which service answers: Anthropic, OpenAI, a local model, or a custom endpoint.',
+    enum: AI_PROVIDERS,
+    enumDescriptions: [
+      'Anthropic (Claude).',
+      'OpenAI.',
+      'A local OpenAI-compatible server (Ollama, LM Studio, llama.cpp).',
+      'Any OpenAI-compatible endpoint; set the base URL.',
+    ],
+    scope: 'application',
+  },
+  {
+    key: 'ai.baseUrl',
+    path: ['ai', 'baseUrl'],
+    description:
+      "Provider endpoint. Leave empty for the provider's default. Remote endpoints must use https; http is accepted only for localhost.",
+    fromSetting: () => '',
+    scope: 'application',
+  },
+  {
+    key: 'ai.model',
+    path: ['ai', 'model'],
+    description: "Model name. Leave empty for the provider's default.",
+    fromSetting: () => '',
+    scope: 'application',
+  },
+  {
+    key: 'ai.confirmBeforeSend',
+    path: ['ai', 'confirmBeforeSend'],
+    description: 'Ask before the first document is sent to the provider in each preview.',
+    scope: 'application',
+  },
 ]
 
 export interface PreviewOptions {
@@ -214,7 +263,7 @@ export function configurationProperties(): Record<string, Record<string, unknown
             : 'string',
       default: def,
       description: e.description,
-      scope: 'resource',
+      scope: e.scope ?? 'resource',
       ...(e.enum ? { enum: [...e.enum] } : {}),
       ...(e.enumDescriptions ? { enumDescriptions: [...e.enumDescriptions] } : {}),
       ...(e.min !== undefined ? { minimum: e.min } : {}),
@@ -241,7 +290,17 @@ export function settingsFromConfig(get: (key: string) => unknown): Settings {
     if (value === undefined) continue
     assign(raw, e.path, e.toSetting ? e.toSetting(value) : value)
   }
-  return parseSettings(raw)
+  const settings = parseSettings(raw)
+  // Empty URL or model means "the provider's default".
+  const preset = AI_PRESETS[settings.ai.provider]
+  return {
+    ...settings,
+    ai: {
+      ...settings.ai,
+      baseUrl: settings.ai.baseUrl || preset.baseUrl,
+      model: settings.ai.model || preset.model,
+    },
+  }
 }
 
 const pick = <T extends string>(v: unknown, allowed: readonly T[], fallback: T): T =>

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { defaultSettings } from '@/shared/settings'
+import { AI_PRESETS, defaultSettings } from '@/shared/settings'
 import {
   PREVIEW_DEFAULTS,
   SETTING_ENTRIES,
@@ -53,12 +53,46 @@ describe('settingsFromConfig', () => {
     expect(s.privacy.remoteImages).toBe(d.privacy.remoteImages)
   })
 
-  test('AI settings cannot be set through VS Code configuration in this release', () => {
-    const s = settingsFromConfig(k => (k.startsWith('ai.') ? 'x' : undefined))
-    expect(s.ai).toEqual(defaultSettings().ai)
-    expect(Object.keys(configurationProperties()).some(k => k.includes('.ai.'))).toBe(
+  test('AI is off by default and an empty URL or model means the provider default', () => {
+    const d = defaultSettings()
+    expect(d.ai.enabled).toBe(false)
+    const s = settingsFromConfig(
+      k => ({ 'ai.provider': 'openai', 'ai.baseUrl': '', 'ai.model': '' })[k as never],
+    )
+    expect(s.ai.provider).toBe('openai')
+    expect(s.ai.baseUrl).toBe(AI_PRESETS.openai.baseUrl)
+    expect(s.ai.model).toBe(AI_PRESETS.openai.model)
+  })
+
+  test('an unsafe AI endpoint falls back to the provider default instead of being used', () => {
+    const s = settingsFromConfig(
+      k =>
+        ({
+          'ai.enabled': true,
+          'ai.provider': 'anthropic',
+          'ai.baseUrl': 'http://evil.example/v1',
+        })[k as never],
+    )
+    expect(s.ai.baseUrl).toBe(AI_PRESETS.anthropic.baseUrl)
+  })
+
+  test('AI settings are application-scoped, so a workspace cannot set them; the key is not a setting', () => {
+    const props = configurationProperties()
+    const aiKeys = Object.keys(props).filter(k => k.startsWith('markscope.ai.'))
+    expect(aiKeys.sort()).toEqual([
+      'markscope.ai.baseUrl',
+      'markscope.ai.confirmBeforeSend',
+      'markscope.ai.enabled',
+      'markscope.ai.model',
+      'markscope.ai.provider',
+    ])
+    for (const k of aiKeys) expect(props[k]!.scope, k).toBe('application')
+    expect(aiKeys.some(k => /key|token|secret/i.test(k.replace('baseUrl', '')))).toBe(
       false,
     )
+    for (const [k, p] of Object.entries(props))
+      if (!k.startsWith('markscope.ai.') && !k.startsWith('markscope.preview.'))
+        expect(p.scope, k).toBe('resource')
   })
 })
 

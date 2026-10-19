@@ -7,19 +7,19 @@ Goal: ship Markscope as a VS Code extension, published on the **Visual Studio Ma
 
 ## Implementation status (updated 2026-10-19)
 
-Branch `feat/vscode-extension`. Phases 0–3 are built and tested, except AI.
+Branch `feat/vscode-extension`. Phases 0–3 are built and tested.
 
 | Phase                        | State                                                                                                                                                                                                                                                     |
 | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0 Spike                      | Done in the real thing: the webview harness runs the built bundle under the exact CSP (Blob worker, lazy Mermaid and Graphviz chunks, KaTeX, `wasm-unsafe-eval`) with no violations. Still to do by you: reserve the publisher id and Open VSX namespace. |
 | 1 Shared seams               | Done (`AITransport`, `renderExportHtml`, `DocumentView` link hooks, `buildLayout({ hide })`, host theme). The "extract from `app.ts`" item was dropped on purpose: `PreviewApp` is small enough that sharing it would only move code around.              |
 | 2 Preview MVP                | Done: panels, follow/lock, live updates, settings, theme and high contrast, links and images, editor ⇄ preview sync, commands, restore after reload.                                                                                                      |
-| 3 Doctor, Reader, export, AI | Done except AI: doctor → Problems, the read-only Reader tab, Export as HTML, Copy Rendered HTML and the status-bar item. |
+| 3 Doctor, Reader, export, AI | Done: doctor → Problems, the read-only Reader tab, Export as HTML, Copy Rendered HTML, the status-bar item and the BYO-key AI assistant. |
 | 4–6                          | Docs, CI and release jobs are written. Security and code reviews are done and acted on, and an automated accessibility check (axe, four themes) runs in the webview harness. The extension is published on the Marketplace as `AbdallahSaeed.markscope`. Still open: the manual QA matrix, listing screenshots and Open VSX.                                                                                                            |
 
 Deviations from this plan, and why:
 
-- **AI is out of the first release** (decision D4 as recommended). The protocol and `AITransport` seam are ready; there are no `markscope.ai.*` settings, so a cloned repo cannot redirect document text.
+- **AI came after the first Marketplace upload** (decision D4 as recommended): it is in the codebase now (host service, SecretStorage key, application-scoped `markscope.ai.*`, untrusted-workspace gate) and ships with the next version. `vscode.lm` as a provider is still backlog.
 - **Links and images reuse the `workspace://` scheme** instead of new URL policy: the base is `workspace://vscodedoc/<path>`, and the existing folder resolution clamps `..`. The webview sends folder-relative paths, never URIs.
 - **Lines are 1-based on the wire** (as in the viewer); only the host converts to VS Code's 0-based lines.
 - **Panel restore** needs the webview to save `{ uri, locked }`, so the protocol gained a `lock` message and a `hash` on `document`.

@@ -12,6 +12,8 @@ import { errorMessage } from '@/shared/errors'
 import { renderKey, type Settings } from '@/shared/settings'
 import { computeStats } from '@/shared/stats'
 import { parseWorkspaceUrl } from '@/shared/urls'
+import { AIPanel } from '@/viewer/ai-panel'
+import type { AITransport } from '@/viewer/ai-client'
 import { DocumentView } from '@/viewer/document-view'
 import {
   cleanForExport,
@@ -48,6 +50,8 @@ export interface PreviewDeps {
   settings: Settings
   /** Webview URI of document.css, inlined into exported files. */
   documentCssUrl: string
+  /** Where AI requests go (the extension host). */
+  aiTransport: AITransport
 }
 
 /** The line the reader was at, from the state a previous page of this panel saved. */
@@ -78,6 +82,7 @@ export class PreviewApp {
   private readonly sidebar: Sidebar
   private readonly docView: DocumentView
   private readonly search: SearchBar
+  private readonly ai: AIPanel
   private readonly echo = new ScrollEcho()
   private readonly pendingMedia = new Map<number, (url: string | null) => void>()
   private mediaSeq = 0
@@ -101,6 +106,9 @@ export class PreviewApp {
     this.layout.sidebarSlot.append(this.sidebar.el)
 
     this.docView = new DocumentView(this.layout.article, 'workspace://vscodedoc/', {
+      onExplainCode: (code, lang) => {
+        if (this.openAI()) this.ai.explainCode(code, lang)
+      },
       onImageError: debounce(() => this.runDoctor(), 300),
       onNavigateAnchor: id => scrollToId(this.layout.article, id),
       loadLocalMedia: url => this.requestMedia(url),
@@ -129,6 +137,18 @@ export class PreviewApp {
     })
     this.search = new SearchBar(() => this.layout.article)
     this.layout.main.prepend(this.search.el)
+    this.ai = new AIPanel(
+      {
+        document: () => this.doc?.text ?? '',
+        title: () => this.doc?.fileName ?? 'Untitled',
+        selection: () => window.getSelection()?.toString() ?? '',
+        dark: () => document.documentElement.dataset.theme === 'dark',
+      },
+      () => this.closeAI(),
+      deps.aiTransport,
+    )
+    this.layout.aiSlot.append(this.ai.el)
+    this.layout.aiBtn.addEventListener('click', () => this.toggleAI())
 
     this.layout.sidebarBtn.addEventListener('click', () => this.toggleSidebar())
     this.layout.searchBtn.addEventListener('click', () => this.search.open())
@@ -145,12 +165,16 @@ export class PreviewApp {
     this.refreshTheme()
     document.body.classList.toggle('sidebar-hidden', this.sidebarHidden)
     this.layout.sidebarBtn.setAttribute('aria-expanded', String(this.sidebarOpen()))
+    this.layout.aiBtn.hidden = !next.ai.enabled
+    if (!next.ai.enabled) this.closeAI()
+    this.ai.configure(next)
     if (
       this.doc &&
       (renderKey(next) !== this.lastRenderKey ||
         prev.code.lineNumbers !== next.code.lineNumbers ||
         prev.code.wrap !== next.code.wrap ||
-        prev.privacy.remoteImages !== next.privacy.remoteImages)
+        prev.privacy.remoteImages !== next.privacy.remoteImages ||
+        prev.ai.enabled !== next.ai.enabled)
     )
       void this.render({ preserveScroll: true })
   }
@@ -228,7 +252,7 @@ export class PreviewApp {
       baseUrl: doc.baseUri,
       sourceLength: doc.text.length,
       dark: resolvedTheme(this.settings) === 'dark',
-      aiEnabled: false,
+      aiEnabled: this.settings.ai.enabled,
     })
     this.sidebar.setHeadings(result.headings, this.layout.article)
     this.runDoctor()
@@ -355,6 +379,7 @@ export class PreviewApp {
     else if (name === 'focusMode') this.toggleFocus()
     else if (name === 'exportHtml') void this.exportHtml()
     else if (name === 'copyHtml') void this.copyHtml()
+    else if (name === 'toggleAI') this.toggleAI()
     else this.runDoctor()
   }
 
@@ -414,6 +439,28 @@ export class PreviewApp {
       document.body.classList.toggle('sidebar-hidden', this.sidebarHidden)
     }
     this.layout.sidebarBtn.setAttribute('aria-expanded', String(this.sidebarOpen()))
+  }
+
+  /** Returns false (and says why) when the assistant is switched off. */
+  openAI(): boolean {
+    if (!this.settings.ai.enabled) {
+      toast('Turn on markscope.ai.enabled in Settings to use the assistant.')
+      return false
+    }
+    this.ai.el.hidden = false
+    document.body.classList.add('ai-open')
+    this.ai.focus()
+    return true
+  }
+
+  closeAI(): void {
+    this.ai.el.hidden = true
+    document.body.classList.remove('ai-open')
+  }
+
+  toggleAI(): void {
+    if (this.ai.el.hidden) this.openAI()
+    else this.closeAI()
   }
 
   toggleFocus(force?: boolean): void {

@@ -4,6 +4,9 @@ import { MARKDOWN_EXTENSIONS } from '@/shared/urls'
 import { readPreviewOptions } from './config'
 import { DiagnosticsSink } from './diagnostics'
 import { PreviewStatus } from './status'
+import type { SecretsStore } from '@/storage/secrets-store'
+import { aiKeyOrigin } from '@/shared/settings'
+import { readConfiguredSettings } from './config'
 import { isMarkdownFileName } from './link-policy'
 import {
   panelOptions,
@@ -52,7 +55,10 @@ export class PreviewManager
   private readonly panels = new Set<PreviewPanel>()
   private lastActive: PreviewPanel | undefined
 
-  constructor(readonly extensionUri: vscode.Uri) {}
+  constructor(
+    readonly extensionUri: vscode.Uri,
+    readonly secrets: SecretsStore,
+  ) {}
 
   // --------------------------------------------------------------- PanelHost
 
@@ -203,6 +209,9 @@ export class PreviewManager
         for (const p of showing(e.textEditor.document))
           p.syncCursor((e.selections[0]?.active.line ?? 0) + 1)
       }),
+      w.onDidGrantWorkspaceTrust(() => {
+        for (const p of this.panels) p.refreshConfig() // AI can switch on now
+      }),
       w.onDidChangeConfiguration(e => {
         if (!e.affectsConfiguration('markscope')) return
         for (const p of this.panels) p.refreshConfig()
@@ -214,6 +223,39 @@ export class PreviewManager
       }),
       ...this.registerCommands(),
     ]
+  }
+
+  /** Asks for the key and stores it in the keychain, bound to the configured endpoint. */
+  private async setAiKey(): Promise<void> {
+    const ai = readConfiguredSettings().ai
+    const origin = aiKeyOrigin(ai.provider, ai.baseUrl)
+    if (!origin) {
+      void vscode.window.showWarningMessage(
+        'Choose an AI provider (or a base URL for a custom endpoint) in the Markscope settings first.',
+      )
+      return
+    }
+    const key = await vscode.window.showInputBox({
+      title: 'Markscope: AI API key',
+      prompt: `Stored in VS Code's secret storage and sent only to ${origin}.`,
+      password: true,
+      ignoreFocusOut: true,
+      validateInput: value =>
+        /\s/.test(value.trim()) ? 'An API key has no spaces.' : undefined,
+    })
+    if (key === undefined) return
+    try {
+      await this.secrets.setApiKey(key, 'local', origin)
+      void vscode.window.showInformationMessage(
+        key.trim() === ''
+          ? 'Markscope: the AI API key was removed.'
+          : `Markscope: key saved for ${origin}.`,
+      )
+    } catch (error) {
+      void vscode.window.showErrorMessage(
+        error instanceof Error ? error.message : String(error),
+      )
+    }
   }
 
   private registerCommands(): vscode.Disposable[] {
@@ -257,6 +299,17 @@ export class PreviewManager
         'markscope.runDoctor',
         forActive(p => p.sendCommand('runDoctor')),
       ),
+      cmd(
+        'markscope.toggleAi',
+        forActive(p => p.sendCommand('toggleAI')),
+      ),
+      cmd('markscope.setAiKey', () => this.setAiKey()),
+      cmd('markscope.clearAiKey', async () => {
+        await this.secrets.clear()
+        void vscode.window.showInformationMessage(
+          'Markscope: the AI API key was removed.',
+        )
+      }),
       cmd(
         'markscope.copyHtml',
         forActive(p => p.requestCopy()),
