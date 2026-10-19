@@ -123,7 +123,7 @@ jobs:
           allow-no-subscriptions: true
       - name: Publish to the Visual Studio Marketplace
         if: env.AZURE_CLIENT_ID != ''
-        run: npx --yes @vscode/vsce@4.0.0 publish --packagePath "release/markscope-${{ needs.release.outputs.version }}.vsix" --azure-credential
+        run: npx --yes @vscode/vsce@4.0.0 publish --packagePath "release/markscope-${{ needs.release.outputs.version }}.vsix" --azure-credential --skip-duplicate
       - name: Skipped (no Azure credentials)
         if: env.AZURE_CLIENT_ID == ''
         run: echo "Configure AZURE_CLIENT_ID / AZURE_TENANT_ID to publish automatically (docs/PUBLISHING.md)."
@@ -142,7 +142,7 @@ jobs:
           path: release
       - name: Publish to Open VSX
         if: env.OVSX_PAT != ''
-        run: npx --yes ovsx@0.10.11 publish "release/markscope-${{ needs.release.outputs.version }}.vsix"
+        run: npx --yes ovsx@0.10.11 publish "release/markscope-${{ needs.release.outputs.version }}.vsix" --skip-duplicate
       - name: Skipped (no OVSX_PAT)
         if: env.OVSX_PAT == ''
         run: echo "Configure the OVSX_PAT secret to publish to Open VSX automatically (docs/PUBLISHING.md)."

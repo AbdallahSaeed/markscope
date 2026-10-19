@@ -1,0 +1,34 @@
+name: Marketplace identity
+
+# One-time helper. Run it by hand (Actions → Marketplace identity → Run workflow) after you
+# created the Azure identity and set the AZURE_* secrets. It signs in as that identity and prints
+# the Visual Studio Marketplace profile id, which you then add as a Contributor member of your
+# publisher at https://marketplace.visualstudio.com/manage (see docs/PUBLISHING.md).
+# It prints only the id (an identifier, not a secret).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  profile-id:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          allow-no-subscriptions: true
+      - name: Print the Marketplace profile id of this identity
+        run: |
+          id=$(az rest -u https://app.vssps.visualstudio.com/_apis/profile/profiles/me \
+            --resource 499b84ac-1321-427f-aa17-267ca6975798 --query id -o tsv)
+          echo "Marketplace profile id: $id"
+          echo "### Marketplace profile id" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`$id\`" >> "$GITHUB_STEP_SUMMARY"

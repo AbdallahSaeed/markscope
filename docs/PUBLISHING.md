@@ -50,10 +50,36 @@ Versioning follows SemVer; `package.json` `version` is copied into the manifest.
 
 ### Automated publishing
 
-The **Release** workflow has a `vscode-marketplace` and an `open-vsx` job. Both run only when configured and otherwise print a skip message.
+Pushing a tag `vX.Y.Z` runs the **Release** workflow (`.github/workflows/release.yml`). It tests, builds everything (including `release/markscope-<version>.vsix`) and creates the GitHub Release. Its `vscode-marketplace` and `open-vsx` jobs then publish the same `.vsix`, but only if their credentials exist (otherwise they print a skip message). Publishing uses `--skip-duplicate`, so re-running a release never fails because the version is already there.
 
-- `OVSX_PAT` (secret): the Open VSX access token.
-- **Marketplace: do not use a personal access token.** Azure DevOps _global_ PATs, which `vsce` has always required, can no longer be created (since 15 March 2026) and **stop working on 1 December 2026**. Use Microsoft Entra ID instead (`vsce publish --azure-credential`, vsce ≥ 2.26.1): create a managed identity with a federated credential for GitHub Actions (use the _Environment_ subject type, e.g. `release`, because a tag subject matches only one exact tag), add that identity as a **member of the Marketplace publisher**, and set the secrets `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` (and `AZURE_SUBSCRIPTION_ID` if the login step needs it). Microsoft documents this for Azure Pipelines only; follow https://code.visualstudio.com/api/working-with-extensions/publishing-extension and verify the GitHub Actions variant on a test publisher first.
+**Rules for a release.** The tag must equal the `package.json` version, must be on `main`, and every release needs a version nobody has uploaded yet. If you upload a version by hand first, the pipeline's next release must be a higher version.
+
+```bash
+# after the PR is merged into main, with package.json at the new version (say 1.1.1)
+git checkout main && git pull
+git tag v1.1.1 && git push origin v1.1.1
+```
+
+#### Visual Studio Marketplace (Microsoft Entra ID, no token to store)
+
+Azure DevOps *global* personal access tokens cannot be created any more and stop working on 1 December 2026, so CI signs in with a managed identity instead. One-time setup:
+
+1. **Create the identity** in the Azure portal (a free Azure account is enough): *Managed Identities → Create*, any resource group and region, name it `markscope-publisher`. Open it and note the **Client ID**, **Tenant ID** and **Subscription ID**.
+2. **Federated credential** on that identity: *Federated credentials → Add → GitHub Actions deploying Azure resources*. Organization `AbdallahSaeed`, repository `markscope`, entity **Environment**, environment name `release`. (Use *Environment*, not *Tag*: a tag subject matches only one exact tag.)
+3. **GitHub secrets** (repository → Settings → Secrets and variables → Actions): `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`. Create an environment named `release` (Settings → Environments) if it does not exist.
+4. **Get the identity's Marketplace id**: run the **Marketplace identity** workflow by hand (Actions tab → *Marketplace identity* → *Run workflow*). It prints a `Marketplace profile id` in the log and the run summary.
+5. **Add it to your publisher**: https://marketplace.visualstudio.com/manage → your publisher → *Members* → *Add*, paste that id, role **Contributor**.
+6. Push a release tag. The `vscode-marketplace` job logs in with `azure/login` and runs `vsce publish --azure-credential`.
+
+Microsoft documents this for Azure Pipelines only (https://code.visualstudio.com/api/working-with-extensions/publishing-extension); the steps above are the GitHub Actions equivalent and were not yet exercised against a real Azure identity. If step 5 does not accept the id, that is the known fiddly part: check the id printed in step 4 and that the identity's federated credential matches `repo:AbdallahSaeed/markscope:environment:release`.
+
+#### Open VSX
+
+Create the namespace once with the same name as the publisher (`npx ovsx create-namespace AbdallahSaeed -p <token>`) and save the Open VSX access token as the repository secret `OVSX_PAT`. The `open-vsx` job then publishes with the token from the environment.
+
+#### Other stores
+
+The Chrome Web Store and Firefox jobs are described in "Automated publishing of the browser extensions" below.
 
 ## Manual steps that need you
 
@@ -75,7 +101,7 @@ The **Release** workflow has a `vscode-marketplace` and an `open-vsx` job. Both 
 | Support | https://github.com/AbdallahSaeed/markscope/issues |
 | Source code (AMO) | https://github.com/AbdallahSaeed/markscope (or the `-source.zip` attached to each GitHub Release) |
 
-## Automated publishing (after the first manual submission)
+## Automated publishing of the browser extensions (after the first manual submission)
 
 The **Release** workflow (`.github/workflows/release.yml`) runs on tags `v*`. It always creates a GitHub Release. Store jobs run only when these repository **secrets** exist (Settings → Secrets and variables → Actions). Never paste them into issues or chat.
 
