@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.1.0 — 2026-10-19
 
-- **Markscope for VS Code (preview, not published yet).** The same renderer in a VS Code webview, next to the native editor (`docs/VSCODE-PLAN.md`).
+- **Markscope for VS Code (new).** The same renderer in a VS Code webview, next to the native editor (`docs/VSCODE-PLAN.md`).
   - **Markscope: Open Preview / Open Preview to the Side**, an editor-title button, and **Toggle Preview Lock**. An unlocked preview follows the active Markdown file; panels are restored after a window reload.
   - Updates as you type (or on save, `markscope.preview.updateOn`); scroll sync both ways, double-click a block to put the cursor on its source line, and the block under the cursor is highlighted.
   - Mermaid, Graphviz, KaTeX, alerts, callouts, outline with scrollspy, find, focus mode and reading stats, as in the browser.
