@@ -52,12 +52,17 @@ function hashOf(anchor: HTMLAnchorElement): string {
 }
 
 let katexCssLoaded = false
+let katexCssHref = 'vendor/katex/katex.min.css'
+
+/** Hosts whose pages don't sit next to `vendor/` (VS Code webviews) say where the stylesheet is. */
+export function configureKatexCss(href: string): void {
+  katexCssHref = href
+}
+
 function ensureKatexCss(): void {
   if (katexCssLoaded) return
   katexCssLoaded = true
-  document.head.append(
-    h('link', { rel: 'stylesheet', href: 'vendor/katex/katex.min.css' }),
-  )
+  document.head.append(h('link', { rel: 'stylesheet', href: katexCssHref }))
 }
 
 export class DocumentView {

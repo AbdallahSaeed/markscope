@@ -101,3 +101,20 @@ Find the extension ID at `chrome://extensions` (Markscope → ID) and use it as
 43. Resize to 375 px wide → no horizontal scroll; the sidebar becomes a drawer (B toggles it).
 44. Tab through the toolbar → visible focus rings; every icon button has a tooltip/name.
 45. Press **?** → the shortcuts dialog opens; Esc closes it.
+
+## 14. VS Code extension
+
+Install the `.vsix` (`code --install-extension release/markscope-<version>.vsix`) and use a folder with Markdown files, images and a Mermaid diagram.
+
+46. Open a `.md` file → **Markscope: Open Preview to the Side** (and the editor-title button) → the preview opens beside it. Typing updates it within a moment; the status bar and Info tab show words and reading time.
+47. Scroll the editor → the preview follows; scroll the preview → the editor follows; neither jitters. Double-click a paragraph in the preview → the cursor jumps to its line. Moving the cursor highlights its block.
+48. A file with a broken `#anchor` link and a missing image → the **Problems** panel lists them on the right lines; fixing the file clears them; closing the preview clears them.
+49. Open another Markdown file → the unlocked preview follows. **Toggle Preview Lock** → the tab shows 🔒 and no longer follows. Open a `.txt` file → nothing changes.
+50. A relative link to another `.md` file (with `#heading`) opens it in the preview at that heading (or in the editor with `markscope.preview.openMarkdownLinks`). A relative image shows. `../../outside.md` and an image symlinked outside the folder do not open or show.
+51. A web link asks VS Code to open it (trusted-domain prompt on first use). A `command:` or `vscode:` link does nothing.
+52. Light, dark, **high contrast** and **high contrast light** themes: the preview matches, with visible borders and focus rings in high contrast. Switching theme while a Mermaid diagram is shown re-themes it.
+53. `markscope.images.remote` = `block` → a web image shows a "Load image" placeholder and no request is made (check the webview's DevTools: **Developer: Open Webview Developer Tools**). Console: no CSP violations.
+54. Reload the window (**Developer: Reload Window**) → the preview comes back on the same file, with the lock state.
+55. A 5 MB Markdown file and one with 20 Mermaid diagrams → the editor stays responsive.
+56. Remote: repeat 46–50 over WSL, Remote-SSH and a Dev Container. Windows: a path with spaces and a drive letter. Untitled (unsaved) Markdown previews, with a hint that relative images need a saved file.
+57. Untrusted workspace (Restricted Mode) → the preview still renders.

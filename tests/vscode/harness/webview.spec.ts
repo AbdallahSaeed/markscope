@@ -1,0 +1,258 @@
+import { expect, test, type Page } from '@playwright/test'
+import {
+  openWebview,
+  posted,
+  send,
+  sendDocument,
+  sendInit,
+  startFakeHost,
+  type FakeHost,
+  type Posted,
+} from './fake-host'
+
+let host: FakeHost
+test.beforeAll(async () => {
+  host = await startFakeHost()
+})
+test.afterAll(() => host.close())
+
+/** Console errors that mention the CSP: the policy must never block our own code. */
+function watchCsp(page: Page): string[] {
+  const violations: string[] = []
+  page.on('console', m => {
+    if (/content security policy|refused to/i.test(m.text())) violations.push(m.text())
+  })
+  page.on('pageerror', e => violations.push(String(e)))
+  return violations
+}
+
+async function start(
+  page: Page,
+  text: string,
+  extra?: Parameters<typeof sendDocument>[2],
+) {
+  await sendInit(page, host)
+  await sendDocument(page, text, extra)
+  await expect(page.locator('.ms-doc h1')).toBeVisible()
+}
+
+const last = async (page: Page, type: string): Promise<Posted | undefined> =>
+  (await posted(page)).filter(m => m.type === type).at(-1)
+
+test('renders under the real CSP: markdown, math, Mermaid and Graphviz, with no violations', async ({
+  page,
+}) => {
+  const violations = watchCsp(page)
+  await openWebview(page, host)
+  await start(
+    page,
+    [
+      '# Title',
+      '',
+      'Inline $a^2+b^2=c^2$ math.',
+      '',
+      '```mermaid',
+      'graph TD; A-->B;',
+      '```',
+      '',
+      '```dot',
+      'digraph { a -> b }',
+      '```',
+      '',
+      '## Second',
+    ].join('\n'),
+  )
+  await expect(page.locator('.katex')).toBeVisible()
+  await expect(page.locator('.ms-diagram svg').first()).toBeVisible({ timeout: 30_000 })
+  await expect(page.locator('.ms-diagram svg')).toHaveCount(2, { timeout: 30_000 })
+  await expect(page.locator('.ms-outline a')).toHaveCount(2)
+  expect(violations).toEqual([])
+})
+
+test('large documents render in a blob worker allowed by the CSP', async ({ page }) => {
+  const violations = watchCsp(page)
+  await openWebview(page, host)
+  const big = '# Big\n\n' + 'A paragraph of text.\n\n'.repeat(5000)
+  await start(page, big)
+  expect(
+    await page.evaluate(() => (window as unknown as { __workers: number }).__workers),
+  ).toBe(1)
+  expect(await page.locator('.ms-doc p').count()).toBeGreaterThan(4000)
+  expect(violations).toEqual([])
+})
+
+test('the doctor reports through the host, with the document uri and version', async ({
+  page,
+}) => {
+  await openWebview(page, host)
+  await start(page, '# T\n\n[gone](#nowhere)\n', { version: 7 })
+  await expect.poll(async () => (await last(page, 'doctor'))?.version).toBe(7)
+  const doctor = (await last(page, 'doctor'))!
+  expect(doctor.uri).toBe('file:///w/docs/readme.md')
+  expect(
+    (doctor.issues as { rule: string; line: number }[]).some(i => i.line === 3),
+  ).toBe(true)
+})
+
+test('links go to the host and the page never navigates', async ({ page }) => {
+  await openWebview(page, host)
+  await start(
+    page,
+    '# T\n\n[other](other.md#part) [up](../top.md) [web](https://example.com/a) [cmd](command:workbench.action.reloadWindow) [anchor](#t)\n',
+  )
+  const url = page.url()
+  await page.getByRole('link', { name: 'other' }).click()
+  await expect
+    .poll(async () => (await last(page, 'openLink')) as Posted | undefined)
+    .toMatchObject({ kind: 'document', target: 'docs/other.md', hash: '#part' })
+  await page.getByRole('link', { name: 'up' }).click()
+  await expect
+    .poll(async () => (await last(page, 'openLink')) as Posted | undefined)
+    .toMatchObject({ kind: 'document', target: 'top.md' })
+  await page.getByRole('link', { name: 'web' }).click()
+  await expect
+    .poll(async () => (await last(page, 'openLink')) as Posted | undefined)
+    .toMatchObject({ kind: 'external', target: 'https://example.com/a' })
+  // command: / vscode: links are stripped by the sanitizer: inert anchors, clicks go nowhere.
+  const unsafe = page.getByText('cmd', { exact: true })
+  await expect(unsafe).not.toHaveAttribute('href', /.+/)
+  const before = (await posted(page)).filter(m => m.type === 'openLink').length
+  await unsafe.click()
+  await page.getByRole('link', { name: 'anchor' }).click()
+  expect((await posted(page)).filter(m => m.type === 'openLink').length).toBe(before)
+  expect(page.url().split('#')[0]).toBe(url.split('#')[0])
+})
+
+test('relative images are resolved through the host and then load', async ({ page }) => {
+  await openWebview(page, host)
+  await start(page, '# T\n\n![pic](img/pixel.png)\n')
+  await expect
+    .poll(async () => (await last(page, 'resolveMedia'))?.path)
+    .toBe('docs/img/pixel.png')
+  const request = (await last(page, 'resolveMedia'))!
+  await send(page, {
+    type: 'media',
+    requestId: request.requestId,
+    url: `${host.origin}/media/pixel.png`,
+  })
+  await expect
+    .poll(() =>
+      page.locator('.ms-doc img').evaluate(i => (i as HTMLImageElement).naturalWidth),
+    )
+    .toBe(1)
+})
+
+test('a refused image (host says null) becomes a broken-image placeholder, not a request', async ({
+  page,
+}) => {
+  await openWebview(page, host)
+  await start(page, '# T\n\n![pic](img/secret.png)\n')
+  await expect
+    .poll(async () => (await last(page, 'resolveMedia'))?.requestId)
+    .toBeDefined()
+  await send(page, {
+    type: 'media',
+    requestId: (await last(page, 'resolveMedia'))!.requestId,
+    url: null,
+  })
+  await expect(page.locator('.ms-doc img[src]')).toHaveCount(0)
+})
+
+test('an unsaved file (no base) explains why relative images are missing', async ({
+  page,
+}) => {
+  await openWebview(page, host)
+  await start(page, '# T\n\n![pic](img/pixel.png)\n', { baseUri: null })
+  await expect(page.locator('.ms-banner')).toContainText('Save this file')
+  expect((await posted(page)).some(m => m.type === 'resolveMedia')).toBe(false)
+})
+
+test('host scrolls move the preview without echoing; user scrolls are reported once', async ({
+  page,
+}) => {
+  await openWebview(page, host)
+  const body = Array.from(
+    { length: 80 },
+    (_, i) => `## Section ${i}\n\nText ${i}.\n`,
+  ).join('\n')
+  await start(page, `# T\n\n${body}`)
+  await send(page, { type: 'scrollToLine', line: 200 })
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(500)
+  await page.waitForTimeout(300)
+  expect((await posted(page)).filter(m => m.type === 'scrolled')).toHaveLength(0)
+
+  await page.mouse.wheel(0, 1500)
+  await expect
+    .poll(async () => (await posted(page)).filter(m => m.type === 'scrolled').length)
+    .toBe(1)
+  const line = (await last(page, 'scrolled'))!.line as number
+  expect(line).toBeGreaterThan(200)
+})
+
+test('double-click reveals the block’s source line; the cursor line is highlighted', async ({
+  page,
+}) => {
+  await openWebview(page, host)
+  await start(page, '# T\n\nfirst\n\nsecond\n')
+  await send(page, { type: 'cursorLine', line: 5 })
+  await expect(page.locator('.ms-doc .ms-cursor-block')).toHaveText('second')
+  await page.locator('.ms-doc p', { hasText: 'first' }).dblclick()
+  await expect.poll(async () => (await last(page, 'revealLine'))?.line).toBe(3)
+})
+
+test('follows the VS Code theme, including high contrast', async ({ page }) => {
+  await openWebview(page, host, { theme: 'vscode-dark' })
+  await start(page, '# T\n')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await page.evaluate(() => {
+    document.body.className = 'vscode-high-contrast-light'
+  })
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+  await expect(page.locator('html')).toHaveAttribute('data-contrast', 'high')
+  await page.evaluate(() => {
+    document.body.className = 'vscode-light'
+  })
+  await expect(page.locator('html')).toHaveAttribute('data-contrast', '')
+})
+
+test('saves what to restore: file and lock state', async ({ page }) => {
+  await openWebview(page, host)
+  await start(page, '# T\n')
+  await send(page, { type: 'lock', locked: true })
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { __state: unknown }).__state))
+    .toEqual({ uri: 'file:///w/docs/readme.md', locked: true })
+})
+
+test('hash links from the host land on the heading; commands drive the UI', async ({
+  page,
+}) => {
+  await openWebview(page, host)
+  const body = Array.from({ length: 60 }, (_, i) => `## Part ${i}\n\nText.\n`).join('\n')
+  await sendInit(page, host)
+  await sendDocument(page, `# T\n\n${body}`, { hash: '#part-40' })
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(1000)
+
+  await send(page, { type: 'command', name: 'find' })
+  await expect(page.locator('.ms-search input')).toBeFocused()
+  await page.keyboard.press('Escape')
+  await send(page, { type: 'command', name: 'toggleSidebar' })
+  await expect(page.locator('body')).toHaveClass(/sidebar-hidden/)
+  await send(page, { type: 'command', name: 'focusMode' })
+  await expect(page.locator('body')).toHaveClass(/zen/)
+})
+
+test('the toolbar shows only what applies in VS Code', async ({ page }) => {
+  await openWebview(page, host)
+  await start(page, '# T\n')
+  for (const sel of [
+    '.ms-home-btn',
+    '.ms-star',
+    '.ms-save-btn',
+    '.ms-seg',
+    '.ms-palette-btn',
+  ])
+    await expect(page.locator(sel)).toBeHidden()
+  await expect(page.getByRole('button', { name: /Find in document/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Toggle sidebar/ })).toBeVisible()
+})

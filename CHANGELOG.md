@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **Markscope for VS Code (preview, not published yet).** The same renderer in a VS Code webview, next to the native editor (`docs/VSCODE-PLAN.md`).
+  - **Markscope: Open Preview / Open Preview to the Side**, an editor-title button, and **Toggle Preview Lock**. An unlocked preview follows the active Markdown file; panels are restored after a window reload.
+  - Updates as you type (or on save, `markscope.preview.updateOn`); scroll sync both ways, double-click a block to put the cursor on its source line, and the block under the cursor is highlighted.
+  - Mermaid, Graphviz, KaTeX, alerts, callouts, outline with scrollspy, find, focus mode and reading stats, as in the browser.
+  - The document doctor reports in the **Problems panel**, on the right line.
+  - Follows the VS Code theme, including high contrast (`markscope.theme`); typography, Markdown and image settings under `markscope.*`.
+  - Relative links to other Markdown files and relative images work, confined to the workspace folder. `command:` and `vscode:` links are inert; web links ask VS Code to open them.
+  - Not in this release: editing inside Markscope, AI, HTML export, a reader tab.
+  - Build and test: `npm run build:vscode`, `npm run package:vscode`, `npm run test:vscode:webview`, `npm run test:vscode`.
 - **New editor (CodeMirror 6)** in the Edit view: Markdown syntax highlighting, line numbers, active-line highlight, bracket matching, soft wrap, and find & replace inside the editor (⌘/Ctrl F).
   - Enter continues lists, task lists and quotes; Backspace removes list markup. Tab / Shift+Tab indent and outdent (Esc then Tab leaves the editor).
   - Undo history survives Discard: ⌘/Ctrl Z in the editor brings discarded edits back.

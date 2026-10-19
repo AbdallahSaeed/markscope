@@ -13,7 +13,7 @@ const root = path.resolve(fileURLToPath(import.meta.url), '../..')
 const svg = await readFile(path.join(root, 'src/icons/logo.svg'), 'utf8')
 const browser = await chromium.launch({ channel: 'chromium' })
 const page = await browser.newPage()
-for (const size of [16, 32, 48, 128]) {
+for (const size of [16, 32, 48, 128, 256]) {
   await page.setViewportSize({ width: size, height: size })
   await page.setContent(
     `<html><body style="margin:0;background:transparent">${svg.replace('<svg ', `<svg width="${size}" height="${size}" `)}</body></html>`,

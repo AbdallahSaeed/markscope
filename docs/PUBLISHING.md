@@ -6,6 +6,7 @@
 
 - `release/markscope-<version>-chrome.zip`: Chrome Web Store and Microsoft Edge Add-ons
 - `release/markscope-<version>-firefox.zip`: Firefox Add-ons (experimental)
+- `release/markscope-<version>.vsix`: VS Code Marketplace and Open VSX
 - `release/SHA256SUMS.txt`
 
 Versioning follows SemVer; `package.json` `version` is copied into the manifest.
@@ -28,6 +29,29 @@ Versioning follows SemVer; `package.json` `version` is copied into the manifest.
 1. https://addons.mozilla.org/developers/: upload the firefox zip.
 2. Source code submission: AMO requires the source for minified bundles. Upload the repo zip with build instructions (`npm ci && npm run build:firefox`).
 3. Known gaps: Firefox opens many `text/markdown` responses as downloads; `file://` access differs from Chromium; File System Access handles are unavailable.
+
+## VS Code Marketplace and Open VSX
+
+`npm run package:vscode` (after `npm run build:vscode`, or as part of `npm run release`) writes `release/markscope-<version>.vsix` and fails above 10 MB. One `.vsix` goes to both registries. The publisher id comes from `VSCODE_PUBLISHER` (default in `scripts/build-vscode.mjs`; it must match the publisher you create).
+
+### Accounts (once, by you)
+
+1. **Marketplace:** sign in at https://marketplace.visualstudio.com/manage with a Microsoft account and **create a publisher**. The id is permanent and becomes the extension id `<publisher>.markscope`. Check first that the display name "Markscope" is free.
+2. **Open VSX:** create an Eclipse account (put your GitHub username in its profile), sign in at https://open-vsx.org with GitHub, **sign the Open VSX Publisher Agreement** from your profile (this is not the ECA), and create an access token. Then `npx ovsx create-namespace <publisher> -p <token>`; the namespace must equal the publisher id. A namespace does not give exclusive rights: **claim it** (an issue in `EclipseFdn/open-vsx.org`) to get the verified badge.
+
+### First release (manual)
+
+1. `npm run release`, then install `release/markscope-<version>.vsix` locally and run section 14 of `docs/QA-CHECKLIST.md` in VS Code (and Cursor or VSCodium).
+2. Marketplace: publisher page → **New extension → Visual Studio Code** → upload the `.vsix` (no token needed).
+3. Open VSX: `npx ovsx publish release/markscope-<version>.vsix -p <token>`.
+4. Set the repository variables `VSCODE_MARKETPLACE_URL` and `OPEN_VSX_URL` once the listings are live.
+
+### Automated publishing
+
+The **Release** workflow has a `vscode-marketplace` and an `open-vsx` job. Both run only when configured and otherwise print a skip message.
+
+- `OVSX_PAT` (secret): the Open VSX access token.
+- **Marketplace: do not use a personal access token.** Azure DevOps _global_ PATs, which `vsce` has always required, can no longer be created (since 15 March 2026) and **stop working on 1 December 2026**. Use Microsoft Entra ID instead (`vsce publish --azure-credential`, vsce ≥ 2.26.1): create a managed identity with a federated credential for GitHub Actions (use the _Environment_ subject type, e.g. `release`, because a tag subject matches only one exact tag), add that identity as a **member of the Marketplace publisher**, and set the secrets `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` (and `AZURE_SUBSCRIPTION_ID` if the login step needs it). Microsoft documents this for Azure Pipelines only; follow https://code.visualstudio.com/api/working-with-extensions/publishing-extension and verify the GitHub Actions variant on a test publisher first.
 
 ## Manual steps that need you
 

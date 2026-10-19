@@ -50,7 +50,7 @@ const iconBtn = (
 
 /** Toolbar controls a host can switch off (they stay in the DOM, hidden). */
 export type HideableControl =
-  'sidebar' | 'home' | 'favorite' | 'save' | 'modes' | 'palette' | 'more'
+  'sidebar' | 'home' | 'favorite' | 'save' | 'modes' | 'palette' | 'theme' | 'more'
 
 export interface LayoutOptions {
   hide?: readonly HideableControl[]
@@ -190,6 +190,7 @@ export function buildLayout(mount: HTMLElement, options: LayoutOptions = {}): La
     save: [saveBtn, discardBtn],
     modes: [modeGroup()],
     palette: [paletteBtn],
+    theme: [themeBtn],
     more: [moreBtn],
   }
   for (const key of hide) for (const el of hidden[key]) if (el) el.dataset.hostHidden = ''

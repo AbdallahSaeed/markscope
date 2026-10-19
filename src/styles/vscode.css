@@ -1,0 +1,40 @@
+/* Host-specific adjustments for the VS Code preview (loaded after viewer.css). */
+
+/* The editor-cursor block highlight, outside the browser's Edit view. */
+.ms-doc > .ms-cursor-block {
+  border-radius: 4px;
+  background: color-mix(in oklch, var(--accent-soft) 45%, transparent);
+  box-shadow: 0 0 0 6px color-mix(in oklch, var(--accent-soft) 45%, transparent);
+  transition:
+    background-color var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease);
+}
+
+/* The tab already shows the file name; keep the toolbar compact. */
+:root {
+  --toolbar-h: 40px;
+}
+.ms-subtitle {
+  display: none;
+}
+
+/* High-contrast VS Code themes: solid borders, no tints, VS Code's focus ring. */
+:root[data-contrast='high'] {
+  --rule: var(--vscode-contrastBorder, currentColor);
+  --rule-strong: var(--vscode-contrastBorder, currentColor);
+  --accent-soft: transparent;
+  --code-bg: transparent;
+}
+:root[data-contrast='high'] .ms-doc > .ms-cursor-block {
+  background: none;
+  box-shadow: none;
+  outline: 2px solid var(--vscode-focusBorder, currentColor);
+  outline-offset: 4px;
+}
+:root[data-contrast='high'] :focus-visible {
+  outline: 2px solid var(--vscode-focusBorder, currentColor);
+  outline-offset: 2px;
+}
+:root[data-contrast='high'] .ms-doc a {
+  text-decoration: underline;
+}

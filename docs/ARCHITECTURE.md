@@ -10,6 +10,24 @@
 | Render worker | `src/engine/worker.ts` | ESM module worker | markdown-it + plugins + highlight.js + KaTeX → HTML string. |
 | Popup / Options | `src/popup`, `src/options` | ESM | Quick actions and settings. |
 
+## VS Code extension
+
+A second host for the same engine (`src/vscode/`, built to `dist/vscode` by `scripts/build-vscode.mjs`).
+
+| Context               | Entry                                           | Responsibility                                                                                                                         |
+| --------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Extension host (Node) | `extension/extension.ts` → `preview-manager.ts` | Commands, follow/lock, editor events (text, scroll, cursor, config), panel serializer, doctor diagnostics                              |
+| Preview panel         | `extension/preview-panel.ts`                    | One webview per preview: sends the document, validates everything the webview posts, confines links and media to the document's folder |
+| Webview               | `webview/index.ts` → `preview-app.ts`           | The same `DocumentView`, sidebar, search and renderer as the viewer, minus editing and file lifecycle                                  |
+| Protocol              | `protocol.ts`                                   | Versioned, validated messages in both directions (1-based lines)                                                                       |
+| Settings              | `config-schema.ts`                              | One description that generates `contributes.configuration` and converts VS Code config to `Settings` through `parseSettings`           |
+
+- **Shared code, thin hosts.** The webview reuses `DocumentView`, `Sidebar`, `SearchBar`, `RenderClient`, `diagnose` and the theme code. Host differences are small seams: `DocumentView` link hooks, `buildLayout({ hide })`, a host theme source, `AIClient` over an `AITransport`, and a pure `renderExportHtml`.
+- **Links and images reuse the folder scheme.** The document's base URL is `workspace://vscodedoc/<path>` relative to the workspace folder (or the document's folder). The existing `workspace:` resolution clamps `..`, and `DocumentView` asks the host for each image through `loadLocalMedia`; the host answers with a webview URI after confining the path.
+- **Rendering.** The render worker is fetched and started from a `blob:` URL (the CSP allows only `blob:` workers). Mermaid and Graphviz stay lazy chunks next to `preview.js`.
+- **No editor, no storage.** The native editor is the source view and VS Code owns saving, backup and conflicts. The webview keeps only `{ uri, locked }` in `getState`/`setState` so VS Code can restore the panel.
+- **`tsconfig.vscode.json`** type-checks the two entry points without `chrome` types, so a stray `chrome.*` call in shared code fails `npm run typecheck:vscode`.
+
 ## Document lifecycle
 
 1. **Detect.** The static content script matches Markdown URL patterns generated from `shared/urls.ts`. `decide()` checks the content type, that the body is a single `<pre>`, the URL, the back/forward state, the raw marker and the auto-open setting.

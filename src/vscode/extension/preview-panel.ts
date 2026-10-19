@@ -1,0 +1,369 @@
+/**
+ * One Markscope preview: a webview showing a text document. It owns the
+ * conversation with its webview. Everything the webview sends is validated by
+ * `parseWebviewMessage` and then re-derived here: the webview never names a
+ * file by URI, only a folder-relative path, which is confined to the
+ * document's root before anything is opened or served.
+ */
+import * as vscode from 'vscode'
+import { workspaceUrl } from '@/shared/urls'
+import {
+  envelope,
+  parseWebviewMessage,
+  type HostMessage,
+  type WebviewMessage,
+} from '../protocol'
+import { readPreviewOptions, readSettings } from './config'
+import { isRealPathInside } from './confine'
+import type { DiagnosticsSink } from './diagnostics'
+import { buildWebviewHtml, makeNonce } from './html'
+import {
+  DOC_ROOT_ID,
+  isMarkdownFileName,
+  isMediaFileName,
+  parseExternalHref,
+  relativeToRoot,
+  safeRelativePath,
+  updateDelayMs,
+} from './link-policy'
+
+export const PREVIEW_VIEW_TYPE = 'markscope.preview'
+
+export interface PanelHost {
+  readonly extensionUri: vscode.Uri
+  readonly diagnostics: DiagnosticsSink
+  /** Called once when the panel closes (the host stops tracking it). */
+  panelClosed(panel: PreviewPanel): void
+  /** Another panel shows this document? (decides when diagnostics are cleared). */
+  isShownElsewhere(doc: vscode.TextDocument, except: PreviewPanel): boolean
+}
+
+const webviewFile = (extensionUri: vscode.Uri, ...parts: string[]) =>
+  vscode.Uri.joinPath(extensionUri, 'webview', ...parts)
+
+/** The folder links and images are confined to: the workspace folder, else the document's own folder. */
+export function rootFor(uri: vscode.Uri): vscode.Uri | undefined {
+  if (uri.scheme === 'untitled') return undefined
+  return vscode.workspace.getWorkspaceFolder(uri)?.uri ?? vscode.Uri.joinPath(uri, '..')
+}
+
+export function panelOptions(
+  extensionUri: vscode.Uri,
+  doc?: vscode.TextDocument,
+): vscode.WebviewOptions {
+  const roots = [
+    webviewFile(extensionUri),
+    ...(vscode.workspace.workspaceFolders ?? []).map(f => f.uri),
+  ]
+  const root = doc ? rootFor(doc.uri) : undefined
+  if (root) roots.push(root)
+  return {
+    enableScripts: true,
+    enableCommandUris: false,
+    enableForms: false,
+    localResourceRoots: roots,
+  }
+}
+
+export class PreviewPanel {
+  private doc: vscode.TextDocument | null = null
+  private ready = false
+  private pendingHash = ''
+  private updateTimer: ReturnType<typeof setTimeout> | undefined
+  private lastRevealedFromPreview = 0
+  private remoteImages = readSettings().privacy.remoteImages
+  private readonly disposables: vscode.Disposable[] = []
+  private disposed = false
+
+  constructor(
+    readonly panel: vscode.WebviewPanel,
+    private readonly host: PanelHost,
+    private locked = false,
+  ) {
+    panel.webview.options = panelOptions(host.extensionUri)
+    this.disposables.push(
+      panel.webview.onDidReceiveMessage(raw => void this.onMessage(raw)),
+      panel.onDidDispose(() => this.dispose()),
+    )
+    this.loadHtml()
+  }
+
+  get document(): vscode.TextDocument | null {
+    return this.doc
+  }
+
+  get isLocked(): boolean {
+    return this.locked
+  }
+
+  // ----------------------------------------------------------------- content
+
+  private loadHtml(): void {
+    const web = this.panel.webview
+    const uri = (...parts: string[]) =>
+      web.asWebviewUri(webviewFile(this.host.extensionUri, ...parts)).toString()
+    this.ready = false
+    web.html = buildWebviewHtml({
+      cspSource: web.cspSource,
+      nonce: makeNonce(),
+      scriptUri: uri('js', 'preview.js'),
+      styleUris: [
+        uri('css', 'document.css'),
+        uri('css', 'viewer.css'),
+        uri('css', 'vscode.css'),
+      ],
+      remoteImages: this.remoteImages,
+    })
+  }
+
+  async show(doc: vscode.TextDocument, hash = ''): Promise<void> {
+    const previous = this.doc
+    this.doc = doc
+    this.pendingHash = hash
+    this.panel.title = `${this.locked ? '🔒 ' : ''}Preview ${fileName(doc)}`
+    this.panel.webview.options = panelOptions(this.host.extensionUri, doc)
+    if (previous && previous !== doc && !this.host.isShownElsewhere(previous, this))
+      this.host.diagnostics.clear(previous.uri)
+    this.sendDocument()
+  }
+
+  private post(message: HostMessage): void {
+    if (this.disposed) return
+    void this.panel.webview.postMessage(envelope(message))
+  }
+
+  private sendDocument(): void {
+    const doc = this.doc
+    if (!doc || !this.ready) return
+    const root = rootFor(doc.uri)
+    const rel = root ? relativeToRoot(root.path, doc.uri.path) : null
+    const hash = this.pendingHash
+    this.pendingHash = ''
+    this.post({
+      type: 'document',
+      uri: doc.uri.toString(),
+      version: doc.version,
+      text: doc.getText(),
+      fileName: fileName(doc),
+      baseUri: rel ? workspaceUrl(DOC_ROOT_ID, rel) : null,
+      hash,
+    })
+  }
+
+  /** The document changed: refresh after a pause that grows with its size. */
+  scheduleUpdate(): void {
+    if (!this.doc) return
+    clearTimeout(this.updateTimer)
+    this.updateTimer = setTimeout(
+      () => this.sendDocument(),
+      updateDelayMs(this.doc.getText().length),
+    )
+  }
+
+  refreshNow(): void {
+    clearTimeout(this.updateTimer)
+    this.sendDocument()
+  }
+
+  setLocked(locked: boolean): void {
+    this.locked = locked
+    if (this.doc) this.panel.title = `${locked ? '🔒 ' : ''}Preview ${fileName(this.doc)}`
+    this.post({ type: 'lock', locked })
+  }
+
+  /** Re-reads the configuration; images mode lives in the CSP, so it reloads the page. */
+  refreshConfig(): void {
+    const settings = readSettings(this.doc?.uri)
+    if (settings.privacy.remoteImages !== this.remoteImages) {
+      this.remoteImages = settings.privacy.remoteImages
+      this.loadHtml() // the webview announces `ready` again and gets everything resent
+      return
+    }
+    this.post({ type: 'settings', settings })
+    const doc = this.doc
+    if (!doc) return
+    if (readPreviewOptions(doc.uri).doctor) this.sendCommand('runDoctor')
+    else this.host.diagnostics.clear(doc.uri)
+  }
+
+  sendCommand(name: Extract<HostMessage, { type: 'command' }>['name']): void {
+    this.post({ type: 'command', name })
+  }
+
+  banner(message: string): void {
+    this.post({ type: 'banner', message })
+  }
+
+  // ------------------------------------------------------------ editor sync
+
+  /** The editor scrolled to `line` (1-based). */
+  syncScroll(line: number): void {
+    if (line === this.lastRevealedFromPreview) return // our own echo, compared by value
+    this.post({ type: 'scrollToLine', line })
+  }
+
+  syncCursor(line: number): void {
+    this.post({ type: 'cursorLine', line })
+  }
+
+  // --------------------------------------------------------------- messages
+
+  private async onMessage(raw: unknown): Promise<void> {
+    const message = parseWebviewMessage(raw)
+    if (!message) return
+    try {
+      await this.handle(message)
+    } catch (error) {
+      this.banner(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  private async handle(message: WebviewMessage): Promise<void> {
+    switch (message.type) {
+      case 'ready':
+        this.ready = true
+        this.post({
+          type: 'init',
+          settings: readSettings(this.doc?.uri),
+          assets: this.assets(),
+          aiAvailable: false,
+        })
+        this.post({ type: 'lock', locked: this.locked })
+        this.sendDocument()
+        return
+      case 'openLink':
+        return message.kind === 'external'
+          ? this.openExternal(message.target)
+          : this.openDocumentLink(message.target, message.hash)
+      case 'resolveMedia':
+        return this.resolveMedia(message.requestId, message.path)
+      case 'scrolled':
+        return this.revealInEditor(message.line)
+      case 'revealLine':
+        return this.focusEditorAt(message.line)
+      case 'doctor':
+        return this.acceptDoctor(message)
+      case 'exportHtml':
+      case 'copy':
+      case 'ai':
+        return // later releases
+    }
+  }
+
+  private assets() {
+    const web = this.panel.webview
+    const uri = (...parts: string[]) =>
+      web.asWebviewUri(webviewFile(this.host.extensionUri, ...parts)).toString()
+    return {
+      worker: uri('js', 'render-worker.js'),
+      documentCss: uri('css', 'document.css'),
+      katexCss: uri('vendor', 'katex', 'katex.min.css'),
+    }
+  }
+
+  private async openExternal(href: string): Promise<void> {
+    const url = parseExternalHref(href)
+    if (!url) return this.banner('That link type is not supported.')
+    // VS Code shows its own trusted-domains prompt for web links.
+    await vscode.env.openExternal(vscode.Uri.parse(url.toString(), true))
+  }
+
+  /** `target` is a folder-relative path; the root is ours, so `..` can never leave it. */
+  private async confinedTarget(path: string): Promise<vscode.Uri | undefined> {
+    const doc = this.doc
+    const rel = safeRelativePath(path)
+    const root = doc ? rootFor(doc.uri) : undefined
+    if (!rel || !root) return undefined
+    const target = vscode.Uri.joinPath(root, ...rel.split('/'))
+    if (target.scheme === 'file') {
+      return (await isRealPathInside(root.fsPath, target.fsPath)) ? target : undefined
+    }
+    try {
+      await vscode.workspace.fs.stat(target)
+      return target
+    } catch {
+      return undefined
+    }
+  }
+
+  private async openDocumentLink(path: string, hash: string): Promise<void> {
+    const rel = safeRelativePath(path)
+    if (!rel || !isMarkdownFileName(rel)) return
+    const target = await this.confinedTarget(rel)
+    if (!target)
+      return this.banner(`Could not open ${rel}: not found inside this folder.`)
+    const next = await vscode.workspace.openTextDocument(target)
+    if (readPreviewOptions(this.doc?.uri).openMarkdownLinks === 'inEditor') {
+      await vscode.window.showTextDocument(next, { viewColumn: this.editorColumn() })
+      return
+    }
+    await this.show(next, hash)
+  }
+
+  private async resolveMedia(requestId: number, path: string): Promise<void> {
+    const rel = safeRelativePath(path)
+    const target =
+      rel && isMediaFileName(rel) ? await this.confinedTarget(rel) : undefined
+    this.post({
+      type: 'media',
+      requestId,
+      url: target ? this.panel.webview.asWebviewUri(target).toString() : null,
+    })
+  }
+
+  private acceptDoctor(message: Extract<WebviewMessage, { type: 'doctor' }>): void {
+    const doc = this.doc
+    if (!doc || message.uri !== doc.uri.toString()) return
+    if (!readPreviewOptions(doc.uri).doctor) return this.host.diagnostics.clear(doc.uri)
+    this.host.diagnostics.set(doc, message.version, message.issues)
+  }
+
+  private editorFor(doc: vscode.TextDocument): vscode.TextEditor | undefined {
+    return vscode.window.visibleTextEditors.find(e => e.document === doc)
+  }
+
+  private editorColumn(): vscode.ViewColumn | undefined {
+    return this.doc ? this.editorFor(this.doc)?.viewColumn : undefined
+  }
+
+  /** The preview scrolled to `line` (1-based): move the editor, if the user wants that. */
+  private revealInEditor(line: number): void {
+    const doc = this.doc
+    const editor = doc ? this.editorFor(doc) : undefined
+    if (!doc || !editor || !readPreviewOptions(doc.uri).scrollEditorWithPreview) return
+    const zero = Math.min(line, doc.lineCount) - 1
+    this.lastRevealedFromPreview = zero + 1
+    editor.revealRange(
+      new vscode.Range(zero, 0, zero, 0),
+      vscode.TextEditorRevealType.AtTop,
+    )
+  }
+
+  /** Double-click in the preview: put the cursor on that source line. */
+  private async focusEditorAt(line: number): Promise<void> {
+    const doc = this.doc
+    if (!doc) return
+    const zero = Math.min(line, doc.lineCount) - 1
+    const position = new vscode.Position(zero, 0)
+    await vscode.window.showTextDocument(doc, {
+      viewColumn: this.editorColumn(),
+      selection: new vscode.Range(position, position),
+    })
+  }
+
+  dispose(): void {
+    if (this.disposed) return
+    this.disposed = true
+    clearTimeout(this.updateTimer)
+    const doc = this.doc
+    if (doc && !this.host.isShownElsewhere(doc, this))
+      this.host.diagnostics.clear(doc.uri)
+    for (const d of this.disposables) d.dispose()
+    this.panel.dispose()
+    this.host.panelClosed(this)
+  }
+}
+
+function fileName(doc: vscode.TextDocument): string {
+  return doc.uri.path.split('/').pop() || 'Untitled'
+}
