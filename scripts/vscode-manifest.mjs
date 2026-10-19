@@ -20,7 +20,8 @@ export function createVscodeManifest({ version, publisher }) {
     // Permanent part of the id (AbdallahSaeed.markscope-reader). Plain `markscope` is taken on
     // the Marketplace ("The extension 'markscope' already exists").
     name: 'markscope-reader',
-    displayName: 'Markscope: Markdown Reader, Diagrams & Doctor',
+    // Display names are unique on the Marketplace, including those of deleted listings.
+    displayName: 'Markscope Reader: Markdown Preview, Diagrams & Doctor',
     description:
       'Fast, secure Markdown preview with Mermaid, Graphviz, KaTeX, an outline, a documentation doctor in the Problems panel, and optional bring-your-own-key AI.',
     version,

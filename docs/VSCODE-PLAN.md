@@ -425,7 +425,7 @@ Output: `dist/vscode/`
 ```jsonc
 {
   "name": "markscope",
-  "displayName": "Markscope — Markdown Reader, Diagrams & Doctor",
+  "displayName": "Markscope Reader: Markdown Preview, Diagrams & Doctor",
   "description": "Fast, secure Markdown preview with Mermaid, Graphviz, KaTeX, an outline, a documentation doctor in the Problems panel, and optional BYO-key AI.",
   "version": "<from root package.json>",
   "publisher": "<publisher id>", // decision D1
