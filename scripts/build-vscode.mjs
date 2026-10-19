@@ -10,7 +10,7 @@ import path from 'node:path'
 import { createVscodeManifest } from './vscode-manifest.mjs'
 
 /** Placeholder until the publisher id is chosen; override with VSCODE_PUBLISHER. */
-const DEFAULT_PUBLISHER = 'AbdallahSaeed'
+const DEFAULT_PUBLISHER = 'markscope'
 
 export async function buildVscode({ root, pkg, watch, dev }) {
   const out = path.join(root, 'dist', 'vscode')

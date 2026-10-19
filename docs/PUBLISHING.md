@@ -32,7 +32,7 @@ Versioning follows SemVer; `package.json` `version` is copied into the manifest.
 
 ## VS Code Marketplace and Open VSX
 
-`npm run package:vscode` (after `npm run build:vscode`, or as part of `npm run release`) writes `release/markscope-<version>.vsix` and fails above 10 MB. One `.vsix` goes to both registries. The publisher id comes from `VSCODE_PUBLISHER` (default `AbdallahSaeed` in `scripts/build-vscode.mjs`; it must match the publisher id exactly, and the Open VSX namespace must be the same).
+`npm run package:vscode` (after `npm run build:vscode`, or as part of `npm run release`) writes `release/markscope-<version>.vsix` and fails above 10 MB. One `.vsix` goes to both registries. The publisher id comes from `VSCODE_PUBLISHER` (default `markscope` in `scripts/build-vscode.mjs`, giving the extension id `markscope.markscope`; it must match the publisher id exactly, and the Open VSX namespace must be the same).
 
 ### Accounts (once, by you)
 
