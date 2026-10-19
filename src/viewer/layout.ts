@@ -48,7 +48,15 @@ const iconBtn = (
     icon(ico),
   )
 
-export function buildLayout(mount: HTMLElement): Layout {
+/** Toolbar controls a host can switch off (they stay in the DOM, hidden). */
+export type HideableControl =
+  'sidebar' | 'home' | 'favorite' | 'save' | 'modes' | 'palette' | 'more'
+
+export interface LayoutOptions {
+  hide?: readonly HideableControl[]
+}
+
+export function buildLayout(mount: HTMLElement, options: LayoutOptions = {}): Layout {
   const sidebarBtn = iconBtn('Toggle sidebar (B)', ICONS.menu, {
     'aria-controls': 'ms-sidebar-slot',
   })
@@ -86,6 +94,7 @@ export function buildLayout(mount: HTMLElement): Layout {
       icon(ico),
       h('span', { text: label }),
     )
+  const modeGroup = () => root.querySelector<HTMLElement>('.ms-seg')
   const modeButtons = {
     read: mode('read', 'Read', ICONS.book, '1'),
     split: mode('split', 'Edit', ICONS.columns, '2'),
@@ -173,6 +182,17 @@ export function buildLayout(mount: HTMLElement): Layout {
     progress,
   )
   mount.replaceChildren(root)
+  const hide = new Set(options.hide ?? [])
+  const hidden: Record<HideableControl, (HTMLElement | null)[]> = {
+    sidebar: [sidebarBtn],
+    home: [homeBtn],
+    favorite: [favoriteBtn],
+    save: [saveBtn, discardBtn],
+    modes: [modeGroup()],
+    palette: [paletteBtn],
+    more: [moreBtn],
+  }
+  for (const key of hide) for (const el of hidden[key]) if (el) el.dataset.hostHidden = ''
 
   return {
     root,

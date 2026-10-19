@@ -111,13 +111,23 @@ ${opts.body}
 </html>`
 }
 
+/** The self-contained HTML for a rendered article; hosts decide where it goes. */
+export function renderExportHtml(
+  article: HTMLElement,
+  title: string,
+  theme: 'light' | 'dark',
+  css: string,
+): string {
+  const body = serializeForExport(cleanForExport(article))
+  return buildExportDocument({ title, theme, css, body })
+}
+
 export async function exportHtml(
   article: HTMLElement,
   title: string,
   theme: 'light' | 'dark',
 ): Promise<void> {
-  const body = serializeForExport(cleanForExport(article))
-  const html = buildExportDocument({ title, theme, css: await documentCss(), body })
+  const html = renderExportHtml(article, title, theme, await documentCss())
   downloadBlob(
     new Blob([html], { type: 'text/html;charset=utf-8' }),
     safeFileName(title, 'html'),

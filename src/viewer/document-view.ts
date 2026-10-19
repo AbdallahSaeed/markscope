@@ -27,6 +27,13 @@ export interface DocumentViewHooks {
   onRequestFolder?: () => void
   /** Same-folder document link: navigate in place (keeps folder permission). */
   onNavigateWorkspace?: (target: string, hash: string) => boolean
+  /**
+   * A host (e.g. VS Code) takes over clicks on links to other documents.
+   * Return true to say it handled the click; the default navigation is skipped.
+   */
+  onNavigateDocument?: (target: string, hash: string) => boolean
+  /** A host takes over clicks on external links (http, https, mailto, tel). */
+  onOpenExternal?: (href: string) => boolean
 }
 
 const HAS_SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i
@@ -35,6 +42,14 @@ const isRelativeRef = (ref: string) =>
   !HAS_SCHEME_RE.test(ref) &&
   !ref.startsWith('//') &&
   !ref.startsWith('#')
+
+function hashOf(anchor: HTMLAnchorElement): string {
+  try {
+    return new URL(anchor.getAttribute('href') ?? '', 'https://x.invalid/').hash
+  } catch {
+    return ''
+  }
+}
 
 let katexCssLoaded = false
 function ensureKatexCss(): void {
@@ -397,6 +412,23 @@ export class DocumentView {
         event.preventDefault()
         return
       }
+    }
+    const plainClick =
+      !event.metaKey && !event.ctrlKey && !event.shiftKey && event.button === 0
+    if (anchor && docTarget && plainClick && this.hooks.onNavigateDocument) {
+      if (this.hooks.onNavigateDocument(docTarget, hashOf(anchor))) {
+        event.preventDefault()
+        return
+      }
+    }
+    if (
+      anchor &&
+      plainClick &&
+      anchor.classList.contains('ms-external') &&
+      this.hooks.onOpenExternal?.(anchor.getAttribute('href') ?? '')
+    ) {
+      event.preventDefault()
+      return
     }
     const href = anchor?.getAttribute('href')
     if (anchor && href?.startsWith('#') && !event.metaKey && !event.ctrlKey) {
