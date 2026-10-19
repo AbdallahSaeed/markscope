@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.0 — 2026-10-20
+
+- **35 named color themes** in the browser extension and the VS Code preview: 10 light (Ayu Light, Catppuccin Latte, Everforest Light, Graphite Light, Gruvbox Light, Rosé Pine Dawn, Solarized Light, Tokyo Night Light, Ulysses Light, Cadmium Light) and 25 dark (Ayu Dark and Mirage, Catppuccin Mocha, cyberdream, Dracula, Everforest, GitHub Dark, Gruvbox, Horizon, Kanagawa, Material, Monokai Pro, Night Owl, Nightfox, Nord, One Dark, Oxocarbon, Palenight, Rosé Pine and Moon, Solarized Dark, Synthwave ’84, Tokyo Night and Storm, Cadmium Dark).
+  - `theme` stays System / Light / Dark; the new `themeLight` and `themeDark` pick the palette for each scheme (`markscope.themeLight` / `markscope.themeDark` in VS Code). Defaults are the existing look, so nothing changes until you choose.
+  - Browser: a gallery under Settings → Appearance, “More themes…” in the popup, and `⌘K` → “Theme: Nord”. Picking a theme also switches to its scheme. `T` still cycles the mode, and its toast names the palette.
+  - VS Code: **Markscope: Color Theme…** (also in the preview's ⋯ menu) and the two settings. “Follow VS Code” uses the palette of the VS Code theme's scheme.
+  - Every palette is generated from a few source colors and checked for WCAG contrast (body text and links 4.5:1, secondary text, callouts and syntax colors 3:1). Colors that were too faint as text are moved in lightness only, never in hue.
+  - Print is always the light default; HTML export carries only the active palette.
+
 ## 1.1.0 — 2026-10-19
 
 - **Fixed:** a key pressed right after running a command from the command palette (for example `2` for the Edit view) could be silently ignored, because the browser had not yet moved focus off the closed palette's search box. Found by a CI failure.

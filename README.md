@@ -33,7 +33,7 @@ Developers read Markdown all day: READMEs, ADRs, runbooks, specs, changelogs. Br
 **Developer workflow**
 
 - Auto-detects `.md`, `.markdown`, `.mdx`, `.mdown`, `.mkd` and `.mkdn` over http, https and `file://`
-- Opens GitHub, GitLab and Bitbucket *blob* pages as raw Markdown (popup or context menu)
+- Opens GitHub, GitLab and Bitbucket _blob_ pages as raw Markdown (popup or context menu)
 - **Live reload** with ETag/Last-Modified (304s), paused in background tabs, keeps your reading position
 - Drag and drop a file, or use **Open file** (⌘/Ctrl O). Picked files live-reload via the File System Access API
 - **Open folder** (⇧⌘/Ctrl⇧O, or drop a folder): browse a project's docs in a **Files** tab. Relative images and links work, navigation keeps your place with Back/Forward, and ⌘K searches every file in the folder. **Show all files** also lists non-Markdown files (shown, not openable). Dependency and hidden folders (`node_modules`, `.git`, …) are skipped
@@ -46,7 +46,7 @@ Developers read Markdown all day: READMEs, ADRs, runbooks, specs, changelogs. Br
 - Recents and favorites, focus mode, fullscreen
 - **Export**: a self-contained HTML file (no network requests, diagrams and math included), the Markdown source, or Print / Save as PDF with a print-optimized light layout
 
-**Appearance**: system, light and dark themes on an OKLCH token system; sans, serif or mono reading type; size, line height and width controls; responsive down to 320 px; keyboard-first; screen-reader friendly.
+**Appearance**: system, light and dark modes with **35 named color themes** (Ayu, Catppuccin, Dracula, Everforest, Gruvbox, Nord, One Dark, Rosé Pine, Solarized, Tokyo Night and more) on an OKLCH token system; sans, serif or mono reading type; size, line height and width controls; responsive down to 320 px; keyboard-first; screen-reader friendly.
 
 ### AI features (optional, off by default)
 
@@ -54,12 +54,12 @@ Summarize, outline, review documentation, suggest improvements, explain the sele
 
 Providers sit behind one `AIProvider` interface:
 
-| Provider | Transport |
-| --- | --- |
-| Anthropic (Claude) | Official `@anthropic-ai/sdk`, streamed |
-| OpenAI | Chat Completions, SSE |
-| Local model | Any OpenAI-compatible server (Ollama, LM Studio, llama.cpp) |
-| Custom endpoint | Any OpenAI-compatible gateway |
+| Provider           | Transport                                                   |
+| ------------------ | ----------------------------------------------------------- |
+| Anthropic (Claude) | Official `@anthropic-ai/sdk`, streamed                      |
+| OpenAI             | Chat Completions, SSE                                       |
+| Local model        | Any OpenAI-compatible server (Ollama, LM Studio, llama.cpp) |
+| Custom endpoint    | Any OpenAI-compatible gateway                               |
 
 Requests go straight from the extension's service worker to your provider. There is no Markscope server. Keys never reach web pages, are never synced or exported, and are bound to the endpoint origin they were saved for.
 
@@ -149,24 +149,24 @@ docs/           architecture, security, privacy, store listing
 
 All settings live on the options page (right-click the toolbar icon, then **Options**) and are validated against a schema, so imported files can't inject invalid values.
 
-| Area | Settings |
-| --- | --- |
-| General | Auto-open Markdown URLs, live reload and interval, extra URL patterns |
-| Appearance | Theme, typeface, font size, line height, content width, highlighting, line numbers, wrapping |
-| Markdown | Raw HTML (always sanitized), math, Mermaid, Graphviz, alerts, footnotes, emoji, extended syntax, smart typography, autolinks, line breaks, front matter |
-| Privacy | Third-party images (load or click-to-load), clear history |
-| AI | Enable, provider, base URL (https, or http for localhost only), model, key storage (device or session) |
-| Backup | Export, import (AI settings excluded) or reset |
+| Area       | Settings                                                                                                                                                |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| General    | Auto-open Markdown URLs, live reload and interval, extra URL patterns                                                                                   |
+| Appearance | Mode, color theme (35), typeface, font size, line height, content width, highlighting, line numbers, wrapping                                           |
+| Markdown   | Raw HTML (always sanitized), math, Mermaid, Graphviz, alerts, footnotes, emoji, extended syntax, smart typography, autolinks, line breaks, front matter |
+| Privacy    | Third-party images (load or click-to-load), clear history                                                                                               |
+| AI         | Enable, provider, base URL (https, or http for localhost only), model, key storage (device or session)                                                  |
+| Backup     | Export, import (AI settings excluded) or reset                                                                                                          |
 
 ## Permissions
 
-| Permission | Why |
-| --- | --- |
-| Content script on `*.md` and similar URLs | Detect Markdown documents and read their text. Chrome applies host access per **origin** (the path in a match pattern is ignored), so the install prompt says Markscope can "read and change your data on all websites". This is inherent to auto-detecting Markdown on any site; the script itself only reads plain-text pages whose URL ends in a Markdown extension |
-| `storage` | Settings, recents and favorites, one-time handoff |
-| `activeTab` + `scripting` | "Render this page" from the popup, only on the tab you invoke it on |
-| `contextMenus` | "Open link in Markscope" |
-| Optional host access (requested per origin) | Live reload from servers without CORS, your extra URL patterns, your AI provider |
+| Permission                                  | Why                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Content script on `*.md` and similar URLs   | Detect Markdown documents and read their text. Chrome applies host access per **origin** (the path in a match pattern is ignored), so the install prompt says Markscope can "read and change your data on all websites". This is inherent to auto-detecting Markdown on any site; the script itself only reads plain-text pages whose URL ends in a Markdown extension |
+| `storage`                                   | Settings, recents and favorites, one-time handoff                                                                                                                                                                                                                                                                                                                      |
+| `activeTab` + `scripting`                   | "Render this page" from the popup, only on the tab you invoke it on                                                                                                                                                                                                                                                                                                    |
+| `contextMenus`                              | "Open link in Markscope"                                                                                                                                                                                                                                                                                                                                               |
+| Optional host access (requested per origin) | Live reload from servers without CORS, your extra URL patterns, your AI provider                                                                                                                                                                                                                                                                                       |
 
 There is no `tabs`, `history`, `downloads` or `cookies` permission. If you restrict Markscope's site access in Chrome (**Details → Site access → On click / On specific sites**), Markscope keeps working on the sites you allow and offers a per-origin **Grant access** prompt elsewhere.
 
@@ -186,11 +186,11 @@ Markscope has no analytics, no telemetry and no remote code. Documents never lea
 
 ## Testing
 
-| Layer | Tooling | What is covered |
-| --- | --- | --- |
-| Unit | Vitest | Markdown pipeline, sanitizer (XSS corpus), URL policy, settings, storage, stats, slugs, doctor, fuzzy search, AI prompts, providers and SSE, loader |
-| Integration | Vitest + chrome fake | Handoff flow and sender authorization, AI port streaming and abort, content script against a text/plain page, DOM pipeline |
-| E2E | Playwright + real extension | Open → detect → render → search → TOC → copy → theme → settings → reload → persistence → restart; malicious and very large docs, broken links and images, back button, CORS permission flow, live reload, responsive overflow |
+| Layer       | Tooling                     | What is covered                                                                                                                                                                                                               |
+| ----------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit        | Vitest                      | Markdown pipeline, sanitizer (XSS corpus), URL policy, settings, storage, stats, slugs, doctor, fuzzy search, AI prompts, providers and SSE, loader                                                                           |
+| Integration | Vitest + chrome fake        | Handoff flow and sender authorization, AI port streaming and abort, content script against a text/plain page, DOM pipeline                                                                                                    |
+| E2E         | Playwright + real extension | Open → detect → render → search → TOC → copy → theme → settings → reload → persistence → restart; malicious and very large docs, broken links and images, back button, CORS permission flow, live reload, responsive overflow |
 
 ## Build and release
 

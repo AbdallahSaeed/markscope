@@ -8,7 +8,7 @@ import { fuzzyFilter } from './fuzzy'
 export interface PaletteItem {
   id: string
   label: string
-  group: 'Command' | 'Heading' | 'File' | 'Recent'
+  group: 'Command' | 'Heading' | 'File' | 'Recent' | 'Theme'
   hint?: string
   run: () => void
 }
@@ -101,6 +101,8 @@ export class CommandPalette {
       pool = this.items.filter(i => i.group === 'Command')
       query = query.slice(1)
     }
+    // The 35 theme entries only show up when searched for ("theme nord").
+    if (!query) pool = pool.filter(i => i.group !== 'Theme')
     this.shown = fuzzyFilter(pool, query, i => `${i.label} ${i.hint ?? ''}`, 60)
     this.active = 0
     this.renderList()

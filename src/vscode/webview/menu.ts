@@ -42,6 +42,7 @@ export function previewMenuItems(host: MenuHost): (MenuItem | 'separator')[] {
       run: act('toggleLineNumbers'),
       checked: () => host.settings().code.lineNumbers,
     },
+    { label: 'Color theme…', run: act('selectTheme') },
     {
       label: 'AI assistant',
       hint: 'A',

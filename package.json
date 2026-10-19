@@ -1,6 +1,6 @@
 {
   "name": "markscope",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "A secure, developer-grade Markdown viewer for the browser.",
   "license": "MIT",
@@ -22,6 +22,7 @@
     "build": "node scripts/build.mjs",
     "build:firefox": "node scripts/build.mjs --target=firefox",
     "build:vscode": "node scripts/build.mjs --target=vscode",
+    "themes": "node scripts/build-themes.mjs",
     "typecheck": "tsc --noEmit",
     "typecheck:vscode": "tsc -p tsconfig.vscode.json --noEmit",
     "test": "vitest run",

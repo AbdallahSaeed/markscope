@@ -1,4 +1,5 @@
 import type { Settings } from '@/shared/settings'
+import { themeById } from '@/shared/themes'
 
 const darkQuery = () => window.matchMedia('(prefers-color-scheme: dark)')
 
@@ -14,6 +15,11 @@ export function resolvedTheme(settings: Settings): 'light' | 'dark' {
   return hostTheme ?? (darkQuery().matches ? 'dark' : 'light')
 }
 
+/** The named palette in effect: the scheme (light/dark) picks `themeLight` or `themeDark`. */
+export function resolvedPalette(settings: Settings): string {
+  return resolvedTheme(settings) === 'dark' ? settings.themeDark : settings.themeLight
+}
+
 /** VS Code marks the webview body with vscode-light / vscode-dark / vscode-high-contrast[-light]. */
 export function themeFromVsCodeClasses(classes: Iterable<string>): {
   theme: 'light' | 'dark'
@@ -26,6 +32,12 @@ export function themeFromVsCodeClasses(classes: Iterable<string>): {
   return { theme: light ? 'light' : 'dark', highContrast }
 }
 
+/** Display name of the palette in effect ("Nord"). */
+export function resolvedPaletteName(settings: Settings): string {
+  const id = resolvedPalette(settings)
+  return themeById(id)?.name ?? id
+}
+
 const WIDTHS = { narrow: '62ch', normal: '76ch', wide: '96ch', full: '100%' } as const
 
 /** Applies theme + typography as attributes/CSS variables (no re-render). */
@@ -34,6 +46,7 @@ export function applyAppearance(
   root: HTMLElement = document.documentElement,
 ): void {
   root.dataset.theme = resolvedTheme(settings)
+  root.dataset.palette = resolvedPalette(settings)
   root.dataset.font = settings.typography.fontFamily
   root.style.setProperty('--doc-font-size', `${settings.typography.fontSize}px`)
   root.style.setProperty('--doc-line-height', String(settings.typography.lineHeight))

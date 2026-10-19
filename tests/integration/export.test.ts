@@ -69,6 +69,36 @@ describe('HTML export', () => {
     expect(doc).toContain('.katex-html { display: none; }') // MathML instead of CDN CSS
   })
 
+  test('the export carries only the active palette and a registry id', () => {
+    const doc = buildExportDocument({
+      title: 'T',
+      theme: 'dark',
+      palette: 'nord',
+      css: '.ms-doc{}',
+      body: '<p>hi</p>',
+    })
+    expect(doc).toContain('<html lang="en" data-theme="dark" data-palette="nord">')
+    expect(doc).toContain("[data-palette='nord']")
+    expect(doc).not.toContain("[data-palette='dracula']")
+    expect(doc).toContain('@media screen') // paper stays on the light base
+    expect(doc).not.toMatch(/https?:\/\/(?!x\.invalid)/)
+  })
+
+  test('an unknown or hostile palette id never reaches the markup', () => {
+    for (const palette of ['nope', '"><script>alert(1)</script>', '']) {
+      const doc = buildExportDocument({
+        title: 'T',
+        theme: 'light',
+        palette,
+        css: '',
+        body: '',
+      })
+      expect(doc).toContain('<html lang="en" data-theme="light">')
+      expect(doc).not.toContain('data-palette')
+      expect(doc).not.toContain('alert(1)')
+    }
+  })
+
   test('file names are filesystem-safe', () => {
     expect(safeFileName('a/b: c?', 'html')).toBe('a b c.html')
     expect(safeFileName('   ', 'md')).toBe('document.md')

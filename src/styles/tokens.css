@@ -1,5 +1,10 @@
-/* Markscope design tokens. Light is the default; dark overrides below. */
-:root {
+/* Markscope design tokens: the Cadmium palettes. Light is the default; dark overrides below.
+   The other named palettes are generated into themes.css (see scripts/build-themes.mjs).
+   The attribute selectors let an element with data-theme + data-palette (a gallery card)
+   carry its own tokens; the theme toggle button's data-theme has no data-palette, so it is
+   unaffected. */
+:root,
+[data-theme='light'][data-palette] {
   color-scheme: light;
   --paper: oklch(98.6% 0.006 85);
   --paper-2: oklch(96.3% 0.008 85);
@@ -69,7 +74,8 @@
 /* Screen only: printed pages always use the light palette (paper is white
    and browsers skip background colors by default). */
 @media screen {
-  :root[data-theme='dark'] {
+  :root[data-theme='dark'],
+  [data-theme='dark'][data-palette] {
     color-scheme: dark;
     --paper: oklch(17.5% 0.012 265);
     --paper-2: oklch(20.3% 0.013 265);

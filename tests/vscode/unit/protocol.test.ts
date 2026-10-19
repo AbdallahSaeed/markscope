@@ -135,6 +135,7 @@ describe('action messages', () => {
       'openCommands',
       'toggleLineNumbers',
       'toggleLock',
+      'selectTheme',
     ])
       expect(parseWebviewMessage({ v, type: 'action', name })).toEqual({
         type: 'action',

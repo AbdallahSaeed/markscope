@@ -6,6 +6,13 @@
  * merges defaults, clamps numbers and rejects unknown enum values.
  */
 
+import {
+  DARK_THEME_IDS,
+  DEFAULT_THEME_DARK,
+  DEFAULT_THEME_LIGHT,
+  LIGHT_THEME_IDS,
+} from './themes.ts'
+
 export const SETTINGS_VERSION = 1
 
 export const THEMES = ['system', 'light', 'dark'] as const
@@ -43,6 +50,9 @@ export interface Settings {
   version: number
   autoRender: boolean
   theme: Theme
+  /** The named palette used while the scheme is light / dark (ids in `themes.ts`). */
+  themeLight: string
+  themeDark: string
   typography: {
     fontFamily: FontFamily
     fontSize: number
@@ -101,6 +111,8 @@ export function defaultSettings(): Settings {
     version: SETTINGS_VERSION,
     autoRender: true,
     theme: 'system',
+    themeLight: DEFAULT_THEME_LIGHT,
+    themeDark: DEFAULT_THEME_DARK,
     typography: {
       fontFamily: 'sans',
       fontSize: 16,
@@ -240,6 +252,8 @@ export function parseSettings(input: unknown): Settings {
     version: SETTINGS_VERSION,
     autoRender: bool(s.autoRender, d.autoRender),
     theme: oneOf(s.theme, THEMES, d.theme),
+    themeLight: oneOf(s.themeLight, LIGHT_THEME_IDS, d.themeLight),
+    themeDark: oneOf(s.themeDark, DARK_THEME_IDS, d.themeDark),
     typography: {
       fontFamily: oneOf(t.fontFamily, FONT_FAMILIES, d.typography.fontFamily),
       fontSize: num(

@@ -21,8 +21,9 @@ export async function exportHtml(
   article: HTMLElement,
   title: string,
   theme: 'light' | 'dark',
+  palette?: string,
 ): Promise<void> {
-  const html = renderExportHtml(article, title, theme, await documentCss())
+  const html = renderExportHtml(article, title, theme, await documentCss(), palette)
   downloadBlob(
     new Blob([html], { type: 'text/html;charset=utf-8' }),
     safeFileName(title, 'html'),

@@ -20,6 +20,7 @@ import { libraryStore, secretsStore, settingsStore } from '@/storage'
 import { AIClient } from '@/viewer/ai-client'
 import { chromePortTransport } from '@/viewer/chrome-port-transport'
 import { applyAppearance } from '@/viewer/theme'
+import { themeGallery } from './theme-gallery'
 
 const store = settingsStore()
 const secrets = secretsStore()
@@ -250,21 +251,32 @@ function generalSection(): HTMLElement {
 }
 
 function appearanceSection(): HTMLElement {
+  const modeField = select(
+    'Mode',
+    'Light and dark each use their own theme below. “Match system” follows your OS.',
+    [
+      ['system', 'Match system'],
+      ['light', 'Light'],
+      ['dark', 'Dark'],
+    ],
+    settings.theme,
+    v => void save({ theme: v }),
+  )
+  const modeSelect = modeField.querySelector('select') as HTMLSelectElement
   return section(
     'appearance',
     'Appearance',
     'Reading comfort. Changes apply instantly to open documents.',
-    select(
-      'Theme',
-      null,
-      [
-        ['system', 'Match system'],
-        ['light', 'Light'],
-        ['dark', 'Dark'],
-      ],
-      settings.theme,
-      v => void save({ theme: v }),
-    ),
+    modeField,
+    themeGallery(settings, (scheme, id) => {
+      // Picking a theme also switches to its scheme, so the result is visible right away.
+      void save(
+        scheme === 'light'
+          ? { theme: 'light', themeLight: id }
+          : { theme: 'dark', themeDark: id },
+      )
+      modeSelect.value = scheme
+    }),
     select(
       'Typeface',
       'Uses fonts already on your device — nothing is downloaded.',

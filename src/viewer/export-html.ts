@@ -6,6 +6,8 @@
 import { escapeHtml } from '@/engine/escape'
 import { sanitizeToString } from '@/engine/sanitize'
 import { randomId } from '@/shared/ids'
+import { exportPaletteCss } from '@/shared/theme-tokens'
+import { themeById } from '@/shared/themes'
 
 export function safeFileName(title: string, ext: string): string {
   const base =
@@ -85,18 +87,23 @@ export function serializeForExport(clone: HTMLElement): string {
 export function buildExportDocument(opts: {
   title: string
   theme: 'light' | 'dark'
+  /** Id of the named palette (see `shared/themes.ts`); unknown ids are ignored. */
+  palette?: string
   css: string
   body: string
 }): string {
+  // Only the active palette travels with the file, and only a registry id reaches the markup.
+  const palette = opts.palette && themeById(opts.palette) ? opts.palette : ''
+  const paletteAttr = palette ? ` data-palette="${palette}"` : ''
   return `<!doctype html>
-<html lang="en" data-theme="${opts.theme}">
+<html lang="en" data-theme="${opts.theme}"${paletteAttr}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src * data:; style-src 'unsafe-inline'">
 <meta name="generator" content="Markscope">
 <title>${escapeHtml(opts.title)}</title>
-<style>${opts.css}${EXPORT_EXTRA_CSS}</style>
+<style>${opts.css}${exportPaletteCss(palette)}${EXPORT_EXTRA_CSS}</style>
 </head>
 <body class="ms-export">
 <article class="ms-doc">
@@ -113,7 +120,8 @@ export function renderExportHtml(
   title: string,
   theme: 'light' | 'dark',
   css: string,
+  palette?: string,
 ): string {
   const body = serializeForExport(cleanForExport(article))
-  return buildExportDocument({ title, theme, css, body })
+  return buildExportDocument({ title, theme, palette, css, body })
 }

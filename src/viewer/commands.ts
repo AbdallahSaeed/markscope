@@ -1,4 +1,5 @@
 /** Command registry: shortcuts, palette entries and the "more" menu. */
+import { THEME_REGISTRY } from '@/shared/themes'
 import { describeSource } from '@/shared/urls'
 import type { ViewerApp } from './app'
 import { entryHref, entryLabel } from './home'
@@ -318,7 +319,23 @@ export async function paletteItems(ctx: CommandContext): Promise<PaletteItem[]> 
         run: () => void app.navigateFolder(path, ''),
       }))
     : []
-  return [...headings, ...files, ...commands, ...recents]
+  // Listed only once the query is non-empty (see CommandPalette.filter): 35 rows would bury the rest.
+  const themes: PaletteItem[] = THEME_REGISTRY.map(t => ({
+    id: `theme:${t.id}`,
+    label: `Theme: ${t.name}`,
+    group: 'Theme',
+    hint: t.scheme,
+    run: () => {
+      // Picking a theme also switches to its scheme, so the result is visible right away.
+      app.updateSettings(
+        t.scheme === 'light'
+          ? { theme: 'light', themeLight: t.id }
+          : { theme: 'dark', themeDark: t.id },
+      )
+      void import('./toast').then(m => m.toast(`Theme: ${t.name}`))
+    },
+  }))
+  return [...headings, ...files, ...commands, ...themes, ...recents]
 }
 
 async function copyAllCode(app: ViewerApp): Promise<void> {
