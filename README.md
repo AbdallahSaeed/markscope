@@ -67,7 +67,7 @@ Requests go straight from the extension's service worker to your provider. There
 
 ### From a store
 
-- **VS Code:** [Markscope on the Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=AbdallahSaeed.markscope), or search “Markscope” in the Extensions view. For VSCodium, Cursor and Windsurf an Open VSX listing is coming.
+- **VS Code:** [Markscope on the Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=AbdallahSaeed.markscope-reader), or search “Markscope” in the Extensions view. For VSCodium, Cursor and Windsurf an Open VSX listing is coming.
 - **Chrome Web Store and Firefox Add-ons** listings are in review (see [docs/PUBLISHING.md](docs/PUBLISHING.md)). Until they are live, install from a release zip.
 
 ### From a release zip
@@ -79,7 +79,7 @@ Requests go straight from the extension's service worker to your provider. There
 
 ### In VS Code
 
-Install it from the [Marketplace](https://marketplace.visualstudio.com/items?itemName=AbdallahSaeed.markscope) (see [docs/VSCODE-PLAN.md](docs/VSCODE-PLAN.md) for how it is built). To build and install it yourself:
+Install it from the [Marketplace](https://marketplace.visualstudio.com/items?itemName=AbdallahSaeed.markscope-reader) (see [docs/VSCODE-PLAN.md](docs/VSCODE-PLAN.md) for how it is built). To build and install it yourself:
 
 ```bash
 npm ci && npm run build:vscode && npm run package:vscode

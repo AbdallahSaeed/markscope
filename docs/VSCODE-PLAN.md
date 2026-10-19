@@ -15,7 +15,7 @@ Branch `feat/vscode-extension`. Phases 0–3 are built and tested.
 | 1 Shared seams               | Done (`AITransport`, `renderExportHtml`, `DocumentView` link hooks, `buildLayout({ hide })`, host theme). The "extract from `app.ts`" item was dropped on purpose: `PreviewApp` is small enough that sharing it would only move code around.              |
 | 2 Preview MVP                | Done: panels, follow/lock, live updates, settings, theme and high contrast, links and images, editor ⇄ preview sync, commands, restore after reload.                                                                                                      |
 | 3 Doctor, Reader, export, AI | Done: doctor → Problems, the read-only Reader tab, Export as HTML, Copy Rendered HTML, the status-bar item and the BYO-key AI assistant. |
-| 4–6                          | Docs, CI and release jobs are written. Security and code reviews are done and acted on, and an automated accessibility check (axe, four themes) runs in the webview harness. The extension is published on the Marketplace as `AbdallahSaeed.markscope`. Still open: the manual QA matrix, listing screenshots and Open VSX.                                                                                                            |
+| 4–6                          | Docs, CI and release jobs are written. Security and code reviews are done and acted on, and an automated accessibility check (axe, four themes) runs in the webview harness. The extension is to be published on the Marketplace as `AbdallahSaeed.markscope-reader`. Still open: the manual QA matrix, listing screenshots and Open VSX.                                                                                                            |
 
 Deviations from this plan, and why:
 
@@ -29,7 +29,7 @@ Deviations from this plan, and why:
 
 ## 1. Summary
 
-- **What we ship.** A VS Code extension, `<publisher>.markscope`, with two surfaces:
+- **What we ship.** A VS Code extension, `<publisher>.markscope-reader` (plain `markscope` was taken on the Marketplace), with two surfaces:
   - a **Markscope Preview** webview that sits next to the native editor (like the built-in preview, with Markscope's renderer, diagrams, outline, search, doctor and AI);
   - an optional **Markscope Reader** custom editor ("Reopen Editor With… → Markscope Reader") for a full-tab reading view.
 - **What we reuse.** Most of the code, as is:
@@ -509,7 +509,7 @@ Output: `dist/vscode/`
 **Visual Studio Marketplace**
 
 1. Sign in at <https://marketplace.visualstudio.com/manage> with a Microsoft account.
-2. **Create publisher**: the ID (for example `abdallahsaeed` or `markscope`) is **permanent** and becomes part of the extension id `<publisher>.markscope`. Display name: "Abdallah Saeed".
+2. **Create publisher**: the ID (for example `abdallahsaeed` or `markscope`) is **permanent** and becomes part of the extension id `<publisher>.markscope-reader`. Display name: "Abdallah Saeed".
 3. Check that the display name **"Markscope"** is free. The Marketplace requires unique display names, so search first and fall back to "Markscope Markdown" if needed.
 4. Optional, later: **verified publisher** (blue check). It requires DNS verification of a domain you own; `*.github.io` can't be verified this way. Check the eligibility rules (they include a minimum publisher age) when applying.
 

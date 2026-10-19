@@ -165,7 +165,7 @@ describe('generated manifest', () => {
 
   test('identity, engine and untrusted-workspace support', () => {
     expect(manifest).toMatchObject({
-      name: 'markscope',
+      name: 'markscope-reader',
       version: '1.2.3',
       publisher: 'pub',
       engines: { vscode: '^1.90.0' },

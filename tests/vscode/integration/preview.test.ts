@@ -99,7 +99,7 @@ describe('Markscope preview', () => {
   })
 
   it('contributes and registers every command', async () => {
-    const pkg = vscode.extensions.all.find(e => e.id.endsWith('.markscope'))
+    const pkg = vscode.extensions.all.find(e => e.id.endsWith('.markscope-reader'))
     assert.ok(pkg, 'extension is installed')
     // Commands exist only once the extension has activated (VS Code does that on first use).
     await pkg.activate()
@@ -267,7 +267,7 @@ describe('Markscope preview', () => {
     const cfg = () => vscode.workspace.getConfiguration('markscope')
     const target: ActionTarget = {
       document: null,
-      extensionId: 'AbdallahSaeed.markscope',
+      extensionId: 'AbdallahSaeed.markscope-reader',
       refresh: () => undefined,
       showSource: async () => undefined,
       requestCopy: () => undefined,

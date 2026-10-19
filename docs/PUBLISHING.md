@@ -36,7 +36,7 @@ Versioning follows SemVer; `package.json` `version` is copied into the manifest.
 
 ### Accounts (once, by you)
 
-1. **Marketplace:** sign in at https://marketplace.visualstudio.com/manage with a Microsoft account and **create a publisher**. The id is permanent and becomes the extension id `<publisher>.markscope`. Check first that the display name "Markscope" is free.
+1. **Marketplace:** sign in at https://marketplace.visualstudio.com/manage with a Microsoft account and **create a publisher**. The id is permanent and becomes the extension id `<publisher>.markscope-reader`. Check first that the display name "Markscope" is free.
 2. **Open VSX:** create an Eclipse account (put your GitHub username in its profile), sign in at https://open-vsx.org with GitHub, **sign the Open VSX Publisher Agreement** from your profile (this is not the ECA), and create an access token. Then `npx ovsx create-namespace <publisher> -p <token>`; the namespace must equal the publisher id. A namespace does not give exclusive rights: **claim it** (an issue in `EclipseFdn/open-vsx.org`) to get the verified badge.
 
 **Every upload needs a new `package.json` version** (the Marketplace refuses a repeated one, and VS Code does not restart an extension that is replaced at the same version, which leaves the old code running next to new webview files).

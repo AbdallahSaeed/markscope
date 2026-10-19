@@ -24,7 +24,7 @@ const firefoxUrl = process.env.FIREFOX_STORE_URL ?? ''
 // The VS Code listing is live; the variable only overrides it (for example after a rename).
 const vscodeUrl =
   process.env.VSCODE_MARKETPLACE_URL ||
-  'https://marketplace.visualstudio.com/items?itemName=AbdallahSaeed.markscope'
+  'https://marketplace.visualstudio.com/items?itemName=AbdallahSaeed.markscope-reader'
 const openVsxUrl = process.env.OPEN_VSX_URL ?? ''
 
 const escape = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])

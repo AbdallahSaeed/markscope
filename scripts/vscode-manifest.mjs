@@ -17,7 +17,9 @@ const inPreview = `activeWebviewPanelId == ${PREVIEW_VIEW_TYPE}`
 export function createVscodeManifest({ version, publisher }) {
   const category = 'Markscope'
   return {
-    name: 'markscope',
+    // Permanent part of the id (AbdallahSaeed.markscope-reader). Plain `markscope` is taken on
+    // the Marketplace ("The extension 'markscope' already exists").
+    name: 'markscope-reader',
     displayName: 'Markscope: Markdown Reader, Diagrams & Doctor',
     description:
       'Fast, secure Markdown preview with Mermaid, Graphviz, KaTeX, an outline, a documentation doctor in the Problems panel, and optional bring-your-own-key AI.',
