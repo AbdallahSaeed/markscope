@@ -27,6 +27,18 @@ export interface DocumentViewHooks {
   onRequestFolder?: () => void
   /** Same-folder document link: navigate in place (keeps folder permission). */
   onNavigateWorkspace?: (target: string, hash: string) => boolean
+  /**
+   * A host (e.g. VS Code) takes over clicks on links to other documents.
+   * Return true to say it handled the click; the default navigation is skipped.
+   */
+  onNavigateDocument?: (target: string, hash: string) => boolean
+  /**
+   * A host that can open non-Markdown files of the folder (VS Code) takes over clicks on
+   * them; without this hook such links are removed, as in the browser.
+   */
+  onOpenFile?: (target: string, hash: string) => boolean
+  /** A host takes over clicks on external links (http, https, mailto, tel). */
+  onOpenExternal?: (href: string) => boolean
 }
 
 const HAS_SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i
@@ -36,13 +48,26 @@ const isRelativeRef = (ref: string) =>
   !ref.startsWith('//') &&
   !ref.startsWith('#')
 
+function hashOf(anchor: HTMLAnchorElement): string {
+  try {
+    return new URL(anchor.getAttribute('href') ?? '', 'https://x.invalid/').hash
+  } catch {
+    return ''
+  }
+}
+
 let katexCssLoaded = false
+let katexCssHref = 'vendor/katex/katex.min.css'
+
+/** Hosts whose pages don't sit next to `vendor/` (VS Code webviews) say where the stylesheet is. */
+export function configureKatexCss(href: string): void {
+  katexCssHref = href
+}
+
 function ensureKatexCss(): void {
   if (katexCssLoaded) return
   katexCssLoaded = true
-  document.head.append(
-    h('link', { rel: 'stylesheet', href: 'vendor/katex/katex.min.css' }),
-  )
+  document.head.append(h('link', { rel: 'stylesheet', href: katexCssHref }))
 }
 
 export class DocumentView {
@@ -81,6 +106,7 @@ export class DocumentView {
     this.decorateHeadings(fragment)
     this.decorateCode(fragment, opts.settings, opts.aiEnabled)
     this.wrapTables(fragment)
+    this.labelTaskCheckboxes(fragment)
     if (result.features.math) ensureKatexCss()
 
     this.article.classList.toggle('is-large', opts.sourceLength > LARGE_DOCUMENT_CHARS)
@@ -95,7 +121,14 @@ export class DocumentView {
 
   private rewriteLinks(root: DocumentFragment, baseUrl: string | null): void {
     for (const a of Array.from(root.querySelectorAll<HTMLAnchorElement>('a[href]'))) {
-      const resolved = resolveLink(a.getAttribute('href') ?? '', baseUrl, this.viewerBase)
+      const resolved = resolveLink(
+        a.getAttribute('href') ?? '',
+        baseUrl,
+        this.viewerBase,
+        {
+          workspaceFiles: this.hooks.onOpenFile !== undefined,
+        },
+      )
       switch (resolved.kind) {
         case 'anchor':
           a.setAttribute('href', resolved.href)
@@ -104,6 +137,11 @@ export class DocumentView {
           a.setAttribute('href', resolved.href)
           a.dataset.msDoc = resolved.target
           a.title ||= `Open ${describeSource(resolved.target).name} in Markscope`
+          break
+        case 'file':
+          a.setAttribute('href', resolved.href)
+          a.dataset.msFile = resolved.target
+          a.title ||= `Open ${describeSource(resolved.target).name}`
           break
         case 'external':
           a.setAttribute('href', resolved.href)
@@ -348,6 +386,15 @@ export class DocumentView {
     }
   }
 
+  /** Task-list checkboxes carry no label of their own: name each after its list item. */
+  private labelTaskCheckboxes(root: DocumentFragment): void {
+    for (const box of root.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')) {
+      if (box.hasAttribute('aria-label') || box.hasAttribute('aria-labelledby')) continue
+      const text = box.closest('li')?.textContent?.replace(/\s+/g, ' ').trim() ?? ''
+      box.setAttribute('aria-label', text ? text.slice(0, 120) : 'Task')
+    }
+  }
+
   private wrapTables(root: DocumentFragment): void {
     for (const table of Array.from(root.querySelectorAll('table'))) {
       if (table.closest('.ms-frontmatter')) continue
@@ -387,16 +434,37 @@ export class DocumentView {
       !event.shiftKey &&
       event.button === 0
     ) {
-      let hash = ''
-      try {
-        hash = new URL(anchor?.getAttribute('href') ?? '', 'https://x.invalid/').hash
-      } catch {
-        // no hash
-      }
-      if (this.hooks.onNavigateWorkspace?.(docTarget, hash)) {
+      if (this.hooks.onNavigateWorkspace?.(docTarget, anchor ? hashOf(anchor) : '')) {
         event.preventDefault()
         return
       }
+    }
+    const plainClick =
+      !event.metaKey && !event.ctrlKey && !event.shiftKey && event.button === 0
+    const fileTarget = anchor?.dataset.msFile
+    if (
+      anchor &&
+      fileTarget &&
+      plainClick &&
+      this.hooks.onOpenFile?.(fileTarget, hashOf(anchor))
+    ) {
+      event.preventDefault()
+      return
+    }
+    if (anchor && docTarget && plainClick && this.hooks.onNavigateDocument) {
+      if (this.hooks.onNavigateDocument(docTarget, hashOf(anchor))) {
+        event.preventDefault()
+        return
+      }
+    }
+    if (
+      anchor &&
+      plainClick &&
+      anchor.classList.contains('ms-external') &&
+      this.hooks.onOpenExternal?.(anchor.getAttribute('href') ?? '')
+    ) {
+      event.preventDefault()
+      return
     }
     const href = anchor?.getAttribute('href')
     if (anchor && href?.startsWith('#') && !event.metaKey && !event.ctrlKey) {

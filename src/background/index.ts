@@ -3,7 +3,7 @@
  * so the logic stays unit-testable.
  */
 import { errorMessage, log } from '@/shared/errors'
-import { chromeArea } from '@/storage/area'
+import { chromeArea } from '@/storage/chrome-area'
 import { secretsStore, settingsStore } from '@/storage'
 import { createAIService } from './ai-service'
 import { syncUserPatterns } from './content-scripts'

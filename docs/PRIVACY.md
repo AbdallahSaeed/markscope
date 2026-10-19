@@ -1,6 +1,6 @@
 # Privacy policy — Markscope
 
-_Last updated: 2026-10-09_
+_Last updated: 2026-10-19_
 
 Markscope is a browser extension that displays Markdown documents.
 
@@ -20,6 +20,8 @@ You can clear history in **Settings → Privacy**, remove the key in **Settings 
 **Network requests.** Markscope loads the documents you open from their own servers, and the images those documents reference (optionally click-to-load).
 
 **Optional AI features.** These are off by default. When you enable them and run an AI action, the current document text (and selection or question) is sent directly from your browser to the AI provider and endpoint you configured: Anthropic, OpenAI, a local model or a custom endpoint. That provider's privacy policy applies. Markscope operates no servers and never sees this data.
+
+**VS Code extension.** The Markscope extension for VS Code follows the same rules: no telemetry, no server, no data collected. It makes no network requests of its own unless you turn on the optional AI assistant: then the text of the document you are asking about (and your question or selection) is sent from VS Code directly to the AI provider you configured (Anthropic, OpenAI, a local model or a custom endpoint), and that provider's privacy policy applies. The API key is kept in VS Code's secret storage and is never synced. The only requests are the images a previewed document references, which you can block with the `markscope.images.remote` setting. It stores nothing beyond VS Code's own settings and the panel state VS Code keeps to restore a preview after a reload (the file's address and whether the preview is locked).
 
 **Permissions** are used only as described in the README's Permissions section.
 

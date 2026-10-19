@@ -1,0 +1,10 @@
+{
+  // Type-checks only what the VS Code extension and its webview reach, with no
+  // `chrome` types: a stray chrome.* call in shared code fails here.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["vscode", "node"]
+  },
+  "include": [],
+  "files": ["src/env.d.ts", "src/vscode/extension/extension.ts", "src/vscode/webview/index.ts"]
+}

@@ -1,0 +1,303 @@
+/**
+ * Runs inside a real VS Code (see .vscode-test.mjs). The webview can't be
+ * inspected from here, so these tests observe it through effects the host
+ * sees: the doctor's diagnostics only appear after the webview booted under
+ * the real CSP, rendered the document and posted the result back.
+ */
+import * as assert from 'node:assert'
+import * as fs from 'node:fs/promises'
+import * as os from 'node:os'
+import * as path from 'node:path'
+import * as vscode from 'vscode'
+import {
+  runPreviewAction,
+  type ActionTarget,
+} from '../../../src/vscode/extension/panel-actions'
+
+const folder = () => vscode.workspace.workspaceFolders![0]!.uri
+const fixture = (name: string) => vscode.Uri.joinPath(folder(), name)
+
+async function waitFor<T>(
+  what: string,
+  probe: () => T | undefined | false,
+  ms = 45_000,
+): Promise<T> {
+  const deadline = Date.now() + ms
+  for (;;) {
+    const value = probe()
+    if (value) return value
+    if (Date.now() > deadline) throw new Error(`Timed out waiting for ${what}`)
+    await new Promise(r => setTimeout(r, 100))
+  }
+}
+
+const previewTabs = () =>
+  vscode.window.tabGroups.all
+    .flatMap(g => [...g.tabs])
+    .filter(
+      t =>
+        t.input instanceof vscode.TabInputWebview &&
+        t.input.viewType.includes('markscope.preview'),
+    )
+
+const readerTabs = () =>
+  vscode.window.tabGroups.all
+    .flatMap(g => [...g.tabs])
+    .filter(
+      t =>
+        t.input instanceof vscode.TabInputCustom &&
+        t.input.viewType === 'markscope.reader',
+    )
+
+const problems = (uri: vscode.Uri) =>
+  vscode.languages.getDiagnostics(uri).filter(d => d.source === 'Markscope')
+
+async function openEditor(name: string): Promise<vscode.TextEditor> {
+  return vscode.window.showTextDocument(
+    await vscode.workspace.openTextDocument(fixture(name)),
+    {
+      preview: false,
+    },
+  )
+}
+
+async function replaceText(
+  editor: vscode.TextEditor,
+  from: string,
+  to: string,
+): Promise<void> {
+  const text = editor.document.getText()
+  const start = editor.document.positionAt(text.indexOf(from))
+  const end = editor.document.positionAt(text.indexOf(from) + from.length)
+  await editor.edit(b => b.replace(new vscode.Range(start, end), to))
+}
+
+/**
+ * Tests edit the fixtures without saving. Put every dirty file back to its on-disk text
+ * (and save, which writes identical content) so no test sees another's leftovers; relying on
+ * "revert the active editor" breaks when focus happens to be elsewhere.
+ */
+async function restoreDirtyFixtures(): Promise<void> {
+  for (const doc of vscode.workspace.textDocuments) {
+    if (!doc.isDirty || doc.uri.scheme !== 'file') continue
+    const onDisk = await fs.readFile(doc.uri.fsPath, 'utf8')
+    const edit = new vscode.WorkspaceEdit()
+    edit.replace(doc.uri, new vscode.Range(0, 0, doc.lineCount, 0), onDisk)
+    await vscode.workspace.applyEdit(edit)
+    await doc.save()
+  }
+}
+
+describe('Markscope preview', () => {
+  afterEach(async () => {
+    await vscode.workspace
+      .getConfiguration('markscope')
+      .update('doctor.enabled', undefined, true)
+    await restoreDirtyFixtures()
+    await vscode.commands.executeCommand('workbench.action.closeAllEditors')
+    await waitFor('previews to close', () => previewTabs().length === 0)
+  })
+
+  it('contributes and registers every command', async () => {
+    const pkg = vscode.extensions.all.find(e => e.id.endsWith('.markscope-reader'))
+    assert.ok(pkg, 'extension is installed')
+    // Commands exist only once the extension has activated (VS Code does that on first use).
+    await pkg.activate()
+    const declared = (pkg.packageJSON.contributes.commands as { command: string }[]).map(
+      c => c.command,
+    )
+    const registered = await vscode.commands.getCommands(true)
+    for (const id of declared) assert.ok(registered.includes(id), `${id} is registered`)
+  })
+
+  it('opens beside the editor and reports doctor problems on the right line', async () => {
+    const editor = await openEditor('broken.md')
+    await vscode.commands.executeCommand('markscope.openPreviewToSide')
+    const tab = await waitFor('the preview tab', () => previewTabs()[0])
+    assert.ok(tab)
+    await waitFor('the title', () => previewTabs()[0]?.label === 'Preview broken.md')
+
+    const issue = await waitFor('the broken-anchor problem', () =>
+      problems(editor.document.uri).find(d => d.code === 'broken-anchor'),
+    )
+    assert.strictEqual(issue.range.start.line, 2, 'issue is on line 3 (0-based 2)')
+    assert.strictEqual(issue.source, 'Markscope')
+  })
+
+  it('updates as the document changes', async () => {
+    const editor = await openEditor('broken.md')
+    await vscode.commands.executeCommand('markscope.openPreviewToSide')
+    await waitFor('the problem', () => problems(editor.document.uri).length > 0)
+    await replaceText(editor, '#missing', '#title')
+    await waitFor(
+      'the problem to clear',
+      () => problems(editor.document.uri).length === 0,
+    )
+    await replaceText(editor, '#title', '#gone')
+    await waitFor('the problem to return', () => problems(editor.document.uri).length > 0)
+  })
+
+  it('follows the active Markdown editor unless locked, and ignores other files', async () => {
+    await openEditor('broken.md')
+    await vscode.commands.executeCommand('markscope.openPreviewToSide')
+    await waitFor('the preview', () => previewTabs()[0])
+
+    await openEditor('other.md')
+    await waitFor(
+      'the preview to follow',
+      () => previewTabs()[0]?.label === 'Preview other.md',
+    )
+
+    await openEditor('notes.txt')
+    await new Promise(r => setTimeout(r, 500))
+    assert.strictEqual(
+      previewTabs()[0]?.label,
+      'Preview other.md',
+      'plain text is not previewed',
+    )
+
+    await vscode.commands.executeCommand('markscope.toggleLock')
+    await waitFor('the lock', () => previewTabs()[0]?.label === '🔒 Preview other.md')
+    await openEditor('broken.md')
+    await new Promise(r => setTimeout(r, 500))
+    assert.strictEqual(
+      previewTabs()[0]?.label,
+      '🔒 Preview other.md',
+      'a locked preview stays put',
+    )
+  })
+
+  it('keeps following the file after its editor was closed and reopened', async () => {
+    const editor = await openEditor('broken.md')
+    await vscode.commands.executeCommand('markscope.openPreviewToSide')
+    await waitFor('the problem', () => problems(editor.document.uri).length > 0)
+    // Closing the editor disposes the TextDocument; reopening makes a new object.
+    const textTab = vscode.window.tabGroups.all
+      .flatMap(g => [...g.tabs])
+      .find(
+        t =>
+          t.input instanceof vscode.TabInputText &&
+          t.input.uri.toString() === editor.document.uri.toString(),
+      )
+    assert.ok(textTab, 'the text editor tab exists')
+    await vscode.window.tabGroups.close(textTab)
+    // VS Code may dispose the document now or much later; either way the preview must keep following the file.
+    // Beside the preview: in the preview's own group the tab would hide it, and a hidden webview is not running.
+    const again = await vscode.window.showTextDocument(
+      await vscode.workspace.openTextDocument(fixture('broken.md')),
+      { preview: false, viewColumn: vscode.ViewColumn.Beside },
+    )
+    assert.strictEqual(previewTabs().length, 1, 'no duplicate preview')
+    await replaceText(again, '#missing', '#title')
+    await waitFor('the problem to clear', () => problems(again.document.uri).length === 0)
+  })
+
+  it('clears its problems when the preview closes', async () => {
+    const editor = await openEditor('broken.md')
+    await vscode.commands.executeCommand('markscope.openPreviewToSide')
+    await waitFor('the problem', () => problems(editor.document.uri).length > 0)
+    const tab = previewTabs()[0]!
+    await vscode.window.tabGroups.close(tab)
+    await waitFor('problems to clear', () => problems(editor.document.uri).length === 0)
+  })
+
+  it('can turn the doctor off', async () => {
+    const editor = await openEditor('broken.md')
+    await vscode.commands.executeCommand('markscope.openPreviewToSide')
+    await waitFor('the problem', () => problems(editor.document.uri).length > 0)
+    await vscode.workspace
+      .getConfiguration('markscope')
+      .update('doctor.enabled', false, true)
+    await waitFor('problems to clear', () => problems(editor.document.uri).length === 0)
+    await vscode.workspace
+      .getConfiguration('markscope')
+      .update('doctor.enabled', true, true)
+    await waitFor('problems to return', () => problems(editor.document.uri).length > 0)
+  })
+
+  it('opens a file in the Reader tab and reports problems from it too', async () => {
+    const uri = fixture('broken.md')
+    await vscode.commands.executeCommand('markscope.openInReader', uri)
+    await waitFor('the reader tab', () => readerTabs()[0])
+    const issue = await waitFor('the broken-anchor problem', () =>
+      problems(uri).find(d => d.code === 'broken-anchor'),
+    )
+    assert.strictEqual(issue.range.start.line, 2)
+    // Open Preview must make a real preview, not hand back the reader.
+    await openEditor('broken.md')
+    await vscode.commands.executeCommand('markscope.openPreviewToSide')
+    await waitFor('the preview tab', () => previewTabs()[0])
+    assert.strictEqual(readerTabs().length, 1)
+    await vscode.window.tabGroups.close(readerTabs()[0]!)
+    await vscode.window.tabGroups.close(previewTabs()[0]!)
+    await waitFor('problems to clear', () => problems(uri).length === 0)
+  })
+
+  it('exports the preview as a self-contained HTML file', async () => {
+    const target = vscode.Uri.file(
+      path.join(os.tmpdir(), `markscope-export-${Date.now()}.html`),
+    )
+    try {
+      await openEditor('other.md')
+      await vscode.commands.executeCommand('markscope.openPreviewToSide')
+      await waitFor('the preview', () => previewTabs()[0])
+      await new Promise(r => setTimeout(r, 1500)) // let the webview boot and render
+      await vscode.commands.executeCommand('markscope.exportHtml', target)
+      const written = await (async () => {
+        const deadline = Date.now() + 30_000
+        for (;;) {
+          try {
+            return await fs.readFile(target.fsPath, 'utf8')
+          } catch {
+            if (Date.now() > deadline) throw new Error('export file was never written')
+            await new Promise(r => setTimeout(r, 200))
+          }
+        }
+      })()
+      assert.match(written, /<!doctype html>/)
+      assert.match(written, /<title>Other<\/title>/)
+      assert.match(written, /default-src 'none'/)
+      assert.doesNotMatch(written, /<script/)
+    } finally {
+      await fs.rm(target.fsPath, { force: true })
+    }
+  })
+
+  it('the settings actions of the menu write the user settings', async () => {
+    const cfg = () => vscode.workspace.getConfiguration('markscope')
+    const target: ActionTarget = {
+      document: null,
+      extensionId: 'AbdallahSaeed.markscope-reader',
+      refresh: () => undefined,
+      showSource: async () => undefined,
+      requestCopy: () => undefined,
+      requestExport: () => undefined,
+      toggleLock: () => undefined,
+    }
+    // Don't assume a pristine profile: flip relative to whatever is there, then put it back.
+    const lineNumbers = cfg().get<boolean>('code.lineNumbers') ?? false
+    const theme = cfg().get<string>('theme') ?? 'vscode'
+    const other = theme === 'dark' ? 'light' : 'dark'
+    try {
+      await runPreviewAction(target, 'toggleLineNumbers')
+      assert.strictEqual(cfg().get('code.lineNumbers'), !lineNumbers)
+      await runPreviewAction(target, 'toggleLineNumbers')
+      assert.strictEqual(cfg().get('code.lineNumbers'), lineNumbers)
+
+      await runPreviewAction(target, 'setTheme', other)
+      assert.strictEqual(cfg().get('theme'), other)
+      await runPreviewAction(target, 'setTheme') // no value: nothing changes
+      assert.strictEqual(cfg().get('theme'), other)
+    } finally {
+      await cfg().update('code.lineNumbers', undefined, true)
+      await cfg().update('theme', undefined, true)
+    }
+  })
+
+  it('refuses to preview a non-Markdown file', async () => {
+    await openEditor('notes.txt')
+    await vscode.commands.executeCommand('markscope.openPreview')
+    await new Promise(r => setTimeout(r, 500))
+    assert.strictEqual(previewTabs().length, 0)
+  })
+})

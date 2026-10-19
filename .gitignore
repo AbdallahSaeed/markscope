@@ -8,3 +8,4 @@ playwright-report/
 *.pem
 .DS_Store
 _site/
+.vscode-test/

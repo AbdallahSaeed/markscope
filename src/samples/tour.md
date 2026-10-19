@@ -12,7 +12,7 @@ Markscope renders **GitHub-flavored Markdown** with diagrams, math and a navigab
 
 ## Text and inline formatting
 
-You get *emphasis*, **strong**, ~~strikethrough~~, `inline code`, ==highlights==, ++insertions++, H~2~O, E = mc^2^ and smart "quotes" -- plus emoji :rocket: :sparkles:.
+You get _emphasis_, **strong**, ~~strikethrough~~, `inline code`, ==highlights==, ++insertions++, H~2~O, E = mc^2^ and smart "quotes" -- plus emoji :rocket: :sparkles:.
 
 Autolinks just work: https://commonmark.org, and so do [relative links](./README.md) — they open inside Markscope.
 
@@ -57,7 +57,11 @@ Collapsible content with `::: details`.
 ```ts
 // Copy, language badge and optional line numbers come for free.
 export function slugify(text: string): string {
-  return text.trim().toLowerCase().replace(/[^\p{L}\p{N} -]/gu, '').replace(/ /g, '-')
+  return text
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N} -]/gu, '')
+    .replace(/ /g, '-')
 }
 ```
 
@@ -67,12 +71,12 @@ npm install && npm run build
 
 ## Tables
 
-| Feature        | Markscope | Notes                        |
-| -------------- | :-------: | ---------------------------- |
-| GFM tables     |     ✓     | Wide tables scroll sideways  |
-| Mermaid        |     ✓     | Lazy-loaded on demand        |
-| Math (KaTeX)   |     ✓     | Inline and display           |
-| Live reload    |     ✓     | Conditional requests (304)   |
+| Feature      | Markscope | Notes                       |
+| ------------ | :-------: | --------------------------- |
+| GFM tables   |     ✓     | Wide tables scroll sideways |
+| Mermaid      |     ✓     | Lazy-loaded on demand       |
+| Math (KaTeX) |     ✓     | Inline and display          |
+| Live reload  |     ✓     | Conditional requests (304)  |
 
 ## Math
 

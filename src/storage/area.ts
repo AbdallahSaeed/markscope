@@ -1,6 +1,7 @@
 /**
- * Minimal key-value storage abstraction over chrome.storage areas so stores
- * can be unit-tested with an in-memory implementation.
+ * Minimal key-value storage abstraction so stores can be unit-tested with an
+ * in-memory implementation. Free of browser-extension APIs: the chrome.storage
+ * adapter lives in chrome-area.ts (the VS Code extension supplies its own).
  */
 export type ChangeListener = (
   changes: Record<string, { oldValue?: unknown; newValue?: unknown }>,
@@ -11,34 +12,6 @@ export interface KeyValueArea {
   set(key: string, value: unknown): Promise<void>
   remove(key: string): Promise<void>
   subscribe(listener: ChangeListener): () => void
-}
-
-export type ChromeAreaName = 'local' | 'sync' | 'session'
-
-export function chromeArea(name: ChromeAreaName): KeyValueArea {
-  const area = chrome.storage[name]
-  return {
-    async get(key) {
-      const out = await area.get(key)
-      return out[key]
-    },
-    async set(key, value) {
-      await area.set({ [key]: value })
-    },
-    async remove(key) {
-      await area.remove(key)
-    },
-    subscribe(listener) {
-      const handler = (
-        changes: Record<string, chrome.storage.StorageChange>,
-        areaName: string,
-      ) => {
-        if (areaName === name) listener(changes)
-      }
-      chrome.storage.onChanged.addListener(handler)
-      return () => chrome.storage.onChanged.removeListener(handler)
-    },
-  }
 }
 
 export function memoryArea(initial: Record<string, unknown> = {}): KeyValueArea {

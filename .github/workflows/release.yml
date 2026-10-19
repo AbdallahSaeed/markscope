@@ -1,23 +1,27 @@
 name: Release
 
 # Push a tag like v1.0.0 (matching package.json "version") to build, test and
-# publish a GitHub Release with the Chrome and Firefox zips. Store uploads run
+# publish a GitHub Release with the Chrome and Firefox zips and the VS Code .vsix. Store uploads run
 # only when their secrets are configured (see docs/PUBLISHING.md).
 on:
   push:
     tags: ['v*']
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: write
     outputs:
       version: ${{ steps.meta.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -29,6 +33,8 @@ jobs:
           version=$(node -p "require('./package.json').version")
           test "v$version" = "$GITHUB_REF_NAME" || { echo "Tag $GITHUB_REF_NAME != v$version"; exit 1; }
           echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Tag must be on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "$GITHUB_REF_NAME is not reachable from main"; exit 1; }
       - run: npm run release
       - name: Source archive for Mozilla review
         run: git archive --format=zip -o "release/markscope-${{ steps.meta.outputs.version }}-source.zip" HEAD
@@ -36,9 +42,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" release/*.zip release/SHA256SUMS.txt \
+          gh release create "$GITHUB_REF_NAME" release/*.zip release/*.vsix release/SHA256SUMS.txt \
             --title "Markscope $GITHUB_REF_NAME" \
-            --notes "See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/$GITHUB_REF_NAME/CHANGELOG.md). Install: unzip markscope-*-chrome.zip and use **Load unpacked** at chrome://extensions, or install from the stores once listed."
+            --notes "See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/$GITHUB_REF_NAME/CHANGELOG.md). Install: unzip markscope-*-chrome.zip and use **Load unpacked** at chrome://extensions, install the .vsix with code --install-extension, or install from the stores once listed."
       - uses: actions/upload-artifact@v4
         with:
           name: release
@@ -88,3 +94,55 @@ jobs:
       - name: Skipped (no AMO secrets)
         if: env.WEB_EXT_API_KEY == ''
         run: echo "Configure AMO_JWT_ISSUER / AMO_JWT_SECRET secrets to publish automatically (docs/PUBLISHING.md)."
+
+  # Marketplace publishing uses Microsoft Entra ID, not a personal access token:
+  # Azure DevOps global PATs stop working on 1 December 2026 (docs/PUBLISHING.md).
+  vscode-marketplace:
+    needs: release
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+    steps:
+      - uses: actions/download-artifact@v4
+        if: env.AZURE_CLIENT_ID != ''
+        with:
+          name: release
+          path: release
+      - uses: azure/login@v2
+        if: env.AZURE_CLIENT_ID != ''
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          allow-no-subscriptions: true
+      - name: Publish to the Visual Studio Marketplace
+        if: env.AZURE_CLIENT_ID != ''
+        run: npx --yes @vscode/vsce@4.0.0 publish --packagePath "release/markscope-${{ needs.release.outputs.version }}.vsix" --azure-credential --skip-duplicate
+      - name: Skipped (no Azure credentials)
+        if: env.AZURE_CLIENT_ID == ''
+        run: echo "Configure AZURE_CLIENT_ID / AZURE_TENANT_ID to publish automatically (docs/PUBLISHING.md)."
+
+  open-vsx:
+    needs: release
+    runs-on: ubuntu-latest
+    environment: release
+    env:
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
+    steps:
+      - uses: actions/download-artifact@v4
+        if: env.OVSX_PAT != ''
+        with:
+          name: release
+          path: release
+      - name: Publish to Open VSX
+        if: env.OVSX_PAT != ''
+        run: npx --yes ovsx@0.10.11 publish "release/markscope-${{ needs.release.outputs.version }}.vsix" --skip-duplicate
+      - name: Skipped (no OVSX_PAT)
+        if: env.OVSX_PAT == ''
+        run: echo "Configure the OVSX_PAT secret to publish to Open VSX automatically (docs/PUBLISHING.md)."

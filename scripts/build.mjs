@@ -2,7 +2,7 @@
  * Build: esbuild bundles each extension context, then static assets and a
  * generated manifest are copied into dist/<target>/.
  *
- *   node scripts/build.mjs [--target=chrome|firefox] [--watch] [--dev]
+ *   node scripts/build.mjs [--target=chrome|firefox|vscode] [--watch] [--dev]
  */
 import * as esbuild from 'esbuild'
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
@@ -17,6 +17,14 @@ const watch = args.has('--watch')
 const dev = args.has('--dev') || watch
 const out = path.join(root, 'dist', target)
 const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'))
+
+// The VS Code extension has its own layout and bundles; see build-vscode.mjs.
+if (target === 'vscode') {
+  const { buildVscode } = await import('./build-vscode.mjs')
+  await buildVscode({ root, pkg, watch, dev })
+  if (!watch) process.exit(0)
+  await new Promise(() => {}) // esbuild's watchers keep running; never fall through to the browser build
+}
 
 const common = {
   bundle: true,

@@ -1,4 +1,5 @@
-import { chromeArea, memoryArea } from '@/storage/area'
+import { memoryArea } from '@/storage/area'
+import { chromeArea } from '@/storage/chrome-area'
 import {
   createLibraryStore,
   MAX_RECENTS,

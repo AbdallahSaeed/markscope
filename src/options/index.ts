@@ -18,6 +18,7 @@ import {
 import { originPattern } from '@/shared/urls'
 import { libraryStore, secretsStore, settingsStore } from '@/storage'
 import { AIClient } from '@/viewer/ai-client'
+import { chromePortTransport } from '@/viewer/chrome-port-transport'
 import { applyAppearance } from '@/viewer/theme'
 
 const store = settingsStore()
@@ -516,7 +517,7 @@ function aiSection(): HTMLElement {
       return
     }
     let reply = ''
-    const client = new AIClient()
+    const client = new AIClient(chromePortTransport())
     client.run(
       { type: 'ai.test' },
       {

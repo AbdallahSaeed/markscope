@@ -8,7 +8,11 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.ts'],
+    include: [
+      'tests/unit/**/*.test.ts',
+      'tests/integration/**/*.test.ts',
+      'tests/vscode/unit/**/*.test.ts',
+    ],
     setupFiles: ['tests/helpers/setup.ts'],
     coverage: {
       provider: 'v8',
@@ -17,6 +21,19 @@ export default defineConfig({
       // Playwright suite; unit coverage targets the logic layers.
       include: [
         'src/shared/**',
+        'src/vscode/protocol.ts',
+        'src/vscode/config-schema.ts',
+        'src/vscode/extension/link-policy.ts',
+        'src/vscode/extension/confine.ts',
+        'src/vscode/extension/html.ts',
+        'src/vscode/extension/diagnostic-map.ts',
+        'src/vscode/extension/status-text.ts',
+        'src/vscode/webview/menu.ts',
+        'src/vscode/build-id.ts',
+        'src/vscode/extension/ai-host.ts',
+        'src/vscode/extension/secret-area.ts',
+        'src/ai/service.ts',
+        'src/vscode/webview/scroll-echo.ts',
         'src/storage/**',
         'src/engine/**',
         'src/analysis/**',

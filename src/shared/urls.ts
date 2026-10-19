@@ -225,6 +225,8 @@ export type ResolvedLink =
   | { kind: 'anchor'; href: string }
   | { kind: 'document'; href: string; target: string }
   | { kind: 'external'; href: string }
+  /** A non-Markdown file in the opened folder; only produced when a host asks for it. */
+  | { kind: 'file'; href: string; target: string }
   | { kind: 'invalid' }
 
 const SAFE_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:', 'file:'])
@@ -237,6 +239,7 @@ export function resolveLink(
   href: string,
   baseUrl: string | null,
   viewerBase: string,
+  opts: { workspaceFiles?: boolean } = {},
 ): ResolvedLink {
   const trimmed = href.trim()
   if (trimmed === '') return { kind: 'invalid' }
@@ -244,7 +247,7 @@ export function resolveLink(
 
   const u = safeParseUrl(trimmed, baseUrl ?? undefined)
   if (u?.protocol === WORKSPACE_PROTOCOL)
-    return resolveWorkspaceLink(u, baseUrl, viewerBase)
+    return resolveWorkspaceLink(u, baseUrl, viewerBase, opts)
   if (!u || !SAFE_LINK_PROTOCOLS.has(u.protocol)) return { kind: 'invalid' }
   // file: links are only meaningful when the document itself is local.
   if (u.protocol === 'file:' && sourceProtocol(baseUrl ?? '') !== 'file') {
@@ -281,13 +284,23 @@ function resolveWorkspaceLink(
   u: URL,
   baseUrl: string | null,
   viewerBase: string,
+  opts: { workspaceFiles?: boolean },
 ): ResolvedLink {
   const base = parseWorkspaceUrl(baseUrl ?? '')
   const target = parseWorkspaceUrl(u.toString())
   if (!base || !target || base.id !== target.id || !target.path)
     return { kind: 'invalid' }
   if (target.path === base.path && u.hash) return { kind: 'anchor', href: u.hash }
-  if (!isMarkdownPath(`https://x.invalid/${target.path}`)) return { kind: 'invalid' }
+  if (!isMarkdownPath(`https://x.invalid/${target.path}`)) {
+    // Non-Markdown files are never linked in the browser; an editor host can open them.
+    return opts.workspaceFiles
+      ? {
+          kind: 'file',
+          href: workspaceUrl(target.id, target.path) + u.hash,
+          target: workspaceUrl(target.id, target.path),
+        }
+      : { kind: 'invalid' }
+  }
   return {
     kind: 'document',
     href: buildViewerUrl(viewerBase, { ws: target.id, path: target.path }, u.hash),

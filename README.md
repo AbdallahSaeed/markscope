@@ -67,7 +67,8 @@ Requests go straight from the extension's service worker to your provider. There
 
 ### From a store
 
-Chrome Web Store and Firefox Add-ons listings are in review (see [docs/PUBLISHING.md](docs/PUBLISHING.md)). Until they are live, install from a release zip.
+- **VS Code:** [Markscope on the Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=AbdallahSaeed.markscope-reader), or search “Markscope” in the Extensions view. For VSCodium, Cursor and Windsurf an Open VSX listing is coming.
+- **Chrome Web Store and Firefox Add-ons** listings are in review (see [docs/PUBLISHING.md](docs/PUBLISHING.md)). Until they are live, install from a release zip.
 
 ### From a release zip
 
@@ -75,6 +76,17 @@ Chrome Web Store and Firefox Add-ons listings are in review (see [docs/PUBLISHIN
 2. Open `chrome://extensions` (or `edge://extensions`) and enable **Developer mode**.
 3. Click **Load unpacked** and select the unzipped folder.
 4. Optional, for local files: in the extension's **Details**, enable **Allow access to file URLs**.
+
+### In VS Code
+
+Install it from the [Marketplace](https://marketplace.visualstudio.com/items?itemName=AbdallahSaeed.markscope-reader) (see [docs/VSCODE-PLAN.md](docs/VSCODE-PLAN.md) for how it is built). To build and install it yourself:
+
+```bash
+npm ci && npm run build:vscode && npm run package:vscode
+code --install-extension release/markscope-<version>.vsix
+```
+
+Then open a Markdown file and run **Markscope: Open Preview to the Side**.
 
 ## Development
 
@@ -88,6 +100,9 @@ npm run test:coverage  # with coverage thresholds (80%)
 npx playwright install chromium
 npm run test:e2e       # Playwright drives the real extension in Chromium
 npm run typecheck
+npm run build:vscode   # dist/vscode: the VS Code extension; npm run package:vscode makes the .vsix
+npm run test:vscode:webview   # the VS Code webview in Chromium, with a fake host
+npm run test:vscode           # the extension in a real VS Code (downloads it once)
 ```
 
 ## Architecture
@@ -123,6 +138,7 @@ src/
   storage/      storage abstraction, settings / library / secrets stores
   shared/       settings schema, message contracts, URL policy, slugs, stats, DOM helpers, icons
   viewer/       viewer app (layout, document view, sidebar, search, palette, AI panel, home, export)
+  vscode/       VS Code extension: host (preview panels, links, diagnostics), webview app, message protocol, settings schema
   popup/  options/  pages/  styles/  icons/  samples/  _locales/
 scripts/        build (esbuild), manifest generation, packaging, icon rasterization
 tests/          unit/, integration/ (Vitest) and e2e/ (Playwright)

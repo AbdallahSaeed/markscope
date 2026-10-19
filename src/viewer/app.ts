@@ -18,6 +18,7 @@ import {
 import type { DocumentRef, LibraryStore } from '@/storage/library-store'
 import type { SettingsStore } from '@/storage/settings-store'
 import { AIPanel } from './ai-panel'
+import { chromePortTransport } from './chrome-port-transport'
 import { DocumentView } from './document-view'
 import type { CursorInfo } from './editor/adapter'
 import { EditorController } from './editor/editor-controller'
@@ -147,6 +148,7 @@ export class ViewerApp {
         dark: () => document.documentElement.dataset.theme === 'dark',
       },
       () => this.closeAI(),
+      chromePortTransport(),
     )
     this.layout.aiSlot.append(this.ai.el)
     this.live = new LiveReload(this)

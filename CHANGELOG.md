@@ -1,7 +1,27 @@
 # Changelog
 
-## Unreleased
+## 1.1.0 — 2026-10-19
 
+- **Fixed:** a key pressed right after running a command from the command palette (for example `2` for the Edit view) could be silently ignored, because the browser had not yet moved focus off the closed palette's search box. Found by a CI failure.
+- **Markscope for VS Code (new).** The same renderer in a VS Code webview, next to the native editor (`docs/VSCODE-PLAN.md`).
+  - **Markscope: Open Preview / Open Preview to the Side**, an editor-title button, and **Toggle Preview Lock**. An unlocked preview follows the active Markdown file; panels are restored after a window reload.
+  - Updates as you type (or on save, `markscope.preview.updateOn`); scroll sync both ways, double-click a block to put the cursor on its source line, and the block under the cursor is highlighted.
+  - Mermaid, Graphviz, KaTeX, alerts, callouts, outline with scrollspy, find, focus mode and reading stats, as in the browser.
+  - The document doctor reports in the **Problems panel**, on the right line.
+  - Follows the VS Code theme, including high contrast (`markscope.theme`); typography, Markdown and image settings under `markscope.*`.
+  - Relative links to other Markdown files and relative images work, confined to the workspace folder. `command:` and `vscode:` links are inert; web links ask VS Code to open them.
+  - **Export as HTML** (command palette): a self-contained file with diagrams rendered, math as MathML and no external requests. It opens VS Code's save dialog; the command also accepts a `.html` target for keybindings and automation.
+  - **Markscope Reader**: a full-tab, read-only view of one file (Explorer or editor → Reopen Editor With… → Markscope Reader, or **Markscope: Open in Reader**). It never becomes the default editor for Markdown.
+  - **The same toolbar and ⋯ menu as the browser viewer**: a theme button (VS Code theme → light → dark, saved as `markscope.theme`), a **Commands** button that opens VS Code's palette filtered to Markscope, and a menu with Refresh, Show source in the editor, Lock preview, Copy Markdown, Copy rendered HTML, Export as HTML, Focus mode, Line numbers in code, AI assistant, Keyboard shortcuts, Command palette and **Settings** (opens this extension's settings). New keys: `R` refresh, `T` theme, `?` shortcut help.
+  - **Update notice**: if VS Code keeps running an older copy of the extension after you replaced it (same version number), the preview says “Reload the window to finish” instead of leaving toolbar items that silently do nothing. Host and webview share a build id.
+  - **Status bar item** while a preview is visible: words, reading time and the number of doctor problems; clicking it opens the Problems panel.
+  - **Links to project files** work: a README link such as `src/app.ts` opens that file in the editor, `src/app.ts#L42` (or `#L10-L20`) selects those lines, and a folder link reveals it in the Explorer. Paths stay confined to the workspace folder.
+  - **Copy Rendered HTML**: the rendered article (diagrams included) as an HTML fragment on the clipboard.
+  - **Optional AI assistant** (off by default): summarize, outline, review, improve, explain a selection or a code block, ask questions, generate a Mermaid diagram. Providers: Anthropic, OpenAI, a local model (Ollama, LM Studio) or any OpenAI-compatible endpoint. Settings are `markscope.ai.*`; **Markscope: Set AI API Key** stores the key in VS Code's secret storage (the OS keychain), bound to the endpoint it was saved for.
+    - Requests run in the extension host and the key never reaches the preview. AI settings are application-scoped, so a cloned repository's `.vscode/settings.json` cannot redirect your document text, and the assistant is off in untrusted workspaces.
+  - Not in this release: editing inside Markscope.
+- **Accessibility** (found by an automated axe check, so this also applies to the browser extension): task-list checkboxes are now named after their item, the muted text color (`--ink-3`) and alert titles meet WCAG AA contrast, and unselected sidebar tabs are readable in the light theme.
+  - Build and test: `npm run build:vscode`, `npm run package:vscode`, `npm run test:vscode:webview`, `npm run test:vscode`.
 - **New editor (CodeMirror 6)** in the Edit view: Markdown syntax highlighting, line numbers, active-line highlight, bracket matching, soft wrap, and find & replace inside the editor (⌘/Ctrl F).
   - Enter continues lists, task lists and quotes; Backspace removes list markup. Tab / Shift+Tab indent and outdent (Esc then Tab leaves the editor).
   - Undo history survives Discard: ⌘/Ctrl Z in the editor brings discarded edits back.

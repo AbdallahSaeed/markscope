@@ -1744,3 +1744,8 @@ details[open] > .ms-files__dir::before {
     padding: 0 8px;
   }
 }
+
+/* Controls a host (e.g. VS Code) switched off through buildLayout({ hide }). */
+[data-host-hidden] {
+  display: none !important;
+}

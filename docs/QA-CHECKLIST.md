@@ -101,3 +101,29 @@ Find the extension ID at `chrome://extensions` (Markscope → ID) and use it as
 43. Resize to 375 px wide → no horizontal scroll; the sidebar becomes a drawer (B toggles it).
 44. Tab through the toolbar → visible focus rings; every icon button has a tooltip/name.
 45. Press **?** → the shortcuts dialog opens; Esc closes it.
+
+## 14. VS Code extension
+
+Install the `.vsix` (`code --install-extension release/markscope-<version>.vsix`) and use a folder with Markdown files, images and a Mermaid diagram.
+
+46. Open a `.md` file → **Markscope: Open Preview to the Side** (and the editor-title button) → the preview opens beside it. Typing updates it within a moment; the status bar and Info tab show words and reading time.
+47. Scroll the editor → the preview follows; scroll the preview → the editor follows; neither jitters. Double-click a paragraph in the preview → the cursor jumps to its line. Moving the cursor highlights its block.
+48. A file with a broken `#anchor` link and a missing image → the **Problems** panel lists them on the right lines; fixing the file clears them; closing the preview clears them.
+49. Open another Markdown file → the unlocked preview follows. **Toggle Preview Lock** → the tab shows 🔒 and no longer follows. Open a `.txt` file → nothing changes.
+50. A relative link to another `.md` file (with `#heading`) opens it in the preview at that heading (or in the editor with `markscope.preview.openMarkdownLinks`). A relative image shows. `../../outside.md` and an image symlinked outside the folder do not open or show.
+51. A web link asks VS Code to open it (trusted-domain prompt on first use). A `command:` or `vscode:` link does nothing.
+52. Light, dark, **high contrast** and **high contrast light** themes: the preview matches, with visible borders and focus rings in high contrast. Switching theme while a Mermaid diagram is shown re-themes it.
+53. `markscope.images.remote` = `block` → a web image shows a "Load image" placeholder and no request is made (check the webview's DevTools: **Developer: Open Webview Developer Tools**). Console: no CSP violations.
+54. Reload the window (**Developer: Reload Window**) → the preview comes back on the same file, with the lock state.
+55. A 5 MB Markdown file and one with 20 Mermaid diagrams → the editor stays responsive.
+56. Remote: repeat 46–50 over WSL, Remote-SSH and a Dev Container. Windows: a path with spaces and a drive letter. Untitled (unsaved) Markdown previews, with a hint that relative images need a saved file.
+57. Untrusted workspace (Restricted Mode) → the preview still renders; workspace settings that enable raw HTML, diagrams or remote images are ignored.
+58. **Markscope: Export as HTML** → a save dialog; the saved file opens offline with diagrams, math and code highlighting, and the browser's network panel shows no requests.
+59. **Markscope: Open in Reader** (and Reopen Editor With… → Markscope Reader) → a full tab with outline and search; it is read-only, titled with the file name, and Problems still show. Markdown still opens in the text editor by default.
+60. The status bar shows `N words · M min` (and a warning count when the doctor finds problems) while a preview is visible; clicking it opens Problems. It disappears when no preview is visible.
+61. **Markscope: Copy Rendered HTML** → paste into a text editor: an HTML fragment (no `<html>` wrapper, no viewer chrome), diagrams as SVG.
+62. AI (needs a key or a local model): in User settings set `markscope.ai.enabled`, the provider (and base URL for a local/custom endpoint), then **Markscope: Set AI API Key**. The preview shows the AI button; **A** opens the panel; Summarize streams an answer; **Stop** works. Setting `markscope.ai.baseUrl` in a *workspace* `.vscode/settings.json` has no effect. In Restricted Mode the assistant is off and a request shows an untrusted-workspace message.
+63. **Markscope: Clear AI API Key** removes the key; the next request says the key is missing. A key saved for one provider is not sent after switching to another endpoint.
+64. A README link to a source file opens it in the editor; `file.ts#L10` selects line 10 and `#L10-L20` the range; a link to a folder reveals it in the Explorer; `../../outside.txt` does nothing but show a notice.
+65. The toolbar shows a theme button, a Commands button and a ⋯ menu. ⋯ lists Refresh, Show source in the editor, Lock preview, Copy Markdown, Copy rendered HTML, Export as HTML, Focus mode, Line numbers in code, (AI assistant when enabled), Keyboard shortcuts, Command palette, Settings. Settings opens VS Code's Settings filtered to Markscope; Command palette opens the palette with `Markscope:`; the theme button cycles and the choice appears in Settings; Line numbers in code toggles and re-renders; Show source focuses the editor. The Reader's menu has no Lock item. `R`, `T`, `?` work.
+66. Install a newer `.vsix` over an older one **without** reloading the window and open a preview: the preview shows “Reload the window to finish” and the notice disappears after **Developer: Reload Window**.
