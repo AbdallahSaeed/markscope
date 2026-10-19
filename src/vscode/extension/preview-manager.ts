@@ -3,11 +3,13 @@ import * as vscode from 'vscode'
 import { MARKDOWN_EXTENSIONS } from '@/shared/urls'
 import { readPreviewOptions } from './config'
 import { DiagnosticsSink } from './diagnostics'
+import { PreviewStatus } from './status'
 import { isMarkdownFileName } from './link-policy'
 import {
   panelOptions,
   PREVIEW_VIEW_TYPE,
   PreviewPanel,
+  previewTitle,
   type PanelHost,
 } from './preview-panel'
 
@@ -45,6 +47,8 @@ export class PreviewManager
   implements PanelHost, vscode.WebviewPanelSerializer, vscode.CustomTextEditorProvider
 {
   readonly diagnostics = new DiagnosticsSink()
+  private readonly status = new PreviewStatus()
+  private statusTimer: ReturnType<typeof setTimeout> | undefined
   private readonly panels = new Set<PreviewPanel>()
   private lastActive: PreviewPanel | undefined
 
@@ -52,8 +56,23 @@ export class PreviewManager
 
   // --------------------------------------------------------------- PanelHost
 
+  stateChanged(): void {
+    this.refreshStatus()
+  }
+
+  /** Shown for the visible preview (the active one first); updates are coalesced. */
+  private refreshStatus(): void {
+    clearTimeout(this.statusTimer)
+    this.statusTimer = setTimeout(() => {
+      const visible = [...this.panels].filter(p => p.panel.visible && p.document)
+      const panel = visible.find(p => p.panel.active) ?? visible[0]
+      this.status.show(panel?.document ?? undefined)
+    }, 100)
+  }
+
   panelClosed(panel: PreviewPanel): void {
     this.panels.delete(panel)
+    this.refreshStatus()
     if (this.lastActive === panel) this.lastActive = undefined
   }
 
@@ -68,6 +87,7 @@ export class PreviewManager
     this.lastActive = panel
     panel.panel.onDidChangeViewState(e => {
       if (e.webviewPanel.active) this.lastActive = panel
+      this.refreshStatus()
     })
     return panel
   }
@@ -95,7 +115,7 @@ export class PreviewManager
     }
     const panel = vscode.window.createWebviewPanel(
       PREVIEW_VIEW_TYPE,
-      'Preview',
+      previewTitle(doc),
       { viewColumn: column, preserveFocus: beside },
       { ...panelOptions(this.extensionUri, doc), retainContextWhenHidden: false },
     )
@@ -142,6 +162,9 @@ export class PreviewManager
       [...this.panels].filter(p => p.showsUri(doc.uri))
     return [
       this.diagnostics,
+      this.status,
+      new vscode.Disposable(() => clearTimeout(this.statusTimer)),
+      vscode.languages.onDidChangeDiagnostics(() => this.refreshStatus()),
       win.registerWebviewPanelSerializer(PREVIEW_VIEW_TYPE, this),
       win.registerCustomEditorProvider(READER_VIEW_TYPE, this, {
         webviewOptions: { retainContextWhenHidden: false },
@@ -233,6 +256,10 @@ export class PreviewManager
       cmd(
         'markscope.runDoctor',
         forActive(p => p.sendCommand('runDoctor')),
+      ),
+      cmd(
+        'markscope.copyHtml',
+        forActive(p => p.requestCopy()),
       ),
       // An optional `.html` target skips the dialog (keybindings, automation); anything else is ignored.
       cmd('markscope.exportHtml', (target?: unknown) => {

@@ -346,6 +346,20 @@ test('the export command produces a self-contained HTML file for the host to sav
   expect(html.length).toBeGreaterThan(10_000) // document.css is inlined
 })
 
+test('the copy command posts the rendered article as a fragment', async ({ page }) => {
+  await openWebview(page, host)
+  await start(page, '# Copy me\n\nSome *text* and [a link](https://example.com/).\n')
+  await send(page, { type: 'command', name: 'copyHtml' })
+  await expect.poll(async () => (await last(page, 'copy')) !== undefined).toBe(true)
+  const text = (await last(page, 'copy'))!.text as string
+  expect(text).toContain('<h1')
+  expect(text).toContain('Copy me')
+  expect(text).toContain('<em>text</em>')
+  expect(text).not.toContain('<html')
+  expect(text).not.toContain('ms-ui')
+  expect(text).not.toContain('data-source-line')
+})
+
 test('nothing is exported unless the host asks', async ({ page }) => {
   await openWebview(page, host)
   await start(page, '# T\n')

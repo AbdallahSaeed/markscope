@@ -101,6 +101,7 @@ export class DocumentView {
     this.decorateHeadings(fragment)
     this.decorateCode(fragment, opts.settings, opts.aiEnabled)
     this.wrapTables(fragment)
+    this.labelTaskCheckboxes(fragment)
     if (result.features.math) ensureKatexCss()
 
     this.article.classList.toggle('is-large', opts.sourceLength > LARGE_DOCUMENT_CHARS)
@@ -365,6 +366,15 @@ export class DocumentView {
       }
       if (pre && settings.code.wrap && !settings.code.lineNumbers)
         pre.classList.add('is-wrapped')
+    }
+  }
+
+  /** Task-list checkboxes carry no label of their own: name each after its list item. */
+  private labelTaskCheckboxes(root: DocumentFragment): void {
+    for (const box of root.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')) {
+      if (box.hasAttribute('aria-label') || box.hasAttribute('aria-labelledby')) continue
+      const text = box.closest('li')?.textContent?.replace(/\s+/g, ' ').trim() ?? ''
+      box.setAttribute('aria-label', text ? text.slice(0, 120) : 'Task')
     }
   }
 

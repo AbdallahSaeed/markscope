@@ -27,6 +27,7 @@ export default defineConfig({
         'src/vscode/extension/confine.ts',
         'src/vscode/extension/html.ts',
         'src/vscode/extension/diagnostic-map.ts',
+        'src/vscode/extension/status-text.ts',
         'src/vscode/webview/scroll-echo.ts',
         'src/storage/**',
         'src/engine/**',

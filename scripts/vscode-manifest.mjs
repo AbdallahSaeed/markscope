@@ -82,6 +82,7 @@ export function createVscodeManifest({ version, publisher }) {
         { command: 'markscope.focusMode', title: 'Toggle Focus Mode', category },
         { command: 'markscope.runDoctor', title: 'Run Document Doctor', category },
         { command: 'markscope.exportHtml', title: 'Export as HTML', category },
+        { command: 'markscope.copyHtml', title: 'Copy Rendered HTML', category },
         { command: 'markscope.openInReader', title: 'Open in Reader', category },
       ],
       menus: {
@@ -101,6 +102,7 @@ export function createVscodeManifest({ version, publisher }) {
           { command: 'markscope.focusMode', when: inPreview },
           { command: 'markscope.runDoctor', when: inPreview },
           { command: 'markscope.exportHtml', when: inPreview },
+          { command: 'markscope.copyHtml', when: inPreview },
           { command: 'markscope.openInReader', when: isMarkdown },
         ],
       },

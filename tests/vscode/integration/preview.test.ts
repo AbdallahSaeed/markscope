@@ -110,7 +110,8 @@ describe('Markscope preview', () => {
     const editor = await openEditor('broken.md')
     await vscode.commands.executeCommand('markscope.openPreviewToSide')
     const tab = await waitFor('the preview tab', () => previewTabs()[0])
-    assert.strictEqual(tab.label, 'Preview broken.md')
+    assert.ok(tab)
+    await waitFor('the title', () => previewTabs()[0]?.label === 'Preview broken.md')
 
     const issue = await waitFor('the broken-anchor problem', () =>
       problems(editor.document.uri).find(d => d.code === 'broken-anchor'),

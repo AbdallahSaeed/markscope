@@ -11,7 +11,10 @@
   - Relative links to other Markdown files and relative images work, confined to the workspace folder. `command:` and `vscode:` links are inert; web links ask VS Code to open them.
   - **Export as HTML** (command palette): a self-contained file with diagrams rendered, math as MathML and no external requests. It opens VS Code's save dialog; the command also accepts a `.html` target for keybindings and automation.
   - **Markscope Reader**: a full-tab, read-only view of one file (Explorer or editor → Reopen Editor With… → Markscope Reader, or **Markscope: Open in Reader**). It never becomes the default editor for Markdown.
+  - **Status bar item** while a preview is visible: words, reading time and the number of doctor problems; clicking it opens the Problems panel.
+  - **Copy Rendered HTML**: the rendered article (diagrams included) as an HTML fragment on the clipboard.
   - Not in this release: editing inside Markscope and AI.
+- **Accessibility** (found by an automated axe check, so this also applies to the browser extension): task-list checkboxes are now named after their item, the muted text color (`--ink-3`) and alert titles meet WCAG AA contrast, and unselected sidebar tabs are readable in the light theme.
   - Build and test: `npm run build:vscode`, `npm run package:vscode`, `npm run test:vscode:webview`, `npm run test:vscode`.
 - **New editor (CodeMirror 6)** in the Edit view: Markdown syntax highlighting, line numbers, active-line highlight, bracket matching, soft wrap, and find & replace inside the editor (⌘/Ctrl F).
   - Enter continues lists, task lists and quotes; Backspace removes list markup. Tab / Shift+Tab indent and outdent (Esc then Tab leaves the editor).

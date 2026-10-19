@@ -13,7 +13,12 @@ import { renderKey, type Settings } from '@/shared/settings'
 import { computeStats } from '@/shared/stats'
 import { parseWorkspaceUrl } from '@/shared/urls'
 import { DocumentView } from '@/viewer/document-view'
-import { renderExportHtml, safeFileName } from '@/viewer/export-html'
+import {
+  cleanForExport,
+  renderExportHtml,
+  safeFileName,
+  serializeForExport,
+} from '@/viewer/export-html'
 import { hideBanner, showBanner, type Layout } from '@/viewer/layout'
 import { idFromHash, scrollToId, scrollToLine, topVisibleLine } from '@/viewer/navigation'
 import { SearchBar } from '@/viewer/search-bar'
@@ -349,7 +354,20 @@ export class PreviewApp {
     else if (name === 'toggleSidebar') this.toggleSidebar()
     else if (name === 'focusMode') this.toggleFocus()
     else if (name === 'exportHtml') void this.exportHtml()
+    else if (name === 'copyHtml') void this.copyHtml()
     else this.runDoctor()
+  }
+
+  /** The rendered article as an HTML fragment (diagrams included), for pasting elsewhere. */
+  async copyHtml(): Promise<void> {
+    if (!this.doc || !this.result) return
+    try {
+      await this.docView.diagrams.renderAll(this.layout.article)
+      const text = serializeForExport(cleanForExport(this.layout.article))
+      this.bridge.post({ type: 'copy', text })
+    } catch (error) {
+      this.banner(`Could not copy: ${errorMessage(error)}`)
+    }
   }
 
   /** Builds the self-contained HTML (diagrams fully rendered) and hands it to the host to save. */

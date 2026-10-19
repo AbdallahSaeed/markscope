@@ -7,7 +7,7 @@
   --raised: oklch(99.6% 0.003 85);
   --ink: oklch(23% 0.016 265);
   --ink-2: oklch(41% 0.016 265);
-  --ink-3: oklch(55% 0.013 265);
+  --ink-3: oklch(51% 0.013 265); /* ≥ 4.5:1 on --paper-2 (WCAG AA for small text) */
   --rule: oklch(89% 0.01 85);
   --rule-strong: oklch(80% 0.012 85);
   --accent: oklch(50% 0.2 264);

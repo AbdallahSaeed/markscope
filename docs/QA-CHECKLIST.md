@@ -120,3 +120,5 @@ Install the `.vsix` (`code --install-extension release/markscope-<version>.vsix`
 57. Untrusted workspace (Restricted Mode) → the preview still renders; workspace settings that enable raw HTML, diagrams or remote images are ignored.
 58. **Markscope: Export as HTML** → a save dialog; the saved file opens offline with diagrams, math and code highlighting, and the browser's network panel shows no requests.
 59. **Markscope: Open in Reader** (and Reopen Editor With… → Markscope Reader) → a full tab with outline and search; it is read-only, titled with the file name, and Problems still show. Markdown still opens in the text editor by default.
+60. The status bar shows `N words · M min` (and a warning count when the doctor finds problems) while a preview is visible; clicking it opens Problems. It disappears when no preview is visible.
+61. **Markscope: Copy Rendered HTML** → paste into a text editor: an HTML fragment (no `<html>` wrapper, no viewer chrome), diagrams as SVG.

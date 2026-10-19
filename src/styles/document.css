@@ -282,7 +282,8 @@ pre.has-gutter {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--c);
+  /* Small text: blend toward the ink so every alert type stays readable (WCAG AA). */
+  color: color-mix(in oklch, var(--c) 72%, var(--ink));
   margin: 0 0 0.35em !important;
 }
 

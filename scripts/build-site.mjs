@@ -4,7 +4,7 @@
  * store screenshots. Store links come from env vars once listings are live.
  *
  *   GITHUB_REPOSITORY=owner/markscope node scripts/build-site.mjs
- *   CHROME_STORE_URL=… FIREFOX_STORE_URL=…   (optional)
+ *   CHROME_STORE_URL=… FIREFOX_STORE_URL=… OPEN_VSX_URL=… VSCODE_MARKETPLACE_URL=…   (optional)
  */
 import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
@@ -21,13 +21,18 @@ const releaseUrl = `${repoUrl}/releases/latest`
 const siteUrl = process.env.SITE_URL ?? `https://${owner.toLowerCase()}.github.io/${name}/`
 const chromeUrl = process.env.CHROME_STORE_URL ?? ''
 const firefoxUrl = process.env.FIREFOX_STORE_URL ?? ''
+// The VS Code listing is live; the variable only overrides it (for example after a rename).
+const vscodeUrl =
+  process.env.VSCODE_MARKETPLACE_URL ||
+  'https://marketplace.visualstudio.com/items?itemName=AbdallahSaeed.markscope'
+const openVsxUrl = process.env.OPEN_VSX_URL ?? ''
 
 const escape = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 
-function storeCard(label, mark, detail, url) {
+function storeCard(label, mark, detail, url, pendingLabel = 'In review') {
   const status = url
     ? '<span class="store-status is-live">Available</span>'
-    : '<span class="store-status is-pending">In review</span>'
+    : `<span class="store-status is-pending">${pendingLabel}</span>`
   const body = `<span class="store-mark" aria-hidden="true">${mark}</span><span class="store-text"><b>${label}</b><span>${detail}</span></span>${status}`
   return url ? `<a class="store" href="${escape(url)}">${body}</a>` : `<div class="store">${body}</div>`
 }
@@ -47,6 +52,8 @@ const vars = {
   STORE_CARDS: [
     storeCard('Chrome Web Store', 'C', 'Chrome, Edge, Brave, Arc', chromeUrl),
     storeCard('Firefox Add-ons', 'F', 'Firefox 140+', firefoxUrl),
+    storeCard('VS Code Marketplace', 'V', 'VS Code', vscodeUrl),
+    storeCard('Open VSX', 'O', 'VSCodium, Cursor, Windsurf', openVsxUrl, 'Coming soon'),
   ].join(''),
 }
 const fill = (html, extra = {}) =>

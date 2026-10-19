@@ -36,6 +36,26 @@ const run = spawnSync(
 )
 if (run.status !== 0) process.exit(run.status ?? 1)
 
+// Nothing but the built extension may ship: no sources, maps or tests.
+const listing = spawnSync('npx', ['--no-install', 'vsce', 'ls'], {
+  cwd: dir,
+  encoding: 'utf8',
+  shell: process.platform === 'win32',
+})
+const files = (listing.stdout ?? '')
+  .split('\n')
+  .map(l => l.trim())
+  .filter(Boolean)
+const stray = files.filter(f =>
+  /\.map$|\.tsx?$|(^|\/)(tests?|src|node_modules)\//.test(f),
+)
+if (listing.status !== 0 || files.length === 0 || stray.length > 0) {
+  console.error(
+    `vsce ls found files that must not ship:\n${stray.join('\n') || '(listing failed)'}`,
+  )
+  process.exit(1)
+}
+
 const bytes = (await stat(file)).size
 if (bytes > MAX_VSIX_BYTES) {
   console.error(

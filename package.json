@@ -65,6 +65,7 @@
     "mermaid": "^12.1.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@playwright/test": "^1.64.0",
     "@types/chrome": "^0.3.4",
     "@types/mocha": "^10.0.10",

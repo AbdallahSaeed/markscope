@@ -34,6 +34,8 @@ jobs:
           # Set these repository variables once the store listings are live.
           CHROME_STORE_URL: ${{ vars.CHROME_STORE_URL }}
           FIREFOX_STORE_URL: ${{ vars.FIREFOX_STORE_URL }}
+          VSCODE_MARKETPLACE_URL: ${{ vars.VSCODE_MARKETPLACE_URL }}
+          OPEN_VSX_URL: ${{ vars.OPEN_VSX_URL }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

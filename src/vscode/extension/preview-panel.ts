@@ -43,6 +43,8 @@ export interface PanelHost {
   panelClosed(panel: PreviewPanel): void
   /** Another panel shows this document? (decides when diagnostics are cleared). */
   isShownElsewhere(doc: vscode.TextDocument, except: PreviewPanel): boolean
+  /** What a panel shows or how it looks changed: refresh the status bar. */
+  stateChanged(): void
 }
 
 const webviewFile = (extensionUri: vscode.Uri, ...parts: string[]) =>
@@ -90,6 +92,7 @@ export class PreviewPanel {
   /** Set when the host asked the webview for an export; the webview can't start one on its own. */
   private exportRequested = false
   private exportTarget: vscode.Uri | undefined
+  private copyRequested = false
   private lastExternalOpen = 0
 
   constructor(
@@ -128,7 +131,7 @@ export class PreviewPanel {
   /** Reader tabs are titled by VS Code (the file name); previews say what they are. */
   private updateTitle(): void {
     if (this.kind === 'reader' || !this.doc) return
-    this.panel.title = `${this.locked ? '🔒 ' : ''}Preview ${fileName(this.doc)}`
+    this.panel.title = previewTitle(this.doc, this.locked)
   }
 
   get isLocked(): boolean {
@@ -167,6 +170,7 @@ export class PreviewPanel {
     }
     this.updateTitle()
     this.panel.webview.options = panelOptions(this.host.extensionUri, doc)
+    this.host.stateChanged()
     if (
       previous &&
       !sameUri(previous, doc) &&
@@ -201,6 +205,7 @@ export class PreviewPanel {
       baseUri: rel ? workspaceUrl(DOC_ROOT_ID, rel) : null,
       hash,
     })
+    this.host.stateChanged()
   }
 
   /** The document changed: refresh after a pause that grows with its size. */
@@ -245,6 +250,19 @@ export class PreviewPanel {
     this.exportRequested = true
     this.exportTarget = target
     this.sendCommand('exportHtml')
+  }
+
+  /** Asks the webview for the rendered HTML of the article; the answer goes to the clipboard. */
+  requestCopy(): void {
+    this.copyRequested = true
+    this.sendCommand('copyHtml')
+  }
+
+  private async saveCopy(text: string): Promise<void> {
+    if (!this.copyRequested) return // only a copy the host asked for
+    this.copyRequested = false
+    await vscode.env.clipboard.writeText(text)
+    vscode.window.setStatusBarMessage('Markscope: copied the rendered HTML', 3000)
   }
 
   private async saveExport(html: string, name: string): Promise<void> {
@@ -337,8 +355,9 @@ export class PreviewPanel {
       case 'exportHtml':
         return this.saveExport(message.html, message.fileName)
       case 'copy':
+        return this.saveCopy(message.text)
       case 'ai':
-        return // later releases
+        return // a later release
     }
   }
 
@@ -461,6 +480,11 @@ export class PreviewPanel {
 
 function sameUri(a: vscode.TextDocument, b: vscode.TextDocument): boolean {
   return a.uri.toString() === b.uri.toString()
+}
+
+/** The tab title of a preview, so a panel can be created with its final name (no placeholder flash). */
+export function previewTitle(doc: vscode.TextDocument, locked = false): string {
+  return `${locked ? '🔒 ' : ''}Preview ${fileName(doc)}`
 }
 
 function fileName(doc: vscode.TextDocument): string {

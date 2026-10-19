@@ -27,6 +27,7 @@ export const WEBVIEW_COMMANDS = [
   'focusMode',
   'runDoctor',
   'exportHtml',
+  'copyHtml',
 ] as const
 export type WebviewCommand = (typeof WEBVIEW_COMMANDS)[number]
 

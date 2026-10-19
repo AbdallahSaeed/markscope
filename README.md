@@ -67,7 +67,8 @@ Requests go straight from the extension's service worker to your provider. There
 
 ### From a store
 
-Chrome Web Store and Firefox Add-ons listings are in review (see [docs/PUBLISHING.md](docs/PUBLISHING.md)). Until they are live, install from a release zip.
+- **VS Code:** [Markscope on the Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=AbdallahSaeed.markscope), or search “Markscope” in the Extensions view. For VSCodium, Cursor and Windsurf an Open VSX listing is coming.
+- **Chrome Web Store and Firefox Add-ons** listings are in review (see [docs/PUBLISHING.md](docs/PUBLISHING.md)). Until they are live, install from a release zip.
 
 ### From a release zip
 
@@ -76,9 +77,9 @@ Chrome Web Store and Firefox Add-ons listings are in review (see [docs/PUBLISHIN
 3. Click **Load unpacked** and select the unzipped folder.
 4. Optional, for local files: in the extension's **Details**, enable **Allow access to file URLs**.
 
-### In VS Code (not published yet)
+### In VS Code
 
-A VS Code extension is in development (see [docs/VSCODE-PLAN.md](docs/VSCODE-PLAN.md)). To try it, build the package and install it:
+Install it from the [Marketplace](https://marketplace.visualstudio.com/items?itemName=AbdallahSaeed.markscope) (see [docs/VSCODE-PLAN.md](docs/VSCODE-PLAN.md) for how it is built). To build and install it yourself:
 
 ```bash
 npm ci && npm run build:vscode && npm run package:vscode
