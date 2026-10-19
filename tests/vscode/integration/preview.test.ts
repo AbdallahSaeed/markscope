@@ -139,6 +139,31 @@ describe('Markscope preview', () => {
     )
   })
 
+  it('keeps following the file after its editor was closed and reopened', async () => {
+    const editor = await openEditor('broken.md')
+    await vscode.commands.executeCommand('markscope.openPreviewToSide')
+    await waitFor('the problem', () => problems(editor.document.uri).length > 0)
+    // Closing the editor disposes the TextDocument; reopening makes a new object.
+    const textTab = vscode.window.tabGroups.all
+      .flatMap(g => [...g.tabs])
+      .find(
+        t =>
+          t.input instanceof vscode.TabInputText &&
+          t.input.uri.toString() === editor.document.uri.toString(),
+      )
+    assert.ok(textTab, 'the text editor tab exists')
+    await vscode.window.tabGroups.close(textTab)
+    // VS Code may dispose the document now or much later; either way the preview must keep following the file.
+    // Beside the preview: in the preview's own group the tab would hide it, and a hidden webview is not running.
+    const again = await vscode.window.showTextDocument(
+      await vscode.workspace.openTextDocument(fixture('broken.md')),
+      { preview: false, viewColumn: vscode.ViewColumn.Beside },
+    )
+    assert.strictEqual(previewTabs().length, 1, 'no duplicate preview')
+    await replaceText(again, '#missing', '#title')
+    await waitFor('the problem to clear', () => problems(again.document.uri).length === 0)
+  })
+
   it('clears its problems when the preview closes', async () => {
     const editor = await openEditor('broken.md')
     await vscode.commands.executeCommand('markscope.openPreviewToSide')

@@ -31,6 +31,10 @@ export function buildCsp(
     `font-src ${opts.cspSource}`,
     // The render worker is started from a blob of the bundled worker script.
     'worker-src blob:',
+    "base-uri 'none'",
+    "form-action 'none'",
+    "frame-src 'none'",
+    "object-src 'none'",
     // Only to read our own bundled files (worker source, document CSS).
     `connect-src ${opts.cspSource}`,
   ].join('; ')

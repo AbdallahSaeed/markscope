@@ -86,16 +86,19 @@ describe('host theme', () => {
 
   test('only decides what "system" means', () => {
     setHostTheme('light')
-    expect(resolvedTheme({ ...defaultSettings(), theme: 'system' })).toBe('light')
-    expect(resolvedTheme({ ...defaultSettings(), theme: 'dark' })).toBe('dark')
-    setHostTheme(null)
+    try {
+      expect(resolvedTheme({ ...defaultSettings(), theme: 'system' })).toBe('light')
+      expect(resolvedTheme({ ...defaultSettings(), theme: 'dark' })).toBe('dark')
+    } finally {
+      setHostTheme(null)
+    }
   })
 })
 
 describe('layout hide option', () => {
   test('marks the requested controls and nothing else', () => {
     const layout = buildLayout(document.createElement('div'), {
-      hide: ['home', 'favorite', 'save', 'modes', 'palette', 'more'],
+      hide: ['home', 'favorite', 'save', 'modes', 'palette', 'theme', 'more'],
     })
     for (const el of [
       layout.homeBtn,
@@ -103,6 +106,7 @@ describe('layout hide option', () => {
       layout.saveBtn,
       layout.discardBtn,
       layout.paletteBtn,
+      layout.themeBtn,
       layout.moreBtn,
       layout.modeButtons.read.parentElement!,
     ])

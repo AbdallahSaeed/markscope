@@ -42,6 +42,15 @@ export interface PreviewDeps {
   settings: Settings
 }
 
+/** The line the reader was at, from the state a previous page of this panel saved. */
+function savedPosition(state: unknown): { uri: string; line: number } | null {
+  if (typeof state !== 'object' || state === null) return null
+  const { uri, line } = state as Record<string, unknown>
+  return typeof uri === 'string' && Number.isInteger(line) && (line as number) >= 1
+    ? { uri, line: line as number }
+    : null
+}
+
 export class PreviewApp {
   settings: Settings
   private doc: PreviewDoc | null = null
@@ -50,6 +59,8 @@ export class PreviewApp {
   private renderSeq = 0
   private lastRenderKey = ''
   private lastSentLine = 0
+  private lastTheme: 'light' | 'dark'
+  private restoreLine: { uri: string; line: number } | null
   private highlighted: Element | null = null
   private sidebarHidden: boolean
   private readonly layout: Layout
@@ -69,6 +80,8 @@ export class PreviewApp {
     this.renderer = deps.renderer
     this.settings = deps.settings
     this.sidebarHidden = !deps.settings.layout.sidebar
+    this.lastTheme = resolvedTheme(deps.settings)
+    this.restoreLine = savedPosition(deps.bridge.getState())
 
     this.sidebar = new Sidebar({
       onHeading: id => scrollToId(this.layout.article, id),
@@ -119,7 +132,7 @@ export class PreviewApp {
   applySettings(next: Settings): void {
     const prev = this.settings
     this.settings = next
-    this.refreshTheme(prev)
+    this.refreshTheme()
     document.body.classList.toggle('sidebar-hidden', this.sidebarHidden)
     this.layout.sidebarBtn.setAttribute('aria-expanded', String(this.sidebarOpen()))
     if (
@@ -133,11 +146,12 @@ export class PreviewApp {
   }
 
   /** Re-applies appearance (also when VS Code's own theme changed). */
-  refreshTheme(prev: Settings = this.settings): void {
+  refreshTheme(): void {
     applyAppearance(this.settings)
     const theme = resolvedTheme(this.settings)
-    if (resolvedTheme(prev) !== theme || prev !== this.settings)
-      this.docView.diagrams.retheme(this.layout.article, theme === 'dark')
+    if (theme === this.lastTheme) return
+    this.lastTheme = theme
+    this.docView.diagrams.retheme(this.layout.article, theme === 'dark')
   }
 
   // --------------------------------------------------------------- documents
@@ -152,7 +166,13 @@ export class PreviewApp {
     await this.render({ preserveScroll: sameFile })
     if (hash)
       requestAnimationFrame(() => scrollToId(this.layout.article, idFromHash(hash)))
-    else if (!sameFile) window.scrollTo(0, 0)
+    else if (!sameFile) {
+      // A hidden tab reloads this page: come back to where the reader was.
+      const restore = this.restoreLine?.uri === doc.uri ? this.restoreLine.line : 0
+      this.restoreLine = null
+      if (restore) this.applyScroll(restore)
+      else window.scrollTo(0, 0)
+    }
     this.persistState()
   }
 
@@ -162,7 +182,11 @@ export class PreviewApp {
   }
 
   private persistState(): void {
-    this.bridge.setState({ uri: this.doc?.uri ?? null, locked: this.locked })
+    this.bridge.setState({
+      uri: this.doc?.uri ?? null,
+      locked: this.locked,
+      line: topVisibleLine(this.layout.article),
+    })
   }
 
   async render(opts: { preserveScroll: boolean }): Promise<void> {
@@ -247,7 +271,9 @@ export class PreviewApp {
   private applyScroll(line: number): void {
     scrollToLine(this.layout.article, line, 'instant')
     // Layout is synchronous: this reads the position we just set.
-    this.echo.expect(topVisibleLine(this.layout.article))
+    const top = topVisibleLine(this.layout.article)
+    this.echo.expect(top)
+    this.lastSentLine = top // a later real scroll back to the old line must be reported
   }
 
   /** The editor cursor moved: mark the block it is in. */
@@ -275,6 +301,7 @@ export class PreviewApp {
           if (line < 1 || this.echo.isEcho(line) || line === this.lastSentLine) return
           this.lastSentLine = line
           this.bridge.post({ type: 'scrolled', line })
+          this.persistState()
         })
       },
       { passive: true },

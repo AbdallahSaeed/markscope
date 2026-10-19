@@ -407,13 +407,7 @@ export class DocumentView {
       !event.shiftKey &&
       event.button === 0
     ) {
-      let hash = ''
-      try {
-        hash = new URL(anchor?.getAttribute('href') ?? '', 'https://x.invalid/').hash
-      } catch {
-        // no hash
-      }
-      if (this.hooks.onNavigateWorkspace?.(docTarget, hash)) {
+      if (this.hooks.onNavigateWorkspace?.(docTarget, anchor ? hashOf(anchor) : '')) {
         event.preventDefault()
         return
       }

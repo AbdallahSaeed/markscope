@@ -4,7 +4,7 @@
  */
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { appendFile, mkdir, readFile, stat } from 'node:fs/promises'
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
@@ -25,11 +25,15 @@ try {
 
 const name = `markscope-${pkg.version}.vsix`
 const file = path.join(releaseDir, name)
-const vsce = path.join(root, 'node_modules/.bin/vsce')
-const run = spawnSync(vsce, ['package', '--no-dependencies', '--out', file], {
-  cwd: dir,
-  stdio: 'inherit',
-})
+const run = spawnSync(
+  'npx',
+  ['--no-install', 'vsce', 'package', '--no-dependencies', '--out', file],
+  {
+    cwd: dir, // npx finds vsce in the repo's node_modules from here
+    stdio: 'inherit',
+    shell: process.platform === 'win32', // npx is a .cmd shim there
+  },
+)
 if (run.status !== 0) process.exit(run.status ?? 1)
 
 const bytes = (await stat(file)).size
@@ -42,5 +46,9 @@ if (bytes > MAX_VSIX_BYTES) {
 const sha = createHash('sha256')
   .update(await readFile(file))
   .digest('hex')
-await appendFile(path.join(releaseDir, 'SHA256SUMS.txt'), `${sha}  ${name}\n`)
+const sums = path.join(releaseDir, 'SHA256SUMS.txt')
+const kept = (await readFile(sums, 'utf8').catch(() => ''))
+  .split('\n')
+  .filter(line => line && !line.endsWith(`  ${name}`))
+await writeFile(sums, [...kept, `${sha}  ${name}`].join('\n') + '\n')
 console.log(`${name}  ${(bytes / 1024).toFixed(0)} KB  sha256:${sha.slice(0, 16)}…`)

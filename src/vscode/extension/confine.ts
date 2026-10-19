@@ -13,7 +13,12 @@ export async function isRealPathInside(root: string, target: string): Promise<bo
   try {
     const [realRoot, realTarget] = await Promise.all([realpath(root), realpath(target)])
     const rel = path.relative(fold(realRoot), fold(realTarget))
-    return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel)
+    return (
+      rel !== '' &&
+      rel !== '..' &&
+      !rel.startsWith(`..${path.sep}`) &&
+      !path.isAbsolute(rel)
+    )
   } catch {
     return false
   }

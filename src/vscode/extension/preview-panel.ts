@@ -5,6 +5,7 @@
  * file by URI, only a folder-relative path, which is confined to the
  * document's root before anything is opened or served.
  */
+import * as os from 'node:os'
 import * as vscode from 'vscode'
 import { workspaceUrl } from '@/shared/urls'
 import {
@@ -19,6 +20,8 @@ import type { DiagnosticsSink } from './diagnostics'
 import { buildWebviewHtml, makeNonce } from './html'
 import {
   DOC_ROOT_ID,
+  isBroadRoot,
+  MAX_PREVIEW_CHARS,
   isMarkdownFileName,
   isMediaFileName,
   parseExternalHref,
@@ -28,6 +31,9 @@ import {
 } from './link-policy'
 
 export const PREVIEW_VIEW_TYPE = 'markscope.preview'
+
+const MAX_MEDIA_IN_FLIGHT = 16
+const EXTERNAL_OPEN_INTERVAL_MS = 1000
 
 export interface PanelHost {
   readonly extensionUri: vscode.Uri
@@ -44,17 +50,22 @@ const webviewFile = (extensionUri: vscode.Uri, ...parts: string[]) =>
 /** The folder links and images are confined to: the workspace folder, else the document's own folder. */
 export function rootFor(uri: vscode.Uri): vscode.Uri | undefined {
   if (uri.scheme === 'untitled') return undefined
-  return vscode.workspace.getWorkspaceFolder(uri)?.uri ?? vscode.Uri.joinPath(uri, '..')
+  const folder = vscode.workspace.getWorkspaceFolder(uri)?.uri
+  if (folder) return folder
+  const dir = vscode.Uri.joinPath(uri, '..')
+  // A loose file in "/" or the home folder must not make everything below it servable.
+  return uri.scheme === 'file' &&
+    isBroadRoot(dir.path, vscode.Uri.file(os.homedir()).path)
+    ? undefined
+    : dir
 }
 
+/** Resources the webview may load: its own bundle and the displayed document's root, nothing else. */
 export function panelOptions(
   extensionUri: vscode.Uri,
   doc?: vscode.TextDocument,
 ): vscode.WebviewOptions {
-  const roots = [
-    webviewFile(extensionUri),
-    ...(vscode.workspace.workspaceFolders ?? []).map(f => f.uri),
-  ]
+  const roots = [webviewFile(extensionUri)]
   const root = doc ? rootFor(doc.uri) : undefined
   if (root) roots.push(root)
   return {
@@ -71,9 +82,11 @@ export class PreviewPanel {
   private pendingHash = ''
   private updateTimer: ReturnType<typeof setTimeout> | undefined
   private lastRevealedFromPreview = 0
-  private remoteImages = readSettings().privacy.remoteImages
+  private remoteImages = readSettings().privacy.remoteImages as 'allow' | 'block'
   private readonly disposables: vscode.Disposable[] = []
   private disposed = false
+  private mediaInFlight = 0
+  private lastExternalOpen = 0
 
   constructor(
     readonly panel: vscode.WebviewPanel,
@@ -90,6 +103,17 @@ export class PreviewPanel {
 
   get document(): vscode.TextDocument | null {
     return this.doc
+  }
+
+  /** VS Code makes a new TextDocument when a closed file is reopened: follow the file, not the object. */
+  rebind(doc: vscode.TextDocument): void {
+    if (!this.doc || !sameUri(this.doc, doc) || this.doc === doc) return
+    this.doc = doc
+    this.refreshNow()
+  }
+
+  showsUri(uri: vscode.Uri): boolean {
+    return this.doc?.uri.toString() === uri.toString()
   }
 
   get isLocked(): boolean {
@@ -120,9 +144,19 @@ export class PreviewPanel {
     const previous = this.doc
     this.doc = doc
     this.pendingHash = hash
+    // Images mode lives in the CSP and is resource-scoped: follow the document's folder.
+    const remote = readSettings(doc.uri).privacy.remoteImages
+    if (remote !== this.remoteImages) {
+      this.remoteImages = remote
+      this.loadHtml() // `ready` comes again and the document is sent then
+    }
     this.panel.title = `${this.locked ? '🔒 ' : ''}Preview ${fileName(doc)}`
     this.panel.webview.options = panelOptions(this.host.extensionUri, doc)
-    if (previous && previous !== doc && !this.host.isShownElsewhere(previous, this))
+    if (
+      previous &&
+      !sameUri(previous, doc) &&
+      !this.host.isShownElsewhere(previous, this)
+    )
       this.host.diagnostics.clear(previous.uri)
     this.sendDocument()
   }
@@ -135,6 +169,10 @@ export class PreviewPanel {
   private sendDocument(): void {
     const doc = this.doc
     if (!doc || !this.ready) return
+    if (doc.getText().length > MAX_PREVIEW_CHARS) {
+      this.banner('This file is too large to preview. Use the editor.')
+      return
+    }
     const root = rootFor(doc.uri)
     const rel = root ? relativeToRoot(root.path, doc.uri.path) : null
     const hash = this.pendingHash
@@ -198,7 +236,10 @@ export class PreviewPanel {
 
   /** The editor scrolled to `line` (1-based). */
   syncScroll(line: number): void {
-    if (line === this.lastRevealedFromPreview) return // our own echo, compared by value
+    if (line === this.lastRevealedFromPreview) {
+      this.lastRevealedFromPreview = 0 // our own echo, compared by value; consumed once
+      return
+    }
     this.post({ type: 'scrollToLine', line })
   }
 
@@ -264,6 +305,9 @@ export class PreviewPanel {
   private async openExternal(href: string): Promise<void> {
     const url = parseExternalHref(href)
     if (!url) return this.banner('That link type is not supported.')
+    const now = Date.now()
+    if (now - this.lastExternalOpen < EXTERNAL_OPEN_INTERVAL_MS) return // no prompt spam
+    this.lastExternalOpen = now
     // VS Code shows its own trusted-domains prompt for web links.
     await vscode.env.openExternal(vscode.Uri.parse(url.toString(), true))
   }
@@ -319,7 +363,7 @@ export class PreviewPanel {
   }
 
   private editorFor(doc: vscode.TextDocument): vscode.TextEditor | undefined {
-    return vscode.window.visibleTextEditors.find(e => e.document === doc)
+    return vscode.window.visibleTextEditors.find(e => sameUri(e.document, doc))
   }
 
   private editorColumn(): vscode.ViewColumn | undefined {
@@ -362,6 +406,10 @@ export class PreviewPanel {
     this.panel.dispose()
     this.host.panelClosed(this)
   }
+}
+
+function sameUri(a: vscode.TextDocument, b: vscode.TextDocument): boolean {
+  return a.uri.toString() === b.uri.toString()
 }
 
 function fileName(doc: vscode.TextDocument): string {

@@ -6,6 +6,7 @@ import { toDiagnosticSpecs } from '@/vscode/extension/diagnostic-map'
 import { isRealPathInside } from '@/vscode/extension/confine'
 import { buildCsp, buildWebviewHtml, makeNonce } from '@/vscode/extension/html'
 import {
+  isBroadRoot,
   isMarkdownFileName,
   isMediaFileName,
   parseExternalHref,
@@ -60,7 +61,28 @@ describe('link policy', () => {
   })
 })
 
+describe('roots too broad to serve from', () => {
+  test('filesystem roots, drive roots and the home folder', () => {
+    for (const p of ['/', '', '/c:', '/c:/', '/home/me', '/home/me/'])
+      expect(isBroadRoot(p, '/home/me'), p).toBe(true)
+    for (const p of ['/home/me/proj', '/c:/work', '/srv/docs'])
+      expect(isBroadRoot(p, '/home/me'), p).toBe(false)
+    expect(isBroadRoot('/home/me')).toBe(false) // no home known: only roots count
+  })
+})
+
 describe('webview HTML and CSP', () => {
+  test('closes the directives default-src does not cover', () => {
+    const csp = buildCsp({ cspSource: 'https://x', nonce: 'n', remoteImages: 'block' })
+    for (const d of [
+      "base-uri 'none'",
+      "form-action 'none'",
+      "frame-src 'none'",
+      "object-src 'none'",
+    ])
+      expect(csp).toContain(d)
+  })
+
   const base = { cspSource: 'https://x.vscode-cdn.net', nonce: 'N0nce' }
 
   test('blocks remote images unless allowed', () => {
@@ -148,6 +170,13 @@ describe('symlink-safe confinement', () => {
     )
     expect(await isRealPathInside(root(), path.join(root(), 'docs', 'leak.png'))).toBe(
       false,
+    )
+  })
+  test('a name that merely starts with two dots is not a climb', async () => {
+    await mkdir(path.join(root(), '..notes'))
+    await writeFile(path.join(root(), '..notes', 'a.png'), 'x')
+    expect(await isRealPathInside(root(), path.join(root(), '..notes', 'a.png'))).toBe(
+      true,
     )
   })
   test('refuses missing files, the root itself and outside paths', async () => {

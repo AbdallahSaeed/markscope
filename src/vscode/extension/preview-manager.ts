@@ -17,6 +17,16 @@ const isMarkdownDocument = (doc: vscode.TextDocument): boolean =>
     doc.uri.path.toLowerCase().endsWith(`.${ext}`),
   )
 
+/** The deleted URI is the file itself or a folder above it. */
+function isSameOrInside(file: vscode.Uri | undefined, deleted: vscode.Uri): boolean {
+  if (!file) return false
+  const target = file.toString()
+  const gone = deleted.toString()
+  return target === gone || target.startsWith(gone.endsWith('/') ? gone : `${gone}/`)
+}
+
+const RESTORABLE_SCHEMES = new Set(['file', 'vscode-vfs', 'vscode-remote'])
+
 interface SavedState {
   uri: string | null
   locked: boolean
@@ -25,7 +35,7 @@ interface SavedState {
 function parseState(state: unknown): SavedState | null {
   if (typeof state !== 'object' || state === null) return null
   const { uri, locked } = state as Record<string, unknown>
-  if (uri !== null && typeof uri !== 'string') return null
+  if (uri !== null && (typeof uri !== 'string' || uri.length > 8192)) return null
   return { uri, locked: locked === true }
 }
 
@@ -44,7 +54,7 @@ export class PreviewManager implements PanelHost, vscode.WebviewPanelSerializer 
   }
 
   isShownElsewhere(doc: vscode.TextDocument, except: PreviewPanel): boolean {
-    return [...this.panels].some(p => p !== except && p.document === doc)
+    return [...this.panels].some(p => p !== except && p.showsUri(doc.uri))
   }
 
   // ------------------------------------------------------------------ panels
@@ -68,7 +78,7 @@ export class PreviewManager implements PanelHost, vscode.WebviewPanelSerializer 
     hash = '',
   ): Promise<void> {
     const beside = column === vscode.ViewColumn.Beside
-    const existing = [...this.panels].find(p => p.document === doc)
+    const existing = [...this.panels].find(p => p.showsUri(doc.uri))
     if (existing) {
       existing.panel.reveal(beside ? column : undefined, beside)
       return
@@ -95,10 +105,16 @@ export class PreviewManager implements PanelHost, vscode.WebviewPanelSerializer 
   ): Promise<void> {
     const preview = this.track(new PreviewPanel(panel, this, parseState(state)?.locked))
     const saved = parseState(state)
-    if (!saved?.uri) return
+    if (!saved?.uri) return preview.banner('Open a Markdown file to preview it.')
     try {
       const uri = vscode.Uri.parse(saved.uri, true)
-      if (!isMarkdownFileName(uri.path)) return // persisted state is not trusted blindly
+      // The webview's saved state is not trusted: only a Markdown file inside this workspace comes back.
+      const restorable =
+        RESTORABLE_SCHEMES.has(uri.scheme) &&
+        isMarkdownFileName(uri.path) &&
+        vscode.workspace.getWorkspaceFolder(uri) !== undefined
+      if (!restorable)
+        return preview.banner('The previewed file is outside this workspace.')
       await preview.show(await vscode.workspace.openTextDocument(uri))
     } catch {
       preview.banner('The previewed file could not be reopened.')
@@ -111,7 +127,7 @@ export class PreviewManager implements PanelHost, vscode.WebviewPanelSerializer 
     const w = vscode.workspace
     const win = vscode.window
     const showing = (doc: vscode.TextDocument) =>
-      [...this.panels].filter(p => p.document === doc)
+      [...this.panels].filter(p => p.showsUri(doc.uri))
     return [
       this.diagnostics,
       win.registerWebviewPanelSerializer(PREVIEW_VIEW_TYPE, this),
@@ -119,6 +135,9 @@ export class PreviewManager implements PanelHost, vscode.WebviewPanelSerializer 
         if (e.contentChanges.length === 0) return
         for (const p of showing(e.document))
           if (readPreviewOptions(e.document.uri).updateOn === 'change') p.scheduleUpdate()
+      }),
+      w.onDidOpenTextDocument(doc => {
+        for (const p of this.panels) p.rebind(doc)
       }),
       w.onDidSaveTextDocument(doc => {
         for (const p of showing(doc)) p.refreshNow()
@@ -129,7 +148,7 @@ export class PreviewManager implements PanelHost, vscode.WebviewPanelSerializer 
         for (const p of this.panels)
           if (
             !p.isLocked &&
-            p.document !== doc &&
+            !p.showsUri(doc.uri) &&
             readPreviewOptions(doc.uri).followActiveEditor
           )
             void p.show(doc)
@@ -151,10 +170,7 @@ export class PreviewManager implements PanelHost, vscode.WebviewPanelSerializer 
       }),
       w.onDidDeleteFiles(e => {
         for (const p of this.panels)
-          if (
-            p.document &&
-            e.files.some(f => f.toString() === p.document?.uri.toString())
-          )
+          if (p.document && e.files.some(f => isSameOrInside(p.document?.uri, f)))
             p.banner('This file was deleted.')
       }),
       ...this.registerCommands(),

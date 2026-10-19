@@ -221,7 +221,7 @@ test('saves what to restore: file and lock state', async ({ page }) => {
   await send(page, { type: 'lock', locked: true })
   await expect
     .poll(() => page.evaluate(() => (window as unknown as { __state: unknown }).__state))
-    .toEqual({ uri: 'file:///w/docs/readme.md', locked: true })
+    .toMatchObject({ uri: 'file:///w/docs/readme.md', locked: true })
 })
 
 test('hash links from the host land on the heading; commands drive the UI', async ({
@@ -255,4 +255,68 @@ test('the toolbar shows only what applies in VS Code', async ({ page }) => {
     await expect(page.locator(sel)).toBeHidden()
   await expect(page.getByRole('button', { name: /Find in document/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Toggle sidebar/ })).toBeVisible()
+})
+
+test('diagrams are re-themed when VS Code switches theme', async ({ page }) => {
+  await openWebview(page, host, { theme: 'vscode-dark' })
+  await start(page, '# T\n\n```mermaid\ngraph TD; A-->B;\n```\n')
+  const svg = page.locator('.ms-diagram svg').first()
+  await expect(svg).toBeVisible({ timeout: 30_000 })
+  await svg.evaluate(el => el.setAttribute('data-probe', '1'))
+  await page.evaluate(() => {
+    document.body.className = 'vscode-light'
+  })
+  // The old SVG (marked above) is replaced by one rendered with the light palette.
+  await expect(page.locator('.ms-diagram svg[data-probe]')).toHaveCount(0, {
+    timeout: 30_000,
+  })
+  await expect(page.locator('.ms-diagram svg')).toHaveCount(1)
+})
+
+test('a reloaded page (hidden tab shown again) returns to where the reader was', async ({
+  page,
+}) => {
+  const body = Array.from(
+    { length: 80 },
+    (_, i) => `## Section ${i}\n\nText ${i}.\n`,
+  ).join('\n')
+  await openWebview(page, host, {
+    state: { uri: 'file:///w/docs/readme.md', locked: false, line: 200 },
+  })
+  await start(page, `# T\n\n${body}`)
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(500)
+  // Restoring is not a user scroll: nothing is reported back to the editor.
+  await page.waitForTimeout(300)
+  expect((await posted(page)).filter(m => m.type === 'scrolled')).toHaveLength(0)
+})
+
+test('only the newest of a burst of document messages is rendered', async ({ page }) => {
+  await openWebview(page, host)
+  await sendInit(page, host)
+  // Large enough to render in the worker (async), so a burst really backs up.
+  const filler = 'A paragraph of text.\n\n'.repeat(4000)
+  await page.evaluate(filler => {
+    for (let v = 1; v <= 20; v++)
+      window.postMessage(
+        {
+          v: 1,
+          type: 'document',
+          uri: 'file:///w/docs/readme.md',
+          version: v,
+          text: `# Version ${v}\n\n${filler}`,
+          fileName: 'readme.md',
+          baseUri: null,
+          hash: '',
+        },
+        '*',
+      )
+  }, filler)
+  await expect(page.locator('.ms-doc h1')).toContainText('Version 20', {
+    timeout: 30_000,
+  })
+  await expect.poll(async () => (await last(page, 'doctor'))?.version).toBe(20)
+  const versions = (await posted(page))
+    .filter(m => m.type === 'doctor')
+    .map(m => m.version)
+  expect(versions.length).toBeLessThan(10)
 })

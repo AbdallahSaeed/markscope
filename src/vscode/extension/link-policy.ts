@@ -68,6 +68,19 @@ export function relativeToRoot(rootPath: string, docPath: string): string | null
   return rel === '' ? null : rel
 }
 
+/** Above this the preview shows a notice instead of rendering (every keystroke would re-send it). */
+export const MAX_PREVIEW_CHARS = 10 * 1024 * 1024
+
+/**
+ * A folder too broad to serve media from: a filesystem or drive root, or the
+ * home directory. A loose file there would otherwise expose everything below.
+ */
+export function isBroadRoot(path: string, homePath?: string): boolean {
+  const p = path.replace(/\/+$/, '')
+  if (p === '' || /^\/[a-zA-Z]:$/.test(p)) return true
+  return homePath !== undefined && p === homePath.replace(/\/+$/, '')
+}
+
 const SMALL_DOC = 64 * 1024
 const LARGE_DOC = 512 * 1024
 

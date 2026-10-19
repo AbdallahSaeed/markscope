@@ -44,7 +44,18 @@ export function createVscodeManifest({ version, publisher }) {
     main: './extension.js',
     activationEvents: [`onWebviewPanel:${PREVIEW_VIEW_TYPE}`],
     capabilities: {
-      untrustedWorkspaces: { supported: true },
+      // A cloned repo's .vscode/settings.json must not widen what a document may do.
+      untrustedWorkspaces: {
+        supported: 'limited',
+        description:
+          'In an untrusted workspace the preview ignores workspace settings that enable raw HTML, diagrams or remote images.',
+        restrictedConfigurations: [
+          'markscope.markdown.html',
+          'markscope.markdown.mermaid',
+          'markscope.markdown.graphviz',
+          'markscope.images.remote',
+        ],
+      },
       virtualWorkspaces: true,
     },
     contributes: {

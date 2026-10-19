@@ -86,30 +86,33 @@ export interface Posted {
 export async function openWebview(
   page: Page,
   host: FakeHost,
-  opts: { theme?: Theme; remote?: 'allow' | 'block' } = {},
+  opts: { theme?: Theme; remote?: 'allow' | 'block'; state?: unknown } = {},
 ): Promise<void> {
   const theme = opts.theme ?? 'vscode-light'
-  await page.addInitScript(theme => {
-    const w = window as unknown as Record<string, unknown>
-    w.__posted = []
-    w.__state = null
-    w.__workers = 0
-    w.acquireVsCodeApi = () => ({
-      postMessage: (m: unknown) => (w.__posted as unknown[]).push(m),
-      getState: () => w.__state,
-      setState: (s: unknown) => (w.__state = s),
-    })
-    const NativeWorker = window.Worker
-    window.Worker = class extends NativeWorker {
-      constructor(url: string | URL, options?: WorkerOptions) {
-        super(url, options)
-        w.__workers = (w.__workers as number) + 1
+  await page.addInitScript(
+    ({ theme, state }) => {
+      const w = window as unknown as Record<string, unknown>
+      w.__posted = []
+      w.__state = state ?? null
+      w.__workers = 0
+      w.acquireVsCodeApi = () => ({
+        postMessage: (m: unknown) => (w.__posted as unknown[]).push(m),
+        getState: () => w.__state,
+        setState: (s: unknown) => (w.__state = s),
+      })
+      const NativeWorker = window.Worker
+      window.Worker = class extends NativeWorker {
+        constructor(url: string | URL, options?: WorkerOptions) {
+          super(url, options)
+          w.__workers = (w.__workers as number) + 1
+        }
       }
-    }
-    document.addEventListener('DOMContentLoaded', () =>
-      document.body.classList.add(theme),
-    )
-  }, theme)
+      document.addEventListener('DOMContentLoaded', () =>
+        document.body.classList.add(theme),
+      )
+    },
+    { theme, state: opts.state },
+  )
   await page.goto(`${host.origin}/index.html?remote=${opts.remote ?? 'allow'}`)
   await page.waitForFunction(() =>
     ((window as unknown as { __posted: Posted[] }).__posted ?? []).some(

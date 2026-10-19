@@ -127,7 +127,10 @@ describe('generated manifest', () => {
       publisher: 'pub',
       engines: { vscode: '^1.90.0' },
       main: './extension.js',
-      capabilities: { untrustedWorkspaces: { supported: true }, virtualWorkspaces: true },
+      capabilities: {
+        untrustedWorkspaces: { supported: 'limited' },
+        virtualWorkspaces: true,
+      },
     })
     expect(markdownFileGlob()).toBe('*.{md,markdown,mdown,mkd,mkdn,mdx}')
   })

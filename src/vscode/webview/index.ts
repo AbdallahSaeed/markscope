@@ -96,7 +96,22 @@ async function main(): Promise<void> {
     }
   }
 
+  // Typing floods `document` messages; only the newest one is worth rendering.
+  let pendingDocument: HostMessage | null = null
   bridge.onMessage(message => {
+    if (message.type === 'document') {
+      const queued = pendingDocument !== null
+      pendingDocument = message
+      if (queued) return
+      queue = queue
+        .then(() => {
+          const latest = pendingDocument
+          pendingDocument = null
+          return latest ? handle(latest) : undefined
+        })
+        .catch(error => app?.banner(errorMessage(error)))
+      return
+    }
     queue = queue
       .then(() => handle(message))
       .catch(error => app?.banner(errorMessage(error)))
