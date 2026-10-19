@@ -70,7 +70,12 @@ export type HostMessage =
 
 export type WebviewMessage =
   | { type: 'ready' }
-  | { type: 'openLink'; kind: 'document' | 'external'; target: string; hash: string }
+  | {
+      type: 'openLink'
+      kind: 'document' | 'external' | 'file'
+      target: string
+      hash: string
+    }
   | { type: 'revealLine'; line: number }
   | { type: 'scrolled'; line: number }
   | { type: 'resolveMedia'; requestId: number; path: string }
@@ -121,7 +126,8 @@ export function parseWebviewMessage(raw: unknown): WebviewMessage | null {
     case 'ready':
       return { type: 'ready' }
     case 'openLink': {
-      if (raw.kind !== 'document' && raw.kind !== 'external') return null
+      if (raw.kind !== 'document' && raw.kind !== 'external' && raw.kind !== 'file')
+        return null
       if (!isString(raw.target, 8192) || raw.target === '') return null
       const hash = raw.hash === undefined ? '' : raw.hash
       if (!isString(hash, 2048) || (hash !== '' && !hash.startsWith('#'))) return null

@@ -119,6 +119,12 @@ export class PreviewApp {
           undefined,
           'warn',
         ),
+      onOpenFile: (target, hash) => {
+        const parsed = parseWorkspaceUrl(target)
+        if (!parsed) return false
+        this.bridge.post({ type: 'openLink', kind: 'file', target: parsed.path, hash })
+        return true
+      },
       onNavigateWorkspace: (target, hash) => {
         const parsed = parseWorkspaceUrl(target)
         if (!parsed) return false

@@ -24,7 +24,7 @@ Deviations from this plan, and why:
 - **Lines are 1-based on the wire** (as in the viewer); only the host converts to VS Code's 0-based lines.
 - **Panel restore** needs the webview to save `{ uri, locked }`, so the protocol gained a `lock` message and a `hash` on `document`.
 - **Status bar item** shows words, reading time and problem count for the visible preview (computed in the host; the preview also shows them in its footer and Info tab).
-- **Links to non-Markdown files** (for example `src/foo.ts`) are removed by the existing folder policy. Opening them with `vscode.open` is a follow-up.
+- **Links to non-Markdown files** (for example `src/foo.ts#L42`) open in the editor through an opt-in `file` link kind, confined to the document's folder; the browser still never links them.
 - Settings are `scope: resource` (window for `preview.*`) and generated from `src/vscode/config-schema.ts`.
 
 ## 1. Summary

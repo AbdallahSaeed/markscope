@@ -32,6 +32,11 @@ export interface DocumentViewHooks {
    * Return true to say it handled the click; the default navigation is skipped.
    */
   onNavigateDocument?: (target: string, hash: string) => boolean
+  /**
+   * A host that can open non-Markdown files of the folder (VS Code) takes over clicks on
+   * them; without this hook such links are removed, as in the browser.
+   */
+  onOpenFile?: (target: string, hash: string) => boolean
   /** A host takes over clicks on external links (http, https, mailto, tel). */
   onOpenExternal?: (href: string) => boolean
 }
@@ -116,7 +121,14 @@ export class DocumentView {
 
   private rewriteLinks(root: DocumentFragment, baseUrl: string | null): void {
     for (const a of Array.from(root.querySelectorAll<HTMLAnchorElement>('a[href]'))) {
-      const resolved = resolveLink(a.getAttribute('href') ?? '', baseUrl, this.viewerBase)
+      const resolved = resolveLink(
+        a.getAttribute('href') ?? '',
+        baseUrl,
+        this.viewerBase,
+        {
+          workspaceFiles: this.hooks.onOpenFile !== undefined,
+        },
+      )
       switch (resolved.kind) {
         case 'anchor':
           a.setAttribute('href', resolved.href)
@@ -125,6 +137,11 @@ export class DocumentView {
           a.setAttribute('href', resolved.href)
           a.dataset.msDoc = resolved.target
           a.title ||= `Open ${describeSource(resolved.target).name} in Markscope`
+          break
+        case 'file':
+          a.setAttribute('href', resolved.href)
+          a.dataset.msFile = resolved.target
+          a.title ||= `Open ${describeSource(resolved.target).name}`
           break
         case 'external':
           a.setAttribute('href', resolved.href)
@@ -424,6 +441,16 @@ export class DocumentView {
     }
     const plainClick =
       !event.metaKey && !event.ctrlKey && !event.shiftKey && event.button === 0
+    const fileTarget = anchor?.dataset.msFile
+    if (
+      anchor &&
+      fileTarget &&
+      plainClick &&
+      this.hooks.onOpenFile?.(fileTarget, hashOf(anchor))
+    ) {
+      event.preventDefault()
+      return
+    }
     if (anchor && docTarget && plainClick && this.hooks.onNavigateDocument) {
       if (this.hooks.onNavigateDocument(docTarget, hashOf(anchor))) {
         event.preventDefault()

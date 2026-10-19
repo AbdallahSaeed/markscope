@@ -28,6 +28,7 @@ import {
   MAX_PREVIEW_CHARS,
   isMarkdownFileName,
   isMediaFileName,
+  parseLineHash,
   parseExternalHref,
   relativeToRoot,
   safeRelativePath,
@@ -372,8 +373,9 @@ export class PreviewPanel {
         this.sendDocument()
         return
       case 'openLink':
-        return message.kind === 'external'
-          ? this.openExternal(message.target)
+        if (message.kind === 'external') return this.openExternal(message.target)
+        return message.kind === 'file'
+          ? this.openFileLink(message.target, message.hash)
           : this.openDocumentLink(message.target, message.hash)
       case 'resolveMedia':
         return this.resolveMedia(message.requestId, message.path)
@@ -443,6 +445,34 @@ export class PreviewPanel {
       return
     }
     await this.show(next, hash)
+  }
+
+  /** A link to a project file (or folder): confined like everything else, then opened by VS Code. */
+  private async openFileLink(path: string, hash: string): Promise<void> {
+    const rel = safeRelativePath(path)
+    if (!rel) return
+    const target = await this.confinedTarget(rel)
+    if (!target)
+      return this.banner(`Could not open ${rel}: not found inside this folder.`)
+    const stat = await vscode.workspace.fs.stat(target)
+    if (stat.type & vscode.FileType.Directory) {
+      await vscode.commands.executeCommand('revealInExplorer', target)
+      return
+    }
+    const lines = parseLineHash(hash)
+    if (!lines) {
+      await vscode.commands.executeCommand('vscode.open', target, {
+        viewColumn: this.editorColumn(),
+      })
+      return
+    }
+    const doc = await vscode.workspace.openTextDocument(target)
+    const last = Math.max(0, Math.min(lines.end, doc.lineCount) - 1)
+    const first = Math.min(Math.max(0, lines.start - 1), last)
+    await vscode.window.showTextDocument(doc, {
+      viewColumn: this.editorColumn(),
+      selection: new vscode.Range(first, 0, last, doc.lineAt(last).text.length),
+    })
   }
 
   private async resolveMedia(requestId: number, path: string): Promise<void> {

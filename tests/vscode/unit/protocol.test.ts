@@ -28,6 +28,7 @@ describe('parseWebviewMessage (untrusted input)', () => {
   test('openLink validates kind, target and hash', () => {
     const base = { v, type: 'openLink', kind: 'external', target: 'https://x.test/' }
     expect(parseWebviewMessage({ ...base, kind: 'command' })).toBeNull()
+    expect(parseWebviewMessage({ ...base, kind: 'file' })).toMatchObject({ kind: 'file' })
     expect(parseWebviewMessage({ ...base, target: '' })).toBeNull()
     expect(parseWebviewMessage({ ...base, target: 'a'.repeat(9000) })).toBeNull()
     expect(parseWebviewMessage({ ...base, hash: 'top' })).toBeNull()

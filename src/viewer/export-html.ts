@@ -39,6 +39,12 @@ export function cleanForExport(article: HTMLElement): HTMLElement {
     .querySelectorAll('[data-source-line]')
     .forEach(n => n.removeAttribute('data-source-line'))
   // Document links were rewritten to the viewer; point them back at the file.
+  // Links to project files only make sense inside the editor: drop them from the export.
+  clone.querySelectorAll<HTMLAnchorElement>('a[data-ms-file]').forEach(a => {
+    a.removeAttribute('href')
+    a.removeAttribute('data-ms-file')
+    a.removeAttribute('title')
+  })
   clone.querySelectorAll<HTMLAnchorElement>('a[data-ms-doc]').forEach(a => {
     const target = a.dataset.msDoc ?? ''
     let hash = ''

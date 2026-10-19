@@ -10,6 +10,7 @@ A fast, secure Markdown preview for developers. Diagrams, math, an outline, and 
 - **Math and more**: KaTeX, GitHub alerts, `::: tip` callouts, footnotes, front matter, `[[toc]]`.
 - **Document doctor**: broken anchors, missing images, heading-level jumps, duplicate headings, empty links, missing alt text and TODO/FIXME show up as real problems on the right line.
 - **Reader features**: outline with scrollspy, find in preview, image lightbox, focus mode, reading stats.
+- **Links that work in a project**: relative links to other Markdown files open in the preview, links to source files open in the editor (`file.ts#L42` selects the line), and relative images show.
 - **Stays in step with your editor**: the preview updates as you type, scrolls with the editor (and the editor with the preview), and double-clicking a block jumps to its source line.
 - **Optional AI (bring your own key)**: summarize, review, explain a code block, ask questions, or generate a Mermaid diagram with Anthropic, OpenAI or a local model. Off by default; see below.
 - **Secure by design**: the preview never runs code from your document. HTML is sanitized, the content security policy blocks scripts, and remote images can be blocked entirely.

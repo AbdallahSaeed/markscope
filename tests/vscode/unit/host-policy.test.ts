@@ -11,6 +11,7 @@ import {
   isMarkdownFileName,
   isMediaFileName,
   parseExternalHref,
+  parseLineHash,
   relativeToRoot,
   safeRelativePath,
   updateDelayMs,
@@ -198,5 +199,28 @@ describe('exportFileName', () => {
     expect(exportFileName('')).toBe('document.html')
     expect(exportFileName('///')).toBe('document.html')
     expect(exportFileName('a'.repeat(300)).length).toBe(85)
+  })
+})
+
+describe('parseLineHash', () => {
+  test('GitHub-style line anchors', () => {
+    expect(parseLineHash('#L42')).toEqual({ start: 42, end: 42 })
+    expect(parseLineHash('#L10-L20')).toEqual({ start: 10, end: 20 })
+    expect(parseLineHash('#L10-20')).toEqual({ start: 10, end: 20 })
+    expect(parseLineHash('#L20-L10')).toEqual({ start: 10, end: 20 })
+  })
+  test('anything else is not a line', () => {
+    for (const h of [
+      '',
+      '#top',
+      '#l5',
+      '#L0',
+      '#L',
+      '#L1-',
+      '#L1;rm',
+      '#L99999999',
+      '#L1-L2-L3',
+    ])
+      expect(parseLineHash(h), h).toBeNull()
   })
 })

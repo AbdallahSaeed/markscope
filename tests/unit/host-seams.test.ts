@@ -122,18 +122,19 @@ describe('layout hide option', () => {
 })
 
 describe('DocumentView host link hooks', () => {
-  function view(hooks: ConstructorParameters<typeof DocumentView>[2]) {
+  function view(
+    hooks: ConstructorParameters<typeof DocumentView>[2],
+    md = '[other](other.md#top) [site](https://example.com) [here](#a)\n\n## A',
+    baseUrl = 'https://example.org/docs/readme.md',
+  ) {
     const article = document.createElement('article')
     document.body.append(article)
     const dv = new DocumentView(article, 'chrome-extension://x/viewer.html', hooks)
     const settings = defaultSettings()
-    const result = renderDocument(
-      '[other](other.md#top) [site](https://example.com) [here](#a)\n\n## A',
-      { markdown: settings.markdown } as never,
-    )
+    const result = renderDocument(md, { markdown: settings.markdown } as never)
     dv.render(result, {
       settings,
-      baseUrl: 'https://example.org/docs/readme.md',
+      baseUrl,
       sourceLength: 10,
       dark: false,
       aiEnabled: false,
@@ -161,6 +162,17 @@ describe('DocumentView host link hooks', () => {
     expect(onOpenExternal).toHaveBeenCalledWith('https://example.com/')
   })
 
+  test('project file links go to the host only when it provides the hook', () => {
+    const ws = 'workspace://vscodedoc/docs/readme.md'
+    const onOpenFile = vi.fn(() => true)
+    const withHook = view({ onOpenFile }, '[src](../src/app.ts#L7)', ws)
+    expect(withHook.querySelector('a[data-ms-file]')).not.toBeNull()
+    expect(click(withHook.querySelector('a[data-ms-file]')!)).toBe(false)
+    expect(onOpenFile).toHaveBeenCalledWith('workspace://vscodedoc/src/app.ts', '#L7')
+    const withoutHook = view({}, '[src](../src/app.ts#L7)', ws)
+    expect(withoutHook.querySelector('a[data-ms-file]')).toBeNull()
+  })
+
   test('without a host hook the default navigation is untouched', () => {
     const article = view({})
     expect(click(article.querySelector('a.ms-external')!)).toBe(true)
@@ -176,5 +188,17 @@ describe('renderExportHtml', () => {
     expect(html).toContain('data-theme="dark"')
     expect(html).toContain('<h1 id="t">Hi</h1>')
     expect(html).not.toContain('chrome')
+  })
+})
+
+describe('export of project file links', () => {
+  test('are dropped (they only make sense inside the editor)', () => {
+    const article = document.createElement('article')
+    article.innerHTML =
+      '<p><a href="workspace://vscodedoc/src/app.ts#L1" data-ms-file="workspace://vscodedoc/src/app.ts" title="Open app.ts">app</a></p>'
+    const html = renderExportHtml(article, 'T', 'light', '')
+    expect(html).toContain('>app</a>')
+    expect(html).not.toContain('workspace:')
+    expect(html).not.toContain('data-ms-file')
   })
 })

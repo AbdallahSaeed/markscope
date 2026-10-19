@@ -454,3 +454,19 @@ test('a host error (for example an untrusted workspace) is shown, not swallowed'
   })
   await expect(page.locator('.ms-ai__log')).toContainText('untrusted workspaces')
 })
+
+test('links to project files go to the host with their path and line anchor', async ({
+  page,
+}) => {
+  await openWebview(page, host)
+  await start(page, '# T\n\n[the app](../src/app.ts#L42) and [the folder](../src/)\n')
+  await page.getByRole('link', { name: 'the app' }).click()
+  await expect
+    .poll(async () => (await last(page, 'openLink')) as Posted | undefined)
+    .toMatchObject({ kind: 'file', target: 'src/app.ts', hash: '#L42' })
+  await page.getByRole('link', { name: 'the folder' }).click()
+  await expect
+    .poll(async () => (await last(page, 'openLink')) as Posted | undefined)
+    .toMatchObject({ kind: 'file', target: 'src', hash: '' })
+  expect(page.url()).toContain('/index.html') // the page itself never navigated
+})

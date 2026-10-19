@@ -101,3 +101,13 @@ export function exportFileName(raw: string): string {
       .slice(0, 80) || 'document'
   return `${base}.html`
 }
+
+/** `#L42` or `#L10-L20` (GitHub style) → the 1-based lines to select, or null. */
+export function parseLineHash(hash: string): { start: number; end: number } | null {
+  const m = /^#L(\d{1,7})(?:-L?(\d{1,7}))?$/.exec(hash)
+  if (!m) return null
+  const start = Number(m[1])
+  const end = m[2] ? Number(m[2]) : start
+  if (start < 1 || end < 1) return null
+  return { start: Math.min(start, end), end: Math.max(start, end) }
+}
