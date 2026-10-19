@@ -9,6 +9,7 @@ import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { createManifest } from './manifest.mjs'
+import { writeThemesCss } from './build-themes.mjs'
 
 const root = path.resolve(fileURLToPath(import.meta.url), '../..')
 const args = new Set(process.argv.slice(2))
@@ -17,6 +18,7 @@ const watch = args.has('--watch')
 const dev = args.has('--dev') || watch
 const out = path.join(root, 'dist', target)
 const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'))
+await writeThemesCss() // src/styles/themes.css, before any bundle imports it
 
 // The VS Code extension has its own layout and bundles; see build-vscode.mjs.
 if (target === 'vscode') {

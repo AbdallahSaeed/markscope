@@ -84,6 +84,7 @@ export function createVscodeManifest({ version, publisher }) {
         { command: 'markscope.toggleSidebar', title: 'Toggle Outline', category },
         { command: 'markscope.focusMode', title: 'Toggle Focus Mode', category },
         { command: 'markscope.runDoctor', title: 'Run Document Doctor', category },
+        { command: 'markscope.selectTheme', title: 'Color Theme…', category },
         { command: 'markscope.exportHtml', title: 'Export as HTML', category },
         { command: 'markscope.copyHtml', title: 'Copy Rendered HTML', category },
         { command: 'markscope.toggleAi', title: 'Toggle AI Assistant', category },

@@ -9,13 +9,13 @@ Goal: ship Markscope as a VS Code extension, published on the **Visual Studio Ma
 
 Branch `feat/vscode-extension`. Phases 0–3 are built and tested.
 
-| Phase                        | State                                                                                                                                                                                                                                                     |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0 Spike                      | Done in the real thing: the webview harness runs the built bundle under the exact CSP (Blob worker, lazy Mermaid and Graphviz chunks, KaTeX, `wasm-unsafe-eval`) with no violations. Still to do by you: reserve the publisher id and Open VSX namespace. |
-| 1 Shared seams               | Done (`AITransport`, `renderExportHtml`, `DocumentView` link hooks, `buildLayout({ hide })`, host theme). The "extract from `app.ts`" item was dropped on purpose: `PreviewApp` is small enough that sharing it would only move code around.              |
-| 2 Preview MVP                | Done: panels, follow/lock, live updates, settings, theme and high contrast, links and images, editor ⇄ preview sync, commands, restore after reload.                                                                                                      |
-| 3 Doctor, Reader, export, AI | Done: doctor → Problems, the read-only Reader tab, Export as HTML, Copy Rendered HTML, the status-bar item and the BYO-key AI assistant. |
-| 4–6                          | Docs, CI and release jobs are written. Security and code reviews are done and acted on, and an automated accessibility check (axe, four themes) runs in the webview harness. The extension is to be published on the Marketplace as `AbdallahSaeed.markscope-reader`. Still open: the manual QA matrix, listing screenshots and Open VSX.                                                                                                            |
+| Phase                        | State                                                                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0 Spike                      | Done in the real thing: the webview harness runs the built bundle under the exact CSP (Blob worker, lazy Mermaid and Graphviz chunks, KaTeX, `wasm-unsafe-eval`) with no violations. Still to do by you: reserve the publisher id and Open VSX namespace.                                                                                 |
+| 1 Shared seams               | Done (`AITransport`, `renderExportHtml`, `DocumentView` link hooks, `buildLayout({ hide })`, host theme). The "extract from `app.ts`" item was dropped on purpose: `PreviewApp` is small enough that sharing it would only move code around.                                                                                              |
+| 2 Preview MVP                | Done: panels, follow/lock, live updates, settings, theme and high contrast, links and images, editor ⇄ preview sync, commands, restore after reload.                                                                                                                                                                                      |
+| 3 Doctor, Reader, export, AI | Done: doctor → Problems, the read-only Reader tab, Export as HTML, Copy Rendered HTML, the status-bar item and the BYO-key AI assistant.                                                                                                                                                                                                  |
+| 4–6                          | Docs, CI and release jobs are written. Security and code reviews are done and acted on, and an automated accessibility check (axe, four themes) runs in the webview harness. The extension is to be published on the Marketplace as `AbdallahSaeed.markscope-reader`. Still open: the manual QA matrix, listing screenshots and Open VSX. |
 
 Deviations from this plan, and why:
 
@@ -297,17 +297,18 @@ connect-src ${webview.cspSource};
 
 `scripts/vscode-manifest.mjs` generates the configuration schema from `defaultSettings()` and the `THEMES` / `FONT_FAMILIES` / `CONTENT_WIDTHS` / … constants in `src/shared/settings.ts`. It imports the `.ts` file the same way `manifest.mjs` imports `urls.ts`. The schema and the runtime can't drift.
 
-| Key                                                                      | Type / default                                       | Scope                         |
-| ------------------------------------------------------------------------ | ---------------------------------------------------- | ----------------------------- |
-| `markscope.theme`                                                        | `"auto"` (follow VS Code) \| `"light"` \| `"dark"`   | `window`                      |
-| `markscope.typography.fontFamily / fontSize / lineHeight / contentWidth` | from defaults                                        | `resource`                    |
-| `markscope.markdown.*` (front matter, line numbers, wrap, …)             | from defaults                                        | `resource`                    |
-| `markscope.images.remote`                                                | `"allow"` \| `"block"` (same default as the browser) | `resource`                    |
-| `markscope.preview.followActiveEditor`                                   | `true`                                               | `window`                      |
-| `markscope.preview.openMarkdownLinks`                                    | `"inPreview"` \| `"inEditor"`                        | `window`                      |
-| `markscope.preview.updateOn`                                             | `"change"` \| `"save"`                               | `resource`                    |
-| `markscope.doctor.enabled`                                               | `true`                                               | `resource`                    |
-| `markscope.ai.enabled / provider / baseUrl / model`                      | from defaults                                        | **`application`** (section 6) |
+| Key                                                                      | Type / default                                                 | Scope                         |
+| ------------------------------------------------------------------------ | -------------------------------------------------------------- | ----------------------------- |
+| `markscope.theme`                                                        | `"auto"` (follow VS Code) \| `"light"` \| `"dark"`             | `window`                      |
+| `markscope.themeLight` / `markscope.themeDark`                           | one of 10 light / 25 dark named themes (`docs/THEMES-PLAN.md`) | `resource`                    |
+| `markscope.typography.fontFamily / fontSize / lineHeight / contentWidth` | from defaults                                                  | `resource`                    |
+| `markscope.markdown.*` (front matter, line numbers, wrap, …)             | from defaults                                                  | `resource`                    |
+| `markscope.images.remote`                                                | `"allow"` \| `"block"` (same default as the browser)           | `resource`                    |
+| `markscope.preview.followActiveEditor`                                   | `true`                                                         | `window`                      |
+| `markscope.preview.openMarkdownLinks`                                    | `"inPreview"` \| `"inEditor"`                                  | `window`                      |
+| `markscope.preview.updateOn`                                             | `"change"` \| `"save"`                                         | `resource`                    |
+| `markscope.doctor.enabled`                                               | `true`                                                         | `resource`                    |
+| `markscope.ai.enabled / provider / baseUrl / model`                      | from defaults                                                  | **`application`** (section 6) |
 
 `config.ts` reads the section, converts it to the `Settings` shape, and runs **`parseSettings`**. That one validator covers browser imports and VS Code configuration, including the AI URL rules. Changes go through `onDidChangeConfiguration` → `affectsConfiguration('markscope')` → post `settings`.
 

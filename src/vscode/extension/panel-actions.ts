@@ -66,6 +66,9 @@ export async function runPreviewAction(
         doc?.uri,
       )
       return
+    case 'selectTheme':
+      await vscode.commands.executeCommand('markscope.selectTheme')
+      return
     case 'setTheme':
       if (value) await setUserSetting('theme', value, doc?.uri)
       return

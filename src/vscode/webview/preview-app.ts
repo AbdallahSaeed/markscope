@@ -28,7 +28,12 @@ import { idFromHash, scrollToId, scrollToLine, topVisibleLine } from '@/viewer/n
 import { SearchBar } from '@/viewer/search-bar'
 import { Sidebar } from '@/viewer/sidebar'
 import { renderStatus } from '@/viewer/status-bar'
-import { applyAppearance, resolvedTheme } from '@/viewer/theme'
+import {
+  applyAppearance,
+  resolvedPalette,
+  resolvedPaletteName,
+  resolvedTheme,
+} from '@/viewer/theme'
 import { toast } from '@/viewer/toast'
 import type { PreviewAction, ThemeChoice, WebviewCommand } from '../protocol'
 import { previewShortcuts, type PreviewKeyActions } from './keys'
@@ -253,7 +258,7 @@ export class PreviewApp {
 
   private updateThemeButton(): void {
     const labels = { system: 'VS Code theme', light: 'Light theme', dark: 'Dark theme' }
-    this.layout.themeBtn.title = `${labels[this.settings.theme]} — switch (T)`
+    this.layout.themeBtn.title = `${labels[this.settings.theme]} (${resolvedPaletteName(this.settings)}) — switch (T)`
     this.layout.themeBtn.setAttribute('aria-label', this.layout.themeBtn.title)
     this.layout.themeBtn.dataset.theme = this.settings.theme
   }
@@ -491,6 +496,7 @@ export class PreviewApp {
         title,
         resolvedTheme(this.settings),
         res.ok ? await res.text() : '',
+        resolvedPalette(this.settings),
       )
       this.bridge.post({
         type: 'exportHtml',

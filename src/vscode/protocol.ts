@@ -47,6 +47,7 @@ export const PREVIEW_ACTIONS = [
   'toggleLineNumbers',
   'setTheme',
   'toggleLock',
+  'selectTheme',
 ] as const
 export type PreviewAction = (typeof PREVIEW_ACTIONS)[number]
 

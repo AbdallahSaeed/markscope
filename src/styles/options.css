@@ -202,3 +202,125 @@ body {
     width: 100%;
   }
 }
+
+/* ---- Theme gallery ---------------------------------------------------------
+   Each card carries data-theme + data-palette, so the tokens inside it are its own
+   (tokens.css / themes.css scope them to that pair of attributes). */
+.ms-theme-gallery {
+  display: grid;
+  gap: 22px;
+  margin: 6px 0 18px;
+}
+.ms-theme-group__title {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.ms-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 10px;
+}
+.ms-theme-card {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border-radius: var(--radius-m);
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--rule-strong);
+  cursor: pointer;
+  transition:
+    transform var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+}
+.ms-theme-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-1);
+}
+.ms-theme-card:has(:checked) {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 2px var(--accent),
+    var(--shadow-1);
+}
+.ms-theme-card:has(:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.ms-theme-card__input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.ms-theme-card__page {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border-radius: var(--radius-s);
+  background: var(--paper-2);
+}
+.ms-theme-card__h {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1;
+  color: var(--ink);
+}
+.ms-theme-card__line {
+  block-size: 4px;
+  border-radius: 2px;
+  background: var(--ink-3);
+  opacity: 0.55;
+}
+.ms-theme-card__line.is-short {
+  inline-size: 62%;
+}
+.ms-theme-card__code {
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+  border-radius: 4px;
+  background: var(--code-bg);
+  border: 1px solid var(--rule);
+}
+.ms-theme-card__code i {
+  block-size: 4px;
+  flex: 1;
+  border-radius: 2px;
+}
+.ms-theme-card__code i:nth-child(1) {
+  background: var(--hl-keyword);
+}
+.ms-theme-card__code i:nth-child(2) {
+  background: var(--hl-string);
+}
+.ms-theme-card__code i:nth-child(3) {
+  background: var(--hl-number);
+}
+.ms-theme-card__code i:nth-child(4) {
+  background: var(--hl-title);
+}
+.ms-theme-card__link {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: underline;
+}
+.ms-theme-card__name {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ms-theme-card:hover {
+    transform: none;
+  }
+}

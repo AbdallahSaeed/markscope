@@ -56,6 +56,7 @@ describe('previewMenuItems', () => {
       ['Settings', 'openSettings'],
       ['Command palette', 'openCommands'],
       ['Export as HTML', 'exportHtml'],
+      ['Color theme…', 'selectTheme'],
     ] as const) {
       visible(h)
         .find(i => i.label === label)!

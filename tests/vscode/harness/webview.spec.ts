@@ -524,6 +524,7 @@ test('menu items ask the host for their fixed action', async ({ page }) => {
     ['Copy Markdown', 'copyMarkdown'],
     ['Copy rendered HTML', 'copyHtml'],
     ['Export as HTML', 'exportHtml'],
+    ['Color theme…', 'selectTheme'],
     ['Command palette', 'openCommands'],
     ['Settings', 'openSettings'],
     ['Line numbers in code', 'toggleLineNumbers'],
@@ -563,6 +564,59 @@ test('the theme button cycles VS Code theme → light → dark and saves the cho
   await expect
     .poll(async () => await action(page))
     .toMatchObject({ name: 'setTheme', value: 'vscode' })
+})
+
+test('named themes: the VS Code scheme picks themeLight or themeDark, under the real CSP', async ({
+  page,
+}) => {
+  const violations = watchCsp(page)
+  await openWebview(page, host, { theme: 'vscode-dark' })
+  await sendInit(page, host)
+  await send(page, {
+    type: 'settings',
+    settings: { ...defaultSettings(), themeLight: 'solarized-light', themeDark: 'nord' },
+  })
+  await sendDocument(page, '# T\n\n```ts\nconst a = 1\n```\n')
+  const paper = () =>
+    page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--paper').trim(),
+    )
+  await expect(page.locator('html')).toHaveAttribute('data-palette', 'nord')
+  expect(await paper()).toBe('#2e3440')
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(46, 52, 64)')
+
+  // Switching VS Code to a light theme moves to the light palette.
+  await page.evaluate(() => {
+    document.body.className = 'vscode-light'
+  })
+  await expect(page.locator('html')).toHaveAttribute('data-palette', 'solarized-light')
+  expect(await paper()).toBe('#fdf6e3')
+
+  // High contrast keeps its own borders on top of the palette.
+  await page.evaluate(() => {
+    document.body.className = 'vscode-high-contrast'
+  })
+  await expect(page.locator('html')).toHaveAttribute('data-contrast', 'high')
+  await expect(page.locator('html')).toHaveAttribute('data-palette', 'nord')
+  expect(violations).toEqual([])
+})
+
+test('the exported HTML carries the active palette only', async ({ page }) => {
+  await openWebview(page, host, { theme: 'vscode-dark' })
+  await sendInit(page, host)
+  await send(page, {
+    type: 'settings',
+    settings: { ...defaultSettings(), themeDark: 'dracula' },
+  })
+  await sendDocument(page, '# Palette export\n')
+  await send(page, { type: 'command', name: 'exportHtml' })
+  await expect
+    .poll(async () => (await last(page, 'exportHtml')) !== undefined, { timeout: 30_000 })
+    .toBe(true)
+  const html = (await last(page, 'exportHtml'))!.html as string
+  expect(html).toContain('data-palette="dracula"')
+  expect(html).toContain("[data-palette='dracula']")
+  expect(html).not.toContain("[data-palette='nord']")
 })
 
 test('the Commands button opens VS Code’s palette, filtered to Markscope', async ({

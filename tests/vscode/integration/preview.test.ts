@@ -294,6 +294,47 @@ describe('Markscope preview', () => {
     }
   })
 
+  it('offers 35 named themes as settings, and the preview keeps working when one changes', async () => {
+    const pkg = vscode.extensions.all.find(e => e.id.endsWith('.markscope-reader'))!
+    const props = pkg.packageJSON.contributes.configuration.properties as Record<
+      string,
+      { enum: string[]; default: string }
+    >
+    assert.strictEqual(props['markscope.themeLight']!.enum.length, 10)
+    assert.strictEqual(props['markscope.themeDark']!.enum.length, 25)
+    assert.strictEqual(props['markscope.themeDark']!.default, 'cadmium-dark')
+    const declared = (pkg.packageJSON.contributes.commands as { command: string }[]).map(
+      c => c.command,
+    )
+    assert.ok(
+      declared.includes('markscope.selectTheme'),
+      'the theme command is contributed',
+    )
+
+    const cfg = vscode.workspace.getConfiguration('markscope')
+    const editor = await openEditor('broken.md')
+    await vscode.commands.executeCommand('markscope.openPreviewToSide')
+    await waitFor('the problem', () => problems(editor.document.uri).length > 0)
+    try {
+      // The webview re-themes from the new setting; it must neither crash nor stop reporting.
+      await cfg.update('themeDark', 'nord', true)
+      await cfg.update('themeLight', 'ayu-light', true)
+      await replaceText(editor, '#missing', '#title')
+      await waitFor(
+        'the problem to clear',
+        () => problems(editor.document.uri).length === 0,
+      )
+      await replaceText(editor, '#title', '#gone')
+      await waitFor(
+        'the problem to return',
+        () => problems(editor.document.uri).length > 0,
+      )
+    } finally {
+      await cfg.update('themeDark', undefined, true)
+      await cfg.update('themeLight', undefined, true)
+    }
+  })
+
   it('refuses to preview a non-Markdown file', async () => {
     await openEditor('notes.txt')
     await vscode.commands.executeCommand('markscope.openPreview')

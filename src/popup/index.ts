@@ -210,6 +210,13 @@ async function render(settings: Settings): Promise<void> {
         v => void store.update({ liveReload: { enabled: v } }),
       ),
       themeControl(settings.theme, t => void store.update({ theme: t })),
+      h('button', {
+        type: 'button',
+        class: 'ms-link-btn',
+        text: 'More themes…',
+        title: 'Open settings to choose from 35 color themes',
+        on: { click: () => void chrome.runtime.openOptionsPage() },
+      }),
     ),
     h(
       'section',

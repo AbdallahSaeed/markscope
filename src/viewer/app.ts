@@ -29,7 +29,12 @@ import { localDocs } from './local-docs'
 import { CommandPalette, type PaletteItem } from './palette'
 import { SearchBar } from './search-bar'
 import { Sidebar } from './sidebar'
-import { applyAppearance, onSystemThemeChange, resolvedTheme } from './theme'
+import {
+  applyAppearance,
+  onSystemThemeChange,
+  resolvedPaletteName,
+  resolvedTheme,
+} from './theme'
 import { toast } from './toast'
 import { draftKey, DraftSaver, draftStore } from './drafts'
 import { offerDraftRestore } from './draft-restore'
@@ -223,7 +228,7 @@ export class ViewerApp {
 
   private updateThemeButton(): void {
     const labels = { system: 'System theme', light: 'Light theme', dark: 'Dark theme' }
-    this.layout.themeBtn.title = `${labels[this.settings.theme]} — switch (T)`
+    this.layout.themeBtn.title = `${labels[this.settings.theme]} (${resolvedPaletteName(this.settings)}) — switch (T)`
     this.layout.themeBtn.dataset.theme = this.settings.theme
   }
 
@@ -232,7 +237,7 @@ export class ViewerApp {
     const next =
       order[(order.indexOf(this.settings.theme) + 1) % order.length] ?? 'system'
     this.updateSettings({ theme: next })
-    toast(`Theme: ${next}`)
+    toast(`Theme: ${next} (${resolvedPaletteName({ ...this.settings, theme: next })})`)
   }
 
   // --------------------------------------------------------------- documents

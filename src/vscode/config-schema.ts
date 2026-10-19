@@ -18,6 +18,7 @@ import {
   parseSettings,
   type Settings,
 } from '../shared/settings.ts'
+import { DARK_THEME_IDS, LIGHT_THEME_IDS, themeById } from '../shared/themes.ts'
 
 export const CONFIG_SECTION = 'markscope'
 
@@ -59,6 +60,22 @@ export const SETTING_ENTRIES: readonly Entry[] = [
     ],
     toSetting: v => (v === 'vscode' ? 'system' : v),
     fromSetting: v => (v === 'system' ? 'vscode' : (v as string)),
+  },
+  {
+    key: 'themeLight',
+    path: ['themeLight'],
+    description:
+      'Color theme used when the preview is light (see "markscope.theme"). 35 named themes: Ayu, Catppuccin, Nord, Tokyo Night and more.',
+    enum: LIGHT_THEME_IDS,
+    enumDescriptions: LIGHT_THEME_IDS.map(id => themeById(id)?.description ?? ''),
+  },
+  {
+    key: 'themeDark',
+    path: ['themeDark'],
+    description:
+      'Color theme used when the preview is dark (see "markscope.theme"), including when it follows a dark VS Code theme.',
+    enum: DARK_THEME_IDS,
+    enumDescriptions: DARK_THEME_IDS.map(id => themeById(id)?.description ?? ''),
   },
   {
     key: 'typography.fontFamily',
