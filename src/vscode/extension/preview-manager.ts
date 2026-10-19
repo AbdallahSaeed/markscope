@@ -39,7 +39,11 @@ function parseState(state: unknown): SavedState | null {
   return { uri, locked: locked === true }
 }
 
-export class PreviewManager implements PanelHost, vscode.WebviewPanelSerializer {
+export const READER_VIEW_TYPE = 'markscope.reader'
+
+export class PreviewManager
+  implements PanelHost, vscode.WebviewPanelSerializer, vscode.CustomTextEditorProvider
+{
   readonly diagnostics = new DiagnosticsSink()
   private readonly panels = new Set<PreviewPanel>()
   private lastActive: PreviewPanel | undefined
@@ -78,7 +82,7 @@ export class PreviewManager implements PanelHost, vscode.WebviewPanelSerializer 
     hash = '',
   ): Promise<void> {
     const beside = column === vscode.ViewColumn.Beside
-    const existing = [...this.panels].find(p => p.showsUri(doc.uri))
+    const existing = [...this.panels].find(p => !p.isReader && p.showsUri(doc.uri))
     if (existing) {
       existing.panel.reveal(beside ? column : undefined, beside)
       return
@@ -96,6 +100,14 @@ export class PreviewManager implements PanelHost, vscode.WebviewPanelSerializer 
       { ...panelOptions(this.extensionUri, doc), retainContextWhenHidden: false },
     )
     await this.track(new PreviewPanel(panel, this)).show(doc, hash)
+  }
+
+  /** The Reader: a full-tab, read-only view of one file (Reopen Editor With… → Markscope Reader). */
+  async resolveCustomTextEditor(
+    document: vscode.TextDocument,
+    webviewPanel: vscode.WebviewPanel,
+  ): Promise<void> {
+    await this.track(new PreviewPanel(webviewPanel, this, true, 'reader')).show(document)
   }
 
   /** VS Code restores panels after a reload, with the state the webview saved. */
@@ -131,6 +143,10 @@ export class PreviewManager implements PanelHost, vscode.WebviewPanelSerializer 
     return [
       this.diagnostics,
       win.registerWebviewPanelSerializer(PREVIEW_VIEW_TYPE, this),
+      win.registerCustomEditorProvider(READER_VIEW_TYPE, this, {
+        webviewOptions: { retainContextWhenHidden: false },
+        supportsMultipleEditorsPerDocument: true,
+      }),
       w.onDidChangeTextDocument(e => {
         if (e.contentChanges.length === 0) return
         for (const p of showing(e.document))
@@ -218,6 +234,23 @@ export class PreviewManager implements PanelHost, vscode.WebviewPanelSerializer 
         'markscope.runDoctor',
         forActive(p => p.sendCommand('runDoctor')),
       ),
+      // An optional `.html` target skips the dialog (keybindings, automation); anything else is ignored.
+      cmd('markscope.exportHtml', (target?: unknown) => {
+        const panel = this.activePanel()
+        const file =
+          target instanceof vscode.Uri && target.path.toLowerCase().endsWith('.html')
+            ? target
+            : undefined
+        panel?.requestExport(file)
+      }),
+      cmd('markscope.openInReader', async (uri?: vscode.Uri) => {
+        const target = uri ?? vscode.window.activeTextEditor?.document.uri
+        if (!target || !isMarkdownFileName(target.path)) {
+          void vscode.window.showInformationMessage('Open a Markdown file to read it.')
+          return
+        }
+        await vscode.commands.executeCommand('vscode.openWith', target, READER_VIEW_TYPE)
+      }),
     ]
   }
 }

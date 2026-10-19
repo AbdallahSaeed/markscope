@@ -13,6 +13,7 @@ import { renderKey, type Settings } from '@/shared/settings'
 import { computeStats } from '@/shared/stats'
 import { parseWorkspaceUrl } from '@/shared/urls'
 import { DocumentView } from '@/viewer/document-view'
+import { renderExportHtml, safeFileName } from '@/viewer/export-html'
 import { hideBanner, showBanner, type Layout } from '@/viewer/layout'
 import { idFromHash, scrollToId, scrollToLine, topVisibleLine } from '@/viewer/navigation'
 import { SearchBar } from '@/viewer/search-bar'
@@ -40,6 +41,8 @@ export interface PreviewDeps {
   bridge: Bridge
   renderer: RenderClient
   settings: Settings
+  /** Webview URI of document.css, inlined into exported files. */
+  documentCssUrl: string
 }
 
 /** The line the reader was at, from the state a previous page of this panel saved. */
@@ -64,6 +67,7 @@ export class PreviewApp {
   private highlighted: Element | null = null
   private sidebarHidden: boolean
   private readonly layout: Layout
+  private readonly documentCssUrl: string
   private readonly bridge: Bridge
   private readonly renderer: RenderClient
   private readonly sidebar: Sidebar
@@ -76,6 +80,7 @@ export class PreviewApp {
 
   constructor(deps: PreviewDeps) {
     this.layout = deps.layout
+    this.documentCssUrl = deps.documentCssUrl
     this.bridge = deps.bridge
     this.renderer = deps.renderer
     this.settings = deps.settings
@@ -343,7 +348,35 @@ export class PreviewApp {
     if (name === 'find') this.search.open()
     else if (name === 'toggleSidebar') this.toggleSidebar()
     else if (name === 'focusMode') this.toggleFocus()
+    else if (name === 'exportHtml') void this.exportHtml()
     else this.runDoctor()
+  }
+
+  /** Builds the self-contained HTML (diagrams fully rendered) and hands it to the host to save. */
+  async exportHtml(): Promise<void> {
+    const doc = this.doc
+    const result = this.result
+    if (!doc || !result) return
+    try {
+      await this.docView.diagrams.renderAll(this.layout.article)
+      const res = await fetch(this.documentCssUrl)
+      const title =
+        result.headings.find(h => h.level === 1)?.text ||
+        doc.fileName.replace(/\.[^.]+$/, '')
+      const html = renderExportHtml(
+        this.layout.article,
+        title,
+        resolvedTheme(this.settings),
+        res.ok ? await res.text() : '',
+      )
+      this.bridge.post({
+        type: 'exportHtml',
+        html,
+        fileName: safeFileName(title, 'html'),
+      })
+    } catch (error) {
+      this.banner(`Could not export: ${errorMessage(error)}`)
+    }
   }
 
   banner(message: string): void {

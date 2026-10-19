@@ -16,7 +16,7 @@ import { parseSettings, type Settings } from '@/shared/settings'
 export const PROTOCOL_VERSION = 1
 
 export const MAX_DOCUMENT_CHARS = 50 * 1024 * 1024
-export const MAX_EXPORT_CHARS = 50 * 1024 * 1024
+export const MAX_EXPORT_CHARS = 20 * 1024 * 1024
 export const MAX_COPY_CHARS = 10 * 1024 * 1024
 export const MAX_DOCTOR_ISSUES = 500
 
@@ -26,6 +26,7 @@ export const WEBVIEW_COMMANDS = [
   'toggleSidebar',
   'focusMode',
   'runDoctor',
+  'exportHtml',
 ] as const
 export type WebviewCommand = (typeof WEBVIEW_COMMANDS)[number]
 

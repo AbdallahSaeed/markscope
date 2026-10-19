@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; img-src * data:; style-src 'unsafe-inline'"
+    />
+    <meta name="generator" content="Markscope" />
+    <title>Other</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --paper: oklch(98.6% 0.006 85);
+        --paper-2: oklch(96.3% 0.008 85);
+        --paper-3: oklch(93.2% 0.01 85);
+        --raised: oklch(99.6% 0.003 85);
+        --ink: oklch(23% 0.016 265);
+        --ink-2: oklch(41% 0.016 265);
+        --ink-3: oklch(55% 0.013 265);
+        --rule: oklch(89% 0.01 85);
+        --rule-strong: oklch(80% 0.012 85);
+        --accent: oklch(50% 0.2 264);
+        --accent-hover: oklch(44% 0.2 264);
+        --accent-ink: oklch(98.5% 0.01 264);
+        --accent-soft: oklch(94% 0.035 264);
+        --code-bg: oklch(96.4% 0.007 85);
+        --code-ink: oklch(28% 0.02 265);
+        --mark: oklch(91% 0.13 95);
+        --danger: oklch(55% 0.2 25);
+        --c-note: oklch(54% 0.15 250);
+        --c-tip: oklch(54% 0.13 155);
+        --c-important: oklch(52% 0.17 300);
+        --c-warning: oklch(60% 0.14 70);
+        --c-caution: oklch(54% 0.19 25);
+        --hl-keyword: oklch(48% 0.18 300);
+        --hl-string: oklch(48% 0.12 150);
+        --hl-number: oklch(54% 0.15 50);
+        --hl-title: oklch(48% 0.16 255);
+        --hl-attr: oklch(50% 0.13 200);
+        --hl-comment: oklch(58% 0.01 265);
+        --hl-meta: oklch(52% 0.1 30);
+        --shadow-1:
+          0 1px 2px oklch(20% 0.02 265 / 0.05), 0 2px 10px oklch(20% 0.02 265 / 0.05);
+        --shadow-2:
+          0 18px 50px -12px oklch(20% 0.03 265 / 0.28),
+          0 2px 6px oklch(20% 0.02 265 / 0.08);
+        --font-ui:
+          ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+          Arial, sans-serif;
+        --font-serif:
+          'Iowan Old Style', 'Charter', 'Sitka Text', 'Palatino Linotype', Cambria,
+          Georgia, serif;
+        --font-mono:
+          ui-monospace, 'SF Mono', 'JetBrains Mono', 'Cascadia Code', Menlo, Consolas,
+          monospace;
+        --radius-s: 6px;
+        --radius-m: 10px;
+        --radius-l: 18px;
+        --dur-fast: 0.12s;
+        --dur: 0.22s;
+        --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+        --doc-font-size: 16px;
+        --doc-line-height: 1.65;
+        --doc-width: 76ch;
+        --doc-font: var(--font-ui);
+      }
+      :root[data-font='serif'] {
+        --doc-font: var(--font-serif);
+      }
+      :root[data-font='mono'] {
+        --doc-font: var(--font-mono);
+      }
+      @media screen {
+        :root[data-theme='dark'] {
+          color-scheme: dark;
+          --paper: oklch(17.5% 0.012 265);
+          --paper-2: oklch(20.3% 0.013 265);
+          --paper-3: oklch(24.5% 0.015 265);
+          --raised: oklch(22.5% 0.014 265);
+          --ink: oklch(92.5% 0.008 85);
+          --ink-2: oklch(78% 0.01 85);
+          --ink-3: oklch(63% 0.012 265);
+          --rule: oklch(29% 0.014 265);
+          --rule-strong: oklch(37% 0.016 265);
+          --accent: oklch(74% 0.13 264);
+          --accent-hover: oklch(80% 0.11 264);
+          --accent-ink: oklch(18% 0.03 264);
+          --accent-soft: oklch(29% 0.06 264);
+          --code-bg: oklch(21% 0.013 265);
+          --code-ink: oklch(88% 0.01 85);
+          --mark: oklch(48% 0.1 95);
+          --danger: oklch(70% 0.16 25);
+          --c-note: oklch(72% 0.12 250);
+          --c-tip: oklch(74% 0.13 155);
+          --c-important: oklch(74% 0.13 300);
+          --c-warning: oklch(80% 0.13 75);
+          --c-caution: oklch(70% 0.16 25);
+          --hl-keyword: oklch(76% 0.13 305);
+          --hl-string: oklch(79% 0.12 145);
+          --hl-number: oklch(80% 0.12 60);
+          --hl-title: oklch(78% 0.11 245);
+          --hl-attr: oklch(80% 0.09 200);
+          --hl-comment: oklch(62% 0.015 265);
+          --hl-meta: oklch(76% 0.1 30);
+          --shadow-1: 0 1px 2px oklch(0% 0 0 / 0.3), 0 2px 10px oklch(0% 0 0 / 0.25);
+          --shadow-2:
+            0 18px 50px -12px oklch(0% 0 0 / 0.6), 0 2px 6px oklch(0% 0 0 / 0.3);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        :root {
+          --dur-fast: 0ms;
+          --dur: 0ms;
+        }
+      }
+      .ms-doc {
+        font-family: var(--doc-font);
+        font-size: var(--doc-font-size);
+        line-height: var(--doc-line-height);
+        color: var(--ink);
+        max-width: var(--doc-width);
+        box-sizing: content-box;
+        padding-inline: 1.6em;
+        margin-inline: auto;
+        overflow-wrap: break-word;
+        font-kerning: normal;
+        text-rendering: optimizeLegibility;
+        contain: layout paint;
+        isolation: isolate;
+      }
+      .ms-doc > :first-child {
+        margin-top: 0;
+      }
+      .ms-doc.is-large > * {
+        content-visibility: auto;
+        contain-intrinsic-size: auto 3lh;
+      }
+      .ms-doc
+        :is(
+          p,
+          ul,
+          ol,
+          dl,
+          blockquote,
+          table,
+          pre,
+          details,
+          figure,
+          .ms-code,
+          .ms-diagram,
+          .markdown-alert,
+          .ms-table-wrap
+        ) {
+        margin-block: 0 1.05em;
+      }
+      .ms-doc :is(h1, h2, h3, h4, h5, h6) {
+        position: relative;
+        line-height: 1.22;
+        font-weight: 700;
+        letter-spacing: -0.012em;
+        margin: 1.9em 0 0.6em;
+        scroll-margin-top: 72px;
+        text-wrap: balance;
+      }
+      .ms-doc h1 {
+        font-family: var(--font-serif);
+        font-size: 2.35em;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        margin-top: 0.4em;
+      }
+      .ms-doc h2 {
+        font-size: 1.55em;
+        padding-bottom: 0.32em;
+        border-bottom: 1px solid var(--rule);
+      }
+      .ms-doc h3 {
+        font-size: 1.22em;
+      }
+      .ms-doc h4 {
+        font-size: 1.04em;
+      }
+      .ms-doc :is(h5, h6) {
+        font-size: 0.82em;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--ink-2);
+      }
+      .ms-anchor {
+        position: absolute;
+        inset-inline-start: -1.15em;
+        width: 1em;
+        text-align: center;
+        font-family: var(--font-serif);
+        font-weight: 400;
+        color: var(--ink-3);
+        text-decoration: none;
+        opacity: 0;
+        transition:
+          opacity var(--dur-fast) var(--ease),
+          color var(--dur-fast);
+      }
+      :is(h1, h2, h3, h4, h5, h6):hover > .ms-anchor,
+      .ms-anchor:focus-visible {
+        opacity: 1;
+      }
+      .ms-anchor:hover {
+        color: var(--accent);
+      }
+      .ms-doc a {
+        color: var(--accent);
+        text-decoration-line: underline;
+        text-decoration-thickness: 1px;
+        text-decoration-color: color-mix(in oklch, var(--accent) 35%, transparent);
+        text-underline-offset: 0.18em;
+        transition: text-decoration-color var(--dur-fast);
+      }
+      .ms-doc a:hover {
+        text-decoration-color: currentColor;
+      }
+      .ms-doc a.ms-link-invalid {
+        color: var(--ink-3);
+        text-decoration-style: dashed;
+        cursor: not-allowed;
+      }
+      .ms-doc strong {
+        font-weight: 650;
+      }
+      .ms-doc :is(ul, ol) {
+        padding-inline-start: 1.6em;
+      }
+      .ms-doc li + li {
+        margin-top: 0.25em;
+      }
+      .ms-doc li > :is(ul, ol) {
+        margin-block: 0.25em 0;
+      }
+      .ms-doc li::marker {
+        color: var(--ink-3);
+      }
+      .ms-doc .task-list-container {
+        list-style: none;
+        padding-inline-start: 0.4em;
+      }
+      .ms-doc .task-list-item-checkbox {
+        margin: 0 0.5em 0 0;
+        accent-color: var(--accent);
+        vertical-align: -0.1em;
+      }
+      .ms-doc blockquote {
+        margin-inline: 0;
+        padding: 0.1em 1.1em;
+        border-inline-start: 3px solid var(--rule-strong);
+        color: var(--ink-2);
+      }
+      .ms-doc hr {
+        border: 0;
+        height: 1px;
+        background: var(--rule);
+        margin: 2.4em 0;
+      }
+      .ms-doc img,
+      .ms-doc video {
+        max-width: 100%;
+        height: auto;
+        border-radius: var(--radius-s);
+      }
+      .ms-doc img {
+        cursor: zoom-in;
+      }
+      .ms-doc a img {
+        cursor: pointer;
+      }
+      .ms-doc mark {
+        background: var(--mark);
+        color: inherit;
+        padding: 0 0.15em;
+        border-radius: 3px;
+      }
+      .ms-doc ins {
+        text-decoration-color: var(--c-tip);
+      }
+      .ms-doc abbr[title] {
+        text-decoration: underline dotted;
+        cursor: help;
+      }
+      .ms-doc kbd {
+        font-family: var(--font-mono);
+        font-size: 0.8em;
+        padding: 0.12em 0.42em;
+        border: 1px solid var(--rule-strong);
+        border-bottom-width: 2px;
+        border-radius: 5px;
+        background: var(--raised);
+      }
+      .ms-doc dt {
+        font-weight: 650;
+      }
+      .ms-doc dd {
+        margin-inline-start: 1.4em;
+        color: var(--ink-2);
+      }
+      .ms-doc :not(pre) > code {
+        font-family: var(--font-mono);
+        font-size: 0.86em;
+        padding: 0.12em 0.36em;
+        border-radius: 5px;
+        background: var(--code-bg);
+        border: 1px solid var(--rule);
+        color: var(--code-ink);
+        overflow-wrap: anywhere;
+      }
+      .ms-code {
+        position: relative;
+        border: 1px solid var(--rule);
+        border-radius: var(--radius-m);
+        background: var(--code-bg);
+        overflow: hidden;
+      }
+      .ms-code pre,
+      .ms-doc pre {
+        margin: 0;
+        padding: 0.9em 1.1em;
+        overflow: auto;
+        font-family: var(--font-mono);
+        font-size: 0.84em;
+        line-height: 1.6;
+        tab-size: 2;
+        color: var(--code-ink);
+      }
+      .ms-doc > pre {
+        background: var(--code-bg);
+        border-radius: var(--radius-m);
+        border: 1px solid var(--rule);
+      }
+      .ms-code pre.is-wrapped {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      pre.has-gutter {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        column-gap: 1em;
+      }
+      .ms-gutter {
+        text-align: right;
+        color: var(--ink-3);
+        opacity: 0.6;
+        user-select: none;
+        white-space: pre;
+        border-inline-end: 1px solid var(--rule);
+        padding-inline-end: 0.8em;
+      }
+      .markdown-alert {
+        --c: var(--c-note);
+        padding: 0.75em 1.1em 0.15em;
+        border: 1px solid color-mix(in oklch, var(--c) 28%, transparent);
+        border-inline-start: 3px solid var(--c);
+        border-radius: var(--radius-s) var(--radius-m) var(--radius-m) var(--radius-s);
+        background: color-mix(in oklch, var(--c) 7%, var(--paper));
+      }
+      .markdown-alert-tip {
+        --c: var(--c-tip);
+      }
+      .markdown-alert-important {
+        --c: var(--c-important);
+      }
+      .markdown-alert-warning {
+        --c: var(--c-warning);
+      }
+      .markdown-alert-caution {
+        --c: var(--c-caution);
+      }
+      .markdown-alert-title {
+        font-family: var(--font-mono);
+        font-size: 0.74em;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--c);
+        margin: 0 0 0.35em !important;
+      }
+      .ms-table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--rule);
+        border-radius: var(--radius-m);
+      }
+      .ms-doc table {
+        border-collapse: collapse;
+        width: max-content;
+        min-width: 100%;
+        font-size: 0.92em;
+        font-variant-numeric: tabular-nums;
+      }
+      .ms-table-wrap table {
+        margin: 0;
+      }
+      .ms-doc :is(th, td) {
+        padding: 0.5em 0.85em;
+        border-bottom: 1px solid var(--rule);
+        text-align: start;
+        vertical-align: top;
+      }
+      .ms-doc th {
+        background: var(--paper-2);
+        font-weight: 650;
+        font-size: 0.94em;
+      }
+      .ms-doc tbody tr:last-child > * {
+        border-bottom: 0;
+      }
+      .ms-doc tbody tr:hover {
+        background: color-mix(in oklch, var(--paper-3) 50%, transparent);
+      }
+      .ms-doc details {
+        border: 1px solid var(--rule);
+        border-radius: var(--radius-m);
+        padding: 0.5em 1em;
+      }
+      .ms-doc summary {
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .ms-doc details[open] > summary {
+        margin-bottom: 0.5em;
+      }
+      .ms-frontmatter {
+        font-size: 0.86em;
+        background: var(--paper-2);
+      }
+      .ms-frontmatter summary {
+        font-family: var(--font-mono);
+        font-size: 0.86em;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+      }
+      .ms-frontmatter table {
+        width: 100%;
+      }
+      .ms-frontmatter th {
+        background: none;
+        font-family: var(--font-mono);
+        width: 1%;
+        white-space: nowrap;
+      }
+      .ms-toc-inline {
+        border-inline-start: 2px solid var(--accent);
+        padding: 0.3em 1em;
+        background: var(--paper-2);
+        border-radius: 0 var(--radius-m) var(--radius-m) 0;
+      }
+      .ms-toc-inline__title {
+        font-family: var(--font-mono);
+        font-size: 0.74em;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+        margin: 0.4em 0 !important;
+      }
+      .ms-toc-inline ul {
+        list-style: none;
+        padding: 0;
+      }
+      .ms-toc-l2 {
+        padding-inline-start: 1em;
+      }
+      .ms-toc-l3 {
+        padding-inline-start: 2em;
+      }
+      .ms-toc-l4 {
+        padding-inline-start: 3em;
+      }
+      .ms-doc .footnotes-sep {
+        margin-top: 3em;
+      }
+      .ms-doc .footnotes {
+        font-size: 0.88em;
+        color: var(--ink-2);
+      }
+      .ms-doc .footnote-ref a {
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .ms-diagram {
+        border: 1px solid var(--rule);
+        border-radius: var(--radius-m);
+        padding: 1em;
+        background: var(--raised);
+        overflow-x: auto;
+        text-align: center;
+      }
+      .ms-diagram[data-state='ready'] .ms-diagram__source {
+        display: none;
+      }
+      .ms-diagram:not([data-state='ready']) .ms-diagram__source {
+        text-align: start;
+      }
+      .ms-diagram__figure svg {
+        max-width: 100%;
+        height: auto;
+      }
+      .ms-diagram__error {
+        font-family: var(--font-mono);
+        font-size: 0.8em;
+        color: var(--danger);
+        text-align: start;
+        margin: 0.6em 0 0;
+      }
+      .ms-broken-image,
+      .ms-blocked-image {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5em;
+        padding: 0.6em 0.9em;
+        border: 1px dashed var(--rule-strong);
+        border-radius: var(--radius-s);
+        color: var(--ink-3);
+        font-size: 0.86em;
+        background: var(--paper-2);
+      }
+      .ms-blocked-image {
+        font: inherit;
+        font-size: 0.86em;
+        cursor: pointer;
+        flex-wrap: wrap;
+      }
+      .ms-blocked-image:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .ms-broken-image .ms-icon,
+      .ms-blocked-image .ms-icon {
+        width: 1.1em;
+        height: 1.1em;
+      }
+      .ms-doc .katex-display {
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-block: 0.2em;
+      }
+      .hljs-keyword,
+      .hljs-selector-tag,
+      .hljs-built_in,
+      .hljs-doctag,
+      .hljs-section,
+      .hljs-literal {
+        color: var(--hl-keyword);
+      }
+      .hljs-string,
+      .hljs-regexp,
+      .hljs-addition,
+      .hljs-template-tag,
+      .hljs-template-variable {
+        color: var(--hl-string);
+      }
+      .hljs-number,
+      .hljs-symbol,
+      .hljs-bullet,
+      .hljs-variable.constant_ {
+        color: var(--hl-number);
+      }
+      .hljs-title,
+      .hljs-title.class_,
+      .hljs-title.function_,
+      .hljs-name {
+        color: var(--hl-title);
+      }
+      .hljs-attr,
+      .hljs-attribute,
+      .hljs-property,
+      .hljs-type,
+      .hljs-params,
+      .hljs-selector-class,
+      .hljs-selector-id {
+        color: var(--hl-attr);
+      }
+      .hljs-comment,
+      .hljs-quote {
+        color: var(--hl-comment);
+        font-style: italic;
+      }
+      .hljs-meta,
+      .hljs-link,
+      .hljs-deletion {
+        color: var(--hl-meta);
+      }
+      .hljs-emphasis {
+        font-style: italic;
+      }
+      .hljs-strong {
+        font-weight: 700;
+      }
+      ::highlight(ms-search) {
+        background-color: var(--mark);
+        color: var(--ink);
+      }
+      ::highlight(ms-search-current) {
+        background-color: var(--accent);
+        color: var(--accent-ink);
+      }
+      body.ms-export {
+        margin: 0;
+        padding: 48px 20px 80px;
+        background: var(--paper);
+        color: var(--ink);
+      }
+      .ms-export__footer {
+        max-width: var(--doc-width);
+        margin: 4em auto 0;
+        font: 12px var(--font-mono);
+        color: var(--ink-3);
+      }
+      @page {
+        margin: 16mm 15mm 18mm;
+      }
+      @media print {
+        .ms-doc {
+          max-width: none;
+          padding-inline: 0;
+          font-size: 10.5pt;
+          line-height: 1.55;
+          contain: none;
+        }
+        .ms-frontmatter,
+        .ms-anchor,
+        .ms-diagram__source,
+        .ms-export__footer {
+          display: none !important;
+        }
+        .ms-doc :is(pre, .ms-code pre) {
+          white-space: pre-wrap;
+          overflow-wrap: anywhere;
+        }
+        .ms-doc
+          :is(
+            pre,
+            table,
+            figure,
+            .ms-code,
+            .ms-diagram,
+            .markdown-alert,
+            img,
+            tr,
+            blockquote
+          ) {
+          break-inside: avoid;
+        }
+        .ms-doc :is(h1, h2, h3, h4, h5, h6) {
+          break-after: avoid;
+        }
+        .ms-doc .footnotes {
+          break-before: avoid;
+        }
+        .ms-doc a.ms-external[href^='http']:after {
+          content: ' (' attr(href) ')';
+          font-size: 0.8em;
+          color: var(--ink-3);
+          overflow-wrap: anywhere;
+        }
+        .ms-table-wrap {
+          overflow: visible;
+        }
+        .ms-doc table {
+          width: 100%;
+          min-width: 0;
+        }
+        .ms-diagram {
+          background: none;
+        }
+      }
+
+      .ms-doc .katex-html {
+        display: none;
+      }
+      .ms-doc .katex-mathml {
+        position: static;
+        clip: auto;
+        width: auto;
+        height: auto;
+        overflow: visible;
+      }
+      .ms-doc .katex-display {
+        display: block;
+        text-align: center;
+        margin: 1em 0;
+      }
+      .ms-doc .katex-display math {
+        display: block math;
+      }
+      .ms-doc .ms-code[data-lang]::before {
+        content: attr(data-lang);
+        display: block;
+        padding: 0.5em 1.1em 0;
+        font: 600 0.7em var(--font-mono);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+      }
+    </style>
+  </head>
+  <body class="ms-export">
+    <article class="ms-doc">
+      <h1 id="other">Other</h1>
+      <p>All fine here.</p>
+    </article>
+    <footer class="ms-export__footer">Exported with Markscope</footer>
+  </body>
+</html>

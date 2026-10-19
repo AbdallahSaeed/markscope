@@ -117,4 +117,6 @@ Install the `.vsix` (`code --install-extension release/markscope-<version>.vsix`
 54. Reload the window (**Developer: Reload Window**) → the preview comes back on the same file, with the lock state.
 55. A 5 MB Markdown file and one with 20 Mermaid diagrams → the editor stays responsive.
 56. Remote: repeat 46–50 over WSL, Remote-SSH and a Dev Container. Windows: a path with spaces and a drive letter. Untitled (unsaved) Markdown previews, with a hint that relative images need a saved file.
-57. Untrusted workspace (Restricted Mode) → the preview still renders.
+57. Untrusted workspace (Restricted Mode) → the preview still renders; workspace settings that enable raw HTML, diagrams or remote images are ignored.
+58. **Markscope: Export as HTML** → a save dialog; the saved file opens offline with diagrams, math and code highlighting, and the browser's network panel shows no requests.
+59. **Markscope: Open in Reader** (and Reopen Editor With… → Markscope Reader) → a full tab with outline and search; it is read-only, titled with the file name, and Problems still show. Markdown still opens in the text editor by default.

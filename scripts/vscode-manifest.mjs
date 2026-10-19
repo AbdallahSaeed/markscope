@@ -9,6 +9,7 @@ import { MARKDOWN_EXTENSIONS } from '../src/shared/urls.ts'
 /** Oldest VS Code we support. @types/vscode in package.json is pinned to this. */
 export const VSCODE_ENGINE = '^1.90.0'
 export const PREVIEW_VIEW_TYPE = 'markscope.preview'
+export const READER_VIEW_TYPE = 'markscope.reader'
 
 const isMarkdown = 'resourceLangId == markdown'
 const inPreview = `activeWebviewPanelId == ${PREVIEW_VIEW_TYPE}`
@@ -42,7 +43,10 @@ export function createVscodeManifest({ version, publisher }) {
     homepage: 'https://abdallahsaeed.github.io/markscope/',
     bugs: { url: 'https://github.com/AbdallahSaeed/markscope/issues' },
     main: './extension.js',
-    activationEvents: [`onWebviewPanel:${PREVIEW_VIEW_TYPE}`],
+    activationEvents: [
+      `onWebviewPanel:${PREVIEW_VIEW_TYPE}`,
+      `onCustomEditor:${READER_VIEW_TYPE}`,
+    ],
     capabilities: {
       // A cloned repo's .vscode/settings.json must not widen what a document may do.
       untrustedWorkspaces: {
@@ -77,6 +81,8 @@ export function createVscodeManifest({ version, publisher }) {
         { command: 'markscope.toggleSidebar', title: 'Toggle Outline', category },
         { command: 'markscope.focusMode', title: 'Toggle Focus Mode', category },
         { command: 'markscope.runDoctor', title: 'Run Document Doctor', category },
+        { command: 'markscope.exportHtml', title: 'Export as HTML', category },
+        { command: 'markscope.openInReader', title: 'Open in Reader', category },
       ],
       menus: {
         'editor/title': [
@@ -94,8 +100,19 @@ export function createVscodeManifest({ version, publisher }) {
           { command: 'markscope.toggleSidebar', when: inPreview },
           { command: 'markscope.focusMode', when: inPreview },
           { command: 'markscope.runDoctor', when: inPreview },
+          { command: 'markscope.exportHtml', when: inPreview },
+          { command: 'markscope.openInReader', when: isMarkdown },
         ],
       },
+      customEditors: [
+        {
+          viewType: READER_VIEW_TYPE,
+          displayName: 'Markscope Reader',
+          // Never the default: Markdown keeps opening in the text editor.
+          priority: 'option',
+          selector: MARKDOWN_EXTENSIONS.map(ext => ({ filenamePattern: `*.${ext}` })),
+        },
+      ],
       keybindings: [
         { command: 'markscope.find', key: 'ctrl+f', mac: 'cmd+f', when: inPreview },
       ],

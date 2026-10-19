@@ -26,6 +26,8 @@ A fast, secure Markdown preview for developers. Diagrams, math, an outline, and 
 | Markscope: Toggle Outline                          | Show or hide the outline sidebar (`B`)                              |
 | Markscope: Toggle Focus Mode                       | Distraction-free reading (`Z`)                                      |
 | Markscope: Run Document Doctor                     | Re-check the document                                               |
+| Markscope: Export as HTML | Save the rendered document as one self-contained HTML file |
+| Markscope: Open in Reader | Read a file in a full tab (also under Reopen Editor With…) |
 
 In the preview: `J` / `K` jump between headings, `/` finds, `B` toggles the outline, `Z` is focus mode.
 

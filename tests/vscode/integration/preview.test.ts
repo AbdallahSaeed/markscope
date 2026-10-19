@@ -5,6 +5,9 @@
  * the real CSP, rendered the document and posted the result back.
  */
 import * as assert from 'node:assert'
+import * as fs from 'node:fs/promises'
+import * as os from 'node:os'
+import * as path from 'node:path'
 import * as vscode from 'vscode'
 
 const folder = () => vscode.workspace.workspaceFolders![0]!.uri
@@ -31,6 +34,15 @@ const previewTabs = () =>
       t =>
         t.input instanceof vscode.TabInputWebview &&
         t.input.viewType.includes('markscope.preview'),
+    )
+
+const readerTabs = () =>
+  vscode.window.tabGroups.all
+    .flatMap(g => [...g.tabs])
+    .filter(
+      t =>
+        t.input instanceof vscode.TabInputCustom &&
+        t.input.viewType === 'markscope.reader',
     )
 
 const problems = (uri: vscode.Uri) =>
@@ -185,6 +197,54 @@ describe('Markscope preview', () => {
       .getConfiguration('markscope')
       .update('doctor.enabled', true, true)
     await waitFor('problems to return', () => problems(editor.document.uri).length > 0)
+  })
+
+  it('opens a file in the Reader tab and reports problems from it too', async () => {
+    const uri = fixture('broken.md')
+    await vscode.commands.executeCommand('markscope.openInReader', uri)
+    await waitFor('the reader tab', () => readerTabs()[0])
+    const issue = await waitFor('the broken-anchor problem', () =>
+      problems(uri).find(d => d.code === 'broken-anchor'),
+    )
+    assert.strictEqual(issue.range.start.line, 2)
+    // Open Preview must make a real preview, not hand back the reader.
+    await openEditor('broken.md')
+    await vscode.commands.executeCommand('markscope.openPreviewToSide')
+    await waitFor('the preview tab', () => previewTabs()[0])
+    assert.strictEqual(readerTabs().length, 1)
+    await vscode.window.tabGroups.close(readerTabs()[0]!)
+    await vscode.window.tabGroups.close(previewTabs()[0]!)
+    await waitFor('problems to clear', () => problems(uri).length === 0)
+  })
+
+  it('exports the preview as a self-contained HTML file', async () => {
+    const target = vscode.Uri.file(
+      path.join(os.tmpdir(), `markscope-export-${Date.now()}.html`),
+    )
+    try {
+      await openEditor('other.md')
+      await vscode.commands.executeCommand('markscope.openPreviewToSide')
+      await waitFor('the preview', () => previewTabs()[0])
+      await new Promise(r => setTimeout(r, 1500)) // let the webview boot and render
+      await vscode.commands.executeCommand('markscope.exportHtml', target)
+      const written = await (async () => {
+        const deadline = Date.now() + 30_000
+        for (;;) {
+          try {
+            return await fs.readFile(target.fsPath, 'utf8')
+          } catch {
+            if (Date.now() > deadline) throw new Error('export file was never written')
+            await new Promise(r => setTimeout(r, 200))
+          }
+        }
+      })()
+      assert.match(written, /<!doctype html>/)
+      assert.match(written, /<title>Other<\/title>/)
+      assert.match(written, /default-src 'none'/)
+      assert.doesNotMatch(written, /<script/)
+    } finally {
+      await fs.rm(target.fsPath, { force: true })
+    }
   })
 
   it('refuses to preview a non-Markdown file', async () => {

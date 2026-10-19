@@ -120,6 +120,15 @@ describe('generated manifest', () => {
     for (const id of used) expect(ids.has(id), id).toBe(true)
   })
 
+  test('the reader is an opt-in custom editor for every Markdown extension', () => {
+    const reader = manifest.contributes.customEditors[0]!
+    expect(reader).toMatchObject({ viewType: 'markscope.reader', priority: 'option' })
+    expect(
+      reader.selector.map((s: { filenamePattern: string }) => s.filenamePattern),
+    ).toEqual(['md', 'markdown', 'mdown', 'mkd', 'mkdn', 'mdx'].map(e => `*.${e}`))
+    expect(manifest.activationEvents).toContain('onCustomEditor:markscope.reader')
+  })
+
   test('identity, engine and untrusted-workspace support', () => {
     expect(manifest).toMatchObject({
       name: 'markscope',

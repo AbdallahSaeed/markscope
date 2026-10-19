@@ -320,3 +320,35 @@ test('only the newest of a burst of document messages is rendered', async ({ pag
     .map(m => m.version)
   expect(versions.length).toBeLessThan(10)
 })
+
+test('the export command produces a self-contained HTML file for the host to save', async ({
+  page,
+}) => {
+  await openWebview(page, host)
+  await start(
+    page,
+    '# Exported title\n\nText with a [link](other.md) and $x^2$.\n\n```mermaid\ngraph TD; A-->B;\n```\n',
+  )
+  await send(page, { type: 'command', name: 'exportHtml' })
+  await expect
+    .poll(async () => (await last(page, 'exportHtml')) !== undefined, { timeout: 30_000 })
+    .toBe(true)
+  const out = (await last(page, 'exportHtml'))!
+  const html = out.html as string
+  expect(out.fileName).toBe('Exported title.html')
+  expect(html).toContain('<!doctype html>')
+  expect(html).toContain('<title>Exported title</title>')
+  expect(html).toContain("default-src 'none'")
+  expect(html).toContain('<svg') // the diagram was rendered before exporting
+  expect(html).not.toContain('<script')
+  expect(html).not.toContain('ms-ui')
+  expect(html).not.toContain('data-source-line')
+  expect(html.length).toBeGreaterThan(10_000) // document.css is inlined
+})
+
+test('nothing is exported unless the host asks', async ({ page }) => {
+  await openWebview(page, host)
+  await start(page, '# T\n')
+  await page.waitForTimeout(300)
+  expect((await posted(page)).some(m => m.type === 'exportHtml')).toBe(false)
+})

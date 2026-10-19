@@ -7,14 +7,14 @@ Goal: ship Markscope as a VS Code extension, published on the **Visual Studio Ma
 
 ## Implementation status (updated 2026-10-19)
 
-Branch `feat/vscode-extension`. Phases 0–2 are built and tested; Phase 3 is partly done.
+Branch `feat/vscode-extension`. Phases 0–3 are built and tested, except AI.
 
 | Phase                        | State                                                                                                                                                                                                                                                     |
 | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0 Spike                      | Done in the real thing: the webview harness runs the built bundle under the exact CSP (Blob worker, lazy Mermaid and Graphviz chunks, KaTeX, `wasm-unsafe-eval`) with no violations. Still to do by you: reserve the publisher id and Open VSX namespace. |
 | 1 Shared seams               | Done (`AITransport`, `renderExportHtml`, `DocumentView` link hooks, `buildLayout({ hide })`, host theme). The "extract from `app.ts`" item was dropped on purpose: `PreviewApp` is small enough that sharing it would only move code around.              |
 | 2 Preview MVP                | Done: panels, follow/lock, live updates, settings, theme and high contrast, links and images, editor ⇄ preview sync, commands, restore after reload.                                                                                                      |
-| 3 Doctor, Reader, export, AI | Doctor → Problems is done. Reader tab, export/copy HTML and AI are **not** built.                                                                                                                                                                         |
+| 3 Doctor, Reader, export, AI | Done except AI: doctor → Problems, the read-only Reader tab and Export as HTML. Copy rendered HTML and AI are not built. |
 | 4–6                          | Docs, CI and release jobs are written. Security review, the manual QA matrix, listing assets (screenshots) and the first publish are not done.                                                                                                            |
 
 Deviations from this plan, and why:

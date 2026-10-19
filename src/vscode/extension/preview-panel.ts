@@ -20,6 +20,7 @@ import type { DiagnosticsSink } from './diagnostics'
 import { buildWebviewHtml, makeNonce } from './html'
 import {
   DOC_ROOT_ID,
+  exportFileName,
   isBroadRoot,
   MAX_PREVIEW_CHARS,
   isMarkdownFileName,
@@ -86,12 +87,16 @@ export class PreviewPanel {
   private readonly disposables: vscode.Disposable[] = []
   private disposed = false
   private mediaInFlight = 0
+  /** Set when the host asked the webview for an export; the webview can't start one on its own. */
+  private exportRequested = false
+  private exportTarget: vscode.Uri | undefined
   private lastExternalOpen = 0
 
   constructor(
     readonly panel: vscode.WebviewPanel,
     private readonly host: PanelHost,
     private locked = false,
+    readonly kind: 'preview' | 'reader' = 'preview',
   ) {
     panel.webview.options = panelOptions(host.extensionUri)
     this.disposables.push(
@@ -114,6 +119,16 @@ export class PreviewPanel {
 
   showsUri(uri: vscode.Uri): boolean {
     return this.doc?.uri.toString() === uri.toString()
+  }
+
+  get isReader(): boolean {
+    return this.kind === 'reader'
+  }
+
+  /** Reader tabs are titled by VS Code (the file name); previews say what they are. */
+  private updateTitle(): void {
+    if (this.kind === 'reader' || !this.doc) return
+    this.panel.title = `${this.locked ? '🔒 ' : ''}Preview ${fileName(this.doc)}`
   }
 
   get isLocked(): boolean {
@@ -150,7 +165,7 @@ export class PreviewPanel {
       this.remoteImages = remote
       this.loadHtml() // `ready` comes again and the document is sent then
     }
-    this.panel.title = `${this.locked ? '🔒 ' : ''}Preview ${fileName(doc)}`
+    this.updateTitle()
     this.panel.webview.options = panelOptions(this.host.extensionUri, doc)
     if (
       previous &&
@@ -204,8 +219,9 @@ export class PreviewPanel {
   }
 
   setLocked(locked: boolean): void {
+    if (this.kind === 'reader') return // the reader is always tied to its file
     this.locked = locked
-    if (this.doc) this.panel.title = `${locked ? '🔒 ' : ''}Preview ${fileName(this.doc)}`
+    this.updateTitle()
     this.post({ type: 'lock', locked })
   }
 
@@ -222,6 +238,40 @@ export class PreviewPanel {
     if (!doc) return
     if (readPreviewOptions(doc.uri).doctor) this.sendCommand('runDoctor')
     else this.host.diagnostics.clear(doc.uri)
+  }
+
+  /** Asks the webview for a self-contained HTML export; the answer opens a save dialog. */
+  requestExport(target?: vscode.Uri): void {
+    this.exportRequested = true
+    this.exportTarget = target
+    this.sendCommand('exportHtml')
+  }
+
+  private async saveExport(html: string, name: string): Promise<void> {
+    if (!this.exportRequested) return // only an export the host asked for
+    this.exportRequested = false
+    const doc = this.doc
+    const folder =
+      doc && doc.uri.scheme !== 'untitled'
+        ? vscode.Uri.joinPath(doc.uri, '..')
+        : undefined
+    const fileName = exportFileName(name)
+    const chosen = this.exportTarget
+    this.exportTarget = undefined
+    const target =
+      chosen ??
+      (await vscode.window.showSaveDialog({
+        defaultUri: folder ? vscode.Uri.joinPath(folder, fileName) : undefined,
+        filters: { HTML: ['html'] },
+        saveLabel: 'Export',
+      }))
+    if (!target) return
+    await vscode.workspace.fs.writeFile(target, new TextEncoder().encode(html))
+    const open = await vscode.window.showInformationMessage(
+      `Exported ${target.path.split('/').pop()}`,
+      'Open in Browser',
+    )
+    if (open) await vscode.env.openExternal(target)
   }
 
   sendCommand(name: Extract<HostMessage, { type: 'command' }>['name']): void {
@@ -285,6 +335,7 @@ export class PreviewPanel {
       case 'doctor':
         return this.acceptDoctor(message)
       case 'exportHtml':
+        return this.saveExport(message.html, message.fileName)
       case 'copy':
       case 'ai':
         return // later releases

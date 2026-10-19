@@ -49,6 +49,7 @@ async function main(): Promise<void> {
         bridge,
         renderer: new RenderClient(url),
         settings: message.settings,
+        documentCssUrl: message.assets.documentCss,
       })
       installPreviewKeys({
         find: () => app?.run('find'),

@@ -15,6 +15,11 @@ export function createVscodeManifest(options: { version: string; publisher: stri
       commandPalette: { command: string }[]
     }
     keybindings: { command: string }[]
+    customEditors: {
+      viewType: string
+      priority: string
+      selector: { filenamePattern: string }[]
+    }[]
     configuration: { properties: Record<string, Record<string, unknown>> }
   }
 }

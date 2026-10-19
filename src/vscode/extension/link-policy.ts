@@ -88,3 +88,16 @@ const LARGE_DOC = 512 * 1024
 export function updateDelayMs(length: number): number {
   return length > LARGE_DOC ? 600 : length > SMALL_DOC ? 300 : 120
 }
+
+/** A safe default name for the export dialog: no separators or control characters, always `.html`. */
+export function exportFileName(raw: string): string {
+  const base =
+    raw
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ')
+      .replace(/\.html?$/i, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 80) || 'document'
+  return `${base}.html`
+}

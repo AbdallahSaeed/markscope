@@ -6,6 +6,7 @@ import { toDiagnosticSpecs } from '@/vscode/extension/diagnostic-map'
 import { isRealPathInside } from '@/vscode/extension/confine'
 import { buildCsp, buildWebviewHtml, makeNonce } from '@/vscode/extension/html'
 import {
+  exportFileName,
   isBroadRoot,
   isMarkdownFileName,
   isMediaFileName,
@@ -185,5 +186,17 @@ describe('symlink-safe confinement', () => {
     expect(await isRealPathInside(root(), path.join(dir, 'outside', 'secret.png'))).toBe(
       false,
     )
+  })
+})
+
+describe('exportFileName', () => {
+  test('strips separators and control characters and always ends in .html', () => {
+    expect(exportFileName('My Doc')).toBe('My Doc.html')
+    expect(exportFileName('a/b\\c:d.html')).toBe('a b c d.html')
+    expect(exportFileName('../../etc/passwd')).toBe('.. .. etc passwd.html')
+    expect(exportFileName('x\u0000y\u001fz')).toBe('x y z.html')
+    expect(exportFileName('')).toBe('document.html')
+    expect(exportFileName('///')).toBe('document.html')
+    expect(exportFileName('a'.repeat(300)).length).toBe(85)
   })
 })
