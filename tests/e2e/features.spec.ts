@@ -50,6 +50,35 @@ test('command palette, view modes and live-preview editing', async ({
   await expect(page.locator('.ms-pane--editor')).toBeHidden()
 })
 
+test('single-key shortcuts work in the very next event after a palette command', async ({
+  context,
+  server,
+}) => {
+  const page = await openMarkdown(context, `${server.url}/guide.md`)
+  await page.keyboard.press('Control+k')
+  await page.keyboard.type('source view')
+  // Chrome only moves focus off the closed dialog's input at its next rendering step. A key
+  // that arrives before that (a slow or loaded machine) still targets the input and used to
+  // be dropped. Reproduce it exactly: Enter, then the next key, in the same task.
+  const target = await page.evaluate(() => {
+    const input = document.querySelector<HTMLInputElement>('.ms-palette__input')
+    if (!input) return 'no palette input'
+    const key = (key: string, to: EventTarget) =>
+      to.dispatchEvent(
+        new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }),
+      )
+    key('Enter', input) // runs "Source view" and closes the palette
+    const next = document.activeElement ?? document.body
+    key('2', next) // the next key press: the "Edit" view
+    return `${next.tagName}.${next.className}`
+  })
+  expect(target).not.toContain('ms-palette__input')
+  await expect(page.locator('[data-mode="split"]')).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+})
+
 test('editor: CodeMirror lists, Tab indent, and ⌘Z undoes a Discard', async ({
   context,
   server,

@@ -82,6 +82,9 @@ export class CommandPalette {
 
   close(): void {
     this.dialog.close()
+    // The browser can leave focus on the (now closed) search box for a moment, and single-key
+    // shortcuts ignore keys typed into inputs: the next key press would be silently dropped.
+    if (document.activeElement === this.input) this.input.blur()
   }
 
   get isOpen(): boolean {

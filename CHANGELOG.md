@@ -2,6 +2,7 @@
 
 ## 1.1.0 — 2026-10-19
 
+- **Fixed:** a key pressed right after running a command from the command palette (for example `2` for the Edit view) could be silently ignored, because the browser had not yet moved focus off the closed palette's search box. Found by a CI failure.
 - **Markscope for VS Code (new).** The same renderer in a VS Code webview, next to the native editor (`docs/VSCODE-PLAN.md`).
   - **Markscope: Open Preview / Open Preview to the Side**, an editor-title button, and **Toggle Preview Lock**. An unlocked preview follows the active Markdown file; panels are restored after a window reload.
   - Updates as you type (or on save, `markscope.preview.updateOn`); scroll sync both ways, double-click a block to put the cursor on its source line, and the block under the cursor is highlighted.
